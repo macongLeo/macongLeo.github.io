@@ -96,6 +96,70 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
+                <a class="clearlink" href="shu-xing-de-shi-zhi-shu-xing-d.html">
+                
+                  <h1>属性的实质</h1>
+                  <div class="a-content">
+                      
+                      <div class="a-content-text">
+                        
+                        	<blockquote>
+<p>属性的实质是什么？<br/>
+包括哪几个部分？<br/>
+属性默认的关键字都有哪些？<br/>
+@dynamic关键字和@synthesize关键字是用来做什么的</p>
+</blockquote>
+
+<p>实质包含部分:</p>
+
+<p>@property = ivar + getter + setter;</p>
+
+<p>实例变量+get方法+ set方法，也就是说使用@property系统会自动生成setter和getter方法;</p>
+
+<p>默认常用关键字:</p>
+
+<p>property中我们经常使用的关键字有strong，weak，assign，copy，nonatomic，atomic....等</p>
+
+<p>@dynamic这个关键词，通常是用不到的。<br/>
+它与@synthesize的区别在于：<br/>
+使用@synthesize编译器会确实的产生getter和setter方法，而@dynamic仅仅是告诉编译器这两个方法在运行期会有的，无需产生警告。</p>
+
+<p>假设有这么个场景，B类，C类分别继承A类，A类实现某个协议（@protocol），协议中某个属性( somePropety )我不想在A中实现，而在B类，C类中分别实现。如果A中不写任何代码，编译器就会给出警告：“use @synthesize, @dynamic or provide a method implementation&quot;这时你给用@dynamic somePropety; <br/>
+编译器就不会警告，同时也不会产生任何默认代码。</p>
+
+<p>@dynamic 就是要来告诉编译器，代码中用@dynamic修饰的属性，其getter和setter方法会在程序运行的时候或者用其他方式动态绑定，以便让编译器通过编译。<br/>
+其主要的作用就是用在NSManageObject对象的属性声明上，由于此类对象的属性一般是从Core Data的属性中生成的，Core Data框架会在程序运行的时候为此类属性生成getter和Setter方法。</p>
+
+<p>参考:</p>
+
+<p><a href="">https://www.jianshu.com/p/00dbeec23291</a></p>
+
+<hr/>
+
+                        
+                      </div>
+                  </div>
+                </a>
+                <div class="read-more clearfix">
+                  <div class="more-left left">
+                  
+                    <span class="date">2020/01/03</span>
+                    
+          				   
+                    
+
+                  </div>
+                  <div class="more-right right">
+                  <span class="comments">
+                      
+
+                       
+                  </span>
+                  </div>
+                </div>
+              </div><!-- article -->
+        
+			<div class="article">
                 <a class="clearlink" href="15780200209710.html">
                 
                   <h1>iOS 响应者链及事件传递</h1>
@@ -267,6 +331,12 @@
                 <div class="side-content">
                 <ul class="posts-list">
 	      
+		      
+			      <li class="post">
+			        <a href="shu-xing-de-shi-zhi-shu-xing-d.html">属性的实质</a>
+			      </li>
+		     
+		  
 		      
 			      <li class="post">
 			        <a href="15780200209710.html">iOS 响应者链及事件传递</a>
