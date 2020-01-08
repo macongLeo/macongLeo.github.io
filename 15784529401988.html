@@ -4,7 +4,7 @@
 	<meta charset="utf-8">
 	<title>  
 	  
-  	Archives - 小马同学的碎碎念
+  	Label 多行换行最后一行现在更过按钮 - 小马同学的碎碎念
   	
 	</title>
 
@@ -118,82 +118,39 @@
 		</div>	
 		<div class="mid-col">
 			<div class="mid-col-container"> <div id="content" class="inner">
-	<div itemscope itemtype="http://schema.org/Blog">
-		<section class="archives">
 
-		
-			 
-			  	<h1 style="top: auto;" class="year">2020</h1>
-			
-			
+	<article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+		<h1 class="title" itemprop="name">Label 多行换行最后一行现在更过按钮</h1>
+		<div class="entry-content" itemprop="articleBody">
+			<p><img src="media/15784529401988/15784530763900.jpg" alt="" style="width:574px;"/><br/>
+这种多行之后（最多显示几行），最后一行还显示不下的时候，要求有更多按钮（或者全文）这种需求很常见。实现方法也比较简单，结合 NSAttributeSring 和 YYLabel 就能很简单的实现。如果最后的“更多”或者“全文”按钮要求自提颜色或者大小不一样，单独处理这个样式即可</p>
 
-				<article itemprop="blogPost" itemscope itemtype="http://schema.org/BlogPosting">
-					<div class="meta">
-						<span class="date"><time datetime="2020-01-08T11:09:00+08:00" itemprop="datePublished">1月 08</time></span>
-						<br>
-						 
-						
-						 
-						
-					    
-					</div>
-					<h1 class="title" itemprop="name"><a href="15784529401988.html">
-					Label 多行换行最后一行现在更过按钮</a></h1>
-				</article>
-	 	
-			
-			
+<pre><code class="language-text">- (void)addSeeMoreButton {
+    
+    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:@&quot;   ... 全文&quot;];
+    //添加文字颜色
+    [text addAttribute:NSForegroundColorAttributeName value:kColor_black1 range:NSMakeRange(text.length-2, 2)];
+    [text addAttribute:NSForegroundColorAttributeName value:kColor_black2 range:NSMakeRange(0, text.length-2)];
+    
+    
+    YYLabel *seeMore = [YYLabel new];
+    seeMore.attributedText = text;
+    [seeMore sizeToFit];
+    NSMutableAttributedString *truncationToken = [NSMutableAttributedString attachmentStringWithContent:seeMore contentMode:UIViewContentModeCenter attachmentSize:seeMore.frame.size alignToFont:[UIFont systemFontOfSize:14] alignment:YYTextVerticalAlignmentCenter];
+    self.passageContentLabel.truncationToken = truncationToken;
+}
 
-				<article itemprop="blogPost" itemscope itemtype="http://schema.org/BlogPosting">
-					<div class="meta">
-						<span class="date"><time datetime="2020-01-03T14:06:13+08:00" itemprop="datePublished">1月 03</time></span>
-						<br>
-						 
-						
-						 
-						
-					    
-					</div>
-					<h1 class="title" itemprop="name"><a href="15780315733102.html">
-					探寻 OC 对象的本质</a></h1>
-				</article>
-	 	
-			
-			
+</code></pre>
 
-				<article itemprop="blogPost" itemscope itemtype="http://schema.org/BlogPosting">
-					<div class="meta">
-						<span class="date"><time datetime="2020-01-03T11:18:36+08:00" itemprop="datePublished">1月 03</time></span>
-						<br>
-						 
-						
-						 
-						
-					    
-					</div>
-					<h1 class="title" itemprop="name"><a href="shu-xing-de-shi-zhi-shu-xing-d.html">
-					属性的实质</a></h1>
-				</article>
-	 	
-			
-			
+		</div>
+	</article>
+	<div class="share-comment">
+	 
 
-				<article itemprop="blogPost" itemscope itemtype="http://schema.org/BlogPosting">
-					<div class="meta">
-						<span class="date"><time datetime="2020-01-03T10:53:40+08:00" itemprop="datePublished">1月 03</time></span>
-						<br>
-						 
-						
-						 
-						
-					    
-					</div>
-					<h1 class="title" itemprop="name"><a href="15780200209710.html">
-					iOS 响应者链及事件传递</a></h1>
-				</article>
-	 	
+	  
 
-	  </section>
+	  
+
 	</div>
 </div>        </div>
 			<footer id="footer" class="inner">Copyright &copy; 2014
@@ -218,6 +175,8 @@ Theme by <a href="http://shashankmehta.in/archive/2012/greyshade.html">Shashank 
 
 
 
+
+<script src="asset/prism.js"></script>
 
 
 <style type="text/css">
