@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  AutoReleasePool 自动释放池 - 小马同学的碎碎念
+  关联对象 AssociatedObject 完全解析 - 小马同学的碎碎念
   
   </title>
   
@@ -100,14 +100,12 @@
       <div class="markdown-body article-wrap">
        <div class="article">
           
-          <h1>AutoReleasePool 自动释放池</h1>
+          <h1>关联对象 AssociatedObject 完全解析</h1>
      
         <div class="read-more clearfix">
-          <span class="date">2020/01/20</span>
+          <span class="date">2020/02/18</span>
 
-          <span>posted in&nbsp;</span> 
           
-              <span class="posted-in"><a href='iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html'>iOS 面试准备</a></span>
            
          
           <span class="comments">
@@ -120,74 +118,174 @@
       </div><!-- article -->
 
       <div class="article-content">
-      <ul>
-<li>App启动后，苹果在主线程 RunLoop 里注册了两个 Observer，其回调都是 _wrapRunLoopWithAutoreleasePoolHandler()。</li>
-<li>第一个 Observer 监视的事件是 Entry(即将进入Loop)，其回调内会调用 _objc_autoreleasePoolPush() 创建自动释放池。其 order 是-2147483647，优先级最高，保证创建释放池发生在其他所有回调之前。</li>
-<li>第二个 Observer 监视了两个事件： BeforeWaiting(准备进入休眠) 时调用_objc_autoreleasePoolPop() 和 _objc_autoreleasePoolPush() 释放旧的池并创建新池；Exit(即将退出Loop) 时调用 _objc_autoreleasePoolPop() 来释放自动释放池。这个 Observer 的 order 是 2147483647，优先级最低，保证其释放池子发生在其他所有回调之后。</li>
-<li>在主线程执行的代码，通常是写在诸如事件回调、Timer回调内的。这些回调会被 RunLoop 创建好的 AutoreleasePool 环绕着，所以不会出现内存泄漏，开发者也不必显示创建 Pool 了。</li>
-</ul>
+      <p>相关面试题:</p>
 
-<p>也就是说<mark>AutoreleasePool创建是在一个RunLoop事件开始之前(push)，AutoreleasePool释放是在一个RunLoop事件即将结束之前(pop)。</mark><br/>
-AutoreleasePool里的Autorelease对象的加入是在RunLoop事件中，AutoreleasePool里的Autorelease对象的释放是在AutoreleasePool释放时。</p>
+<blockquote>
+<p>关联对象有什么应用，系统如何管理关联对象？其被释放的时候需要手动将所有的关联对象的指针置空么？</p>
+</blockquote>
 
-<h2 id="toc_0">Autorelease对象什么时候释放？</h2>
-
-<p>在没有手动添加 AutoreleasePool的情况下,<br/>
-**Autorelease对象是在当前的 RunLoop 迭代结束的时候释放的 **<br/>
-原因:<br/>
-    系统在每个 RunLoop 迭代中都加入了自动释放池的 Push 和 Pop</p>
-
-<h2 id="toc_1">AutoreleasePool原理</h2>
-
-<p><img src="media/15795063924352/15795107102374.jpg" alt="" style="width:702px;"/></p>
-
-<p><img src="media/15795063924352/15795070852300.jpg" alt="" style="width:536px;"/></p>
-
-<ul>
-<li>AutoreleasePool并没有单独的结构,而是由若干个 AutoreleasePoolPage 以双向链表的形式结合而成(分别对应图中的 parent 和 child 指针)</li>
-<li>AutoreleasePool是按线程一一对应的(结构中的 thread 指向当前线程)</li>
-<li>AutoreleasePoolPage 每个对象会开辟 4096 个字节内存(一页虚拟内存的大小)除了上面的实例变量所占的空间,剩下的空间都用来存储 Autorelease对象</li>
-<li>上面的 id *next 指针作为游标指向栈顶最新 add 进来的 Autorelease对象的下一个位置</li>
-<li>一个 AutoreleasePoolPage 的空间被沾满时,会创建一个新的 AutoreleasePoolPage 对象,连接链表,后来的 Autorelease对象在新的 page 加入</li>
-</ul>
-
-<p>所以若当前线程中只有一个 AutoreleasePoolPage 对象,并记录了很多 Autorelease对象地址时,内存:<br/>
-<img src="media/15795063924352/15795075970216.jpg" alt="" style="width:520px;"/><br/>
-图中的情况，这一页再加入一个autorelease对象就要满了（也就是next指针马上指向栈顶），这时就要执行上面说的操作，建立下一页page对象，与这一页链表连接完成后，新page的next指针被初始化在栈底（begin的位置），然后继续向栈顶添加新对象。</p>
-
-<p><mark><strong>向一个对象发送- autorelease消息，就是将这个对象加入到当前AutoreleasePoolPage的栈顶next指针指向的位置</strong></mark><br/>
-这一步只是把 Autorelease对象加入到了自动释放池,还并没有释放</p>
-
-<h3 id="toc_2">真正释放时刻</h3>
-
-<p>每当进行一次<mark><strong>objc_autoreleasePoolPush</strong></mark>调用时，runtime向当前的AutoreleasePoolPage中add进一个哨兵对象，值为0（也就是个nil），那么这一个page就变成了下面的样子：<br/>
-<img src="media/15795063924352/15795082558655.jpg" alt="" style="width:754px;"/><br/>
-<mark>objc_autoreleasePoolPush</mark>的返回值正是这个哨兵对象的地址，被<mark>objc_autoreleasePoolPop</mark>(哨兵对象)作为入参，于是：</p>
+<p>先回答问题:</p>
 
 <ol>
-<li> 根据传入的哨兵对象地址找到哨兵对象所处的page</li>
-<li>在当前page中，将晚于哨兵对象插入的所有autorelease对象都发送一次- release消息，并向回移动next指针到正确位置</li>
-<li>补充2：从最新加入的对象一直向前清理，可以向前跨越若干个page，直到哨兵所在的page<br/>
-刚才的objc_autoreleasePoolPop执行后，
-<img src="media/15795063924352/15795086281414.jpg" alt="" style="width:758px;"/>
-最终变成了下面的样子:
-<img src="media/15795063924352/15795084636880.jpg" alt="" style="width:725px;"/></li>
+<li>关联对象的作用是可以为分类<mark>增加实例变量和存取发法</mark>(分类不能直接添加)</li>
+<li>系统使用AssociationsManager管理关联对象</li>
 </ol>
 
-<p><strong>嵌套的AutoreleasePool</strong><br/>
-知道了上面的原理，嵌套的AutoreleasePool就非常简单了，pop的时候总会释放到上次push的位置为止，多层的pool就是多个哨兵对象而已，就像剥洋葱一样，每次一层，互不影响。 </p>
+<p><strong>在分类中,因为类的实例变量布局已经固定</strong>,使用@property 已经无法向固定的布局中添加新的实例变量(这样做可能会覆盖之类的实例变量),所以我们需要使用关联对象以及两个方法来模拟构成属性的三个要素.</p>
 
-<p><img src="media/15795063924352/15795095043776.jpg" alt="" style="width:767px;"/></p>
+<p>在分类中@property 并不会自动生成实例变量以及存取方法,所以需要使用关联对象为已经存在的类添加属性,例如:</p>
 
-<p><img src="media/15795063924352/15795109308256.jpg" alt="" style="width:700px;"/></p>
+<pre class="line-numbers"><code class="language-text">#import &quot;DKObject+Category.h&quot;
+#import &lt;objc/runtime.h&gt;
 
-<p>注意点:<br/>
-NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添加到该pool里面的所有OC对象都执行一遍release（retainCount-=1），如果恰好此时retainCount&lt;=0 ，那么系统会自动调用<mark>dealloc</mark>方法废弃对象。</p>
+@implementation DKObject (Category)
+
+- (NSString *)categoryProperty {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+- (void)setCategoryProperty:(NSString *)categoryProperty {
+    objc_setAssociatedObject(self, @selector(categoryProperty), categoryProperty, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+@end
+</code></pre>
+
+<p>我们使用了 <mark>objc_getAssociateedObjcet</mark>以及 <mark>objc_serAssociatedObject</mark> 来模拟属性的存取方法,使用关联对象来模拟实例变量</p>
+
+<p>这里有两个需要解释的问题:</p>
+
+<ol>
+<li>为什么向方法中传入@selector(catagoryProperty)?</li>
+<li>OBJC_ASSOCIATION_RETAIN_NONATOMIC是干什么的</li>
+</ol>
+
+<p>关于第一个,我们先看这两个方法的原型;</p>
+
+<pre class="line-numbers"><code class="language-text">id objc_getAssociatedObject(id object, const void *key);
+void objc_setAssociatedObject(id object, const void *key, id value, objc_AssociationPolicy policy);
+</code></pre>
+
+<p>@selector(categoryProperty)其实也就是参数中的 key,其实可以使用静态指针 stati void * 类型的参数来代替,不过这里强烈建议使用@selector(categoryProperty)作为key 传入.因为这种方法省略了生命参数的代码,并且能很好的保证 key 的唯一性.<br/>
+关于OBJC_ASSOCIATION_RETAIN_NONATOMIC,其实就是内存管理语句.<br/>
+<img src="media/15820364056941/15820966989089.jpg" alt="" style="width:519px;"/><br/>
+注意:关联对象的内存管理策略中没有对应的 weak.如果确实需要使用 weak 应该怎么处理呢?<br/>
+最简单的方法是使用 block 包起来,例如:</p>
+
+<pre class="line-numbers"><code class="language-text">-(void)setWeakvalue:(NSObject *)weakvalue {
+    __weak typeof(weakvalue) weakObj = weakvalue;
+    typeof(weakvalue) (^block)() = ^(){
+        return weakObj;
+    };
+    objc_setAssociatedObject(self, weakValueKey, block, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+-(NSObject *)weakvalue {
+    id (^block)() = objc_getAssociatedObject(self, weakValueKey);
+    return block();
+}
+</code></pre>
+
+<p>首先我们在 setter 方法里面使用了一个weak 的局部变量 weakObj 来存储值,并在 block 中将其捕获并返回,由于 weakObj 是弱引用,所以不会修改对象的引用计数,当对象释放时,由于 weakObj 的 weak 属性,它在释放后也会指向 nil,所以在 getter 返回的时候也就是 nil,也就是模拟了 weak 释放后自动置为 nil.</p>
+
+<p><strong>objc_setAssociatedObject</strong></p>
+
+<pre class="line-numbers"><code class="language-text">void _object_set_associative_reference(id object, void *key, id value, uintptr_t policy) {
+    // 关联对象使用 ObjcAssociation 这个c++对象来存储。
+      // 设置新对象，那么有可能有老的对象会被废弃。那么新建一个ObjcAssociation对象，之后用来存储老的对象
+    ObjcAssociation old_association(0, nil);
+
+      // acquireValue函数： 设置新的对象的retainCount，也就是对他进行手动内存管理
+    id new_value = value ? acquireValue(value, policy) : nil;
+    {
+        AssociationsManager manager;
+        AssociationsHashMap &amp;associations(manager.associations());
+        disguised_ptr_t disguised_object = DISGUISE(object);
+
+          // 如果确实是要设置新关联对象的时候
+        if (new_value) {
+            // break any existing association.
+            AssociationsHashMap::iterator i = associations.find(disguised_object);
+
+              // 这个对象之前设置过关联对象，也就是说该对象的关联对象数量大于1
+            if (i != associations.end()) {
+                // secondary table exists
+                ObjectAssociationMap *refs = i-&gt;second;
+                ObjectAssociationMap::iterator j = refs-&gt;find(key);
+                 // 寻找全局的关联对象表，如果存在老对象的话
+                if (j != refs-&gt;end()) {
+                      // 存储老对象到之前新建的ObjcAssociation对象中
+                    old_association = j-&gt;second;
+                      // 设置新的关联对象
+                    j-&gt;second = ObjcAssociation(policy, new_value);
+                }
+                  // 不存在老对象，直接设置新关联对象
+                  else {
+                    (*refs)[key] = ObjcAssociation(policy, new_value);
+                }
+            }
+              // 这个对象之前没有设置过任何的关联对象
+              else {
+                // create the new association (first time).
+                ObjectAssociationMap *refs = new ObjectAssociationMap;
+                associations[disguised_object] = refs;
+                (*refs)[key] = ObjcAssociation(policy, new_value);
+                 // 将对象的isa的has_assoc字段设置成true
+                object-&gt;setHasAssociatedObjects();
+            }
+        } 
+          // 要将关联对象设成 nil，也就是取消该关联对象。先存老对象，再在全局表中删除该关联对象
+          else {
+            // setting the association to nil breaks the association.
+            AssociationsHashMap::iterator i = associations.find(disguised_object);
+            if (i !=  associations.end()) {
+                ObjectAssociationMap *refs = i-&gt;second;
+                ObjectAssociationMap::iterator j = refs-&gt;find(key);
+                if (j != refs-&gt;end()) {
+                    old_association = j-&gt;second;
+                    refs-&gt;erase(j);
+                }
+            }
+        }
+    }
+    // 释放老对象，retainCount相关，内存管理相关
+    if (old_association.hasValue()) ReleaseValue()(old_association);
+}
+</code></pre>
+
+<p>可以看到设置新的关联对象其实很简单：</p>
+
+<ul>
+<li>现在全局关联对象表中寻找这个 key</li>
+<li>先存原来关联对象</li>
+<li>再设置新的关联对象</li>
+<li>释放原有的关联对象</li>
+</ul>
+
+<p><strong>关联对象的实现</strong><br/>
+关联对象使用的是全局的表来存储所有关联对象,如图:<br/>
+<img src="media/15820364056941/15820977012071.jpg" alt="" style="width:643px;"/><br/>
+<strong>关联对象是和对象一一对应的,而不是和类一一对应的</strong></p>
+
+<ol>
+<li>所有的关联对象都由一个<strong>AssociationsManager</strong>对象来管理,这个对象里有一个<strong>AssociationsHashMap</strong>.</li>
+<li><strong>AssociationsHashMap</strong>由许多 key-value 构成.key 是对象的地址,value 是一个<strong>ObjectAssociationMap</strong>,也就是所谓的关联对象</li>
+<li><strong>ObjectAssociationMap</strong>就是关联对象,每个关联对象里面包含多个 key-value 对,key 是属性名,value 是<strong>ObjcAssociation</strong>,也就是相当于属性对应的实例变量.</li>
+<li><strong>ObjcAssociation</strong>相当于实例变量,这个结构体有两个成员,_policy 属性的内存管理语句,_value 属性的值</li>
+</ol>
+
+<p>总结:</p>
+
+<ol>
+<li>category 可以给现有类添加属性,方法,协议,但是不能添加实例变量</li>
+<li>添加属性对应的实例变量需要使用关联对象来实现</li>
+<li>category 里面的方法不会覆盖掉原有同名方法,只是会提前检索到,所以感觉是被覆盖掉了</li>
+<li>对于系统自带的类,在 runtime 时才会加载 category,但是自定义的分类在编译期就已经全部加载了,就像不存在分类,但是存在一个大大的自定义类一样.</li>
+</ol>
 
 <p>参考:<br/>
-<a href="https://www.jianshu.com/p/61d8131c6bf3">https://www.jianshu.com/p/61d8131c6bf3</a><br/>
-<a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/">https://blog.sunnyxx.com/2014/10/15/behind-autorelease/</a><br/>
-<a href="https://juejin.im/post/5d7765756fb9a06af82503b6">https://juejin.im/post/5d7765756fb9a06af82503b6</a></p>
+<a href="https://draveness.me/ao">https://draveness.me/ao</a><br/>
+<a href="http://vanney9.com/2017/07/14/association-object-and-retain-count/">http://vanney9.com/2017/07/14/association-object-and-retain-count/</a><br/>
+<a href="http://vanney9.com/2017/06/07/objective-c-runtime-category/">http://vanney9.com/2017/06/07/objective-c-runtime-category/</a><br/>
+<a href="https://www.jianshu.com/p/1b0a1f9ecf39">https://www.jianshu.com/p/1b0a1f9ecf39</a></p>
 
 
     
@@ -198,16 +296,16 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
         <div class="large-6 columns">
         <p class="text-left" style="padding:15px 0px;">
       
-          <a href="15815876783958.html" 
-          title="Previous Post: iOS 中的锁">&laquo; iOS 中的锁</a>
+          <a href="15820370480952.html" 
+          title="Previous Post: 类 子类 分类 区别与联系">&laquo; 类 子类 分类 区别与联系</a>
       
         </p>
         </div>
         <div class="large-6 columns">
       <p class="text-right" style="padding:15px 0px;">
       
-          <a  href="15791552193020.html" 
-          title="Next Post: RunLoop 详解">RunLoop 详解 &raquo;</a>
+          <a  href="15820198947096.html" 
+          title="Next Post: weak 的释放及原理">weak 的释放及原理 &raquo;</a>
       
       </p>
         </div>
@@ -360,6 +458,8 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
+
+<script src="asset/prism.js"></script>
 
 
 <style type="text/css">

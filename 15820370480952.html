@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  AutoReleasePool 自动释放池 - 小马同学的碎碎念
+  类 子类 分类 区别与联系 - 小马同学的碎碎念
   
   </title>
   
@@ -100,14 +100,12 @@
       <div class="markdown-body article-wrap">
        <div class="article">
           
-          <h1>AutoReleasePool 自动释放池</h1>
+          <h1>类 子类 分类 区别与联系</h1>
      
         <div class="read-more clearfix">
-          <span class="date">2020/01/20</span>
+          <span class="date">2020/02/18</span>
 
-          <span>posted in&nbsp;</span> 
           
-              <span class="posted-in"><a href='iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html'>iOS 面试准备</a></span>
            
          
           <span class="comments">
@@ -120,74 +118,51 @@
       </div><!-- article -->
 
       <div class="article-content">
-      <ul>
-<li>App启动后，苹果在主线程 RunLoop 里注册了两个 Observer，其回调都是 _wrapRunLoopWithAutoreleasePoolHandler()。</li>
-<li>第一个 Observer 监视的事件是 Entry(即将进入Loop)，其回调内会调用 _objc_autoreleasePoolPush() 创建自动释放池。其 order 是-2147483647，优先级最高，保证创建释放池发生在其他所有回调之前。</li>
-<li>第二个 Observer 监视了两个事件： BeforeWaiting(准备进入休眠) 时调用_objc_autoreleasePoolPop() 和 _objc_autoreleasePoolPush() 释放旧的池并创建新池；Exit(即将退出Loop) 时调用 _objc_autoreleasePoolPop() 来释放自动释放池。这个 Observer 的 order 是 2147483647，优先级最低，保证其释放池子发生在其他所有回调之后。</li>
-<li>在主线程执行的代码，通常是写在诸如事件回调、Timer回调内的。这些回调会被 RunLoop 创建好的 AutoreleasePool 环绕着，所以不会出现内存泄漏，开发者也不必显示创建 Pool 了。</li>
-</ul>
+      <p><strong>分类(category)</strong><br/>
+分类允许开发者在不改变原有类的情况下,对该类进行拓展,分类是 OC 的特有语法,他是表示一个指向分类的结构体指针,原则上分类只能增加方法,不能增加实例变量,因为在分类中,类的实例变量布局已经固定,所以不能添加实例变量,但是可以利用 runtime 的特性,添加关联属性.</p>
 
-<p>也就是说<mark>AutoreleasePool创建是在一个RunLoop事件开始之前(push)，AutoreleasePool释放是在一个RunLoop事件即将结束之前(pop)。</mark><br/>
-AutoreleasePool里的Autorelease对象的加入是在RunLoop事件中，AutoreleasePool里的Autorelease对象的释放是在AutoreleasePool释放时。</p>
+<pre class="line-numbers"><code class="language-text">Category
+Category 是表示一个指向分类的结构体的指针，其定义如下：
+typedef struct objc_category *Category;
+struct objc_category {
+  char *category_name                          OBJC2_UNAVAILABLE; // 分类名
+  char *class_name                             OBJC2_UNAVAILABLE; // 分类所属的类名
+  struct objc_method_list *instance_methods    OBJC2_UNAVAILABLE; // 实例方法列表
+  struct objc_method_list *class_methods       OBJC2_UNAVAILABLE; // 类方法列表
+  struct objc_protocol_list *protocols         OBJC2_UNAVAILABLE; // 分类所实现的协议列表
+}
+</code></pre>
 
-<h2 id="toc_0">Autorelease对象什么时候释放？</h2>
-
-<p>在没有手动添加 AutoreleasePool的情况下,<br/>
-**Autorelease对象是在当前的 RunLoop 迭代结束的时候释放的 **<br/>
-原因:<br/>
-    系统在每个 RunLoop 迭代中都加入了自动释放池的 Push 和 Pop</p>
-
-<h2 id="toc_1">AutoreleasePool原理</h2>
-
-<p><img src="media/15795063924352/15795107102374.jpg" alt="" style="width:702px;"/></p>
-
-<p><img src="media/15795063924352/15795070852300.jpg" alt="" style="width:536px;"/></p>
+<p>从上面可以看出,这个结构体主要包含了分类定义的实例方法与类方法,但是这里面并没有属性列表,也就没办法直接添加属性(实例变量)<br/>
+<strong>要点</strong>:</p>
 
 <ul>
-<li>AutoreleasePool并没有单独的结构,而是由若干个 AutoreleasePoolPage 以双向链表的形式结合而成(分别对应图中的 parent 和 child 指针)</li>
-<li>AutoreleasePool是按线程一一对应的(结构中的 thread 指向当前线程)</li>
-<li>AutoreleasePoolPage 每个对象会开辟 4096 个字节内存(一页虚拟内存的大小)除了上面的实例变量所占的空间,剩下的空间都用来存储 Autorelease对象</li>
-<li>上面的 id *next 指针作为游标指向栈顶最新 add 进来的 Autorelease对象的下一个位置</li>
-<li>一个 AutoreleasePoolPage 的空间被沾满时,会创建一个新的 AutoreleasePoolPage 对象,连接链表,后来的 Autorelease对象在新的 page 加入</li>
+<li>分类是用于给原有类添加方法的,因为在分类的结构体中只有方法列表,没有属性列表.</li>
+<li>分类中可以写@property,但是不会生成 getter/setter 方法,也不会生成实例变量.编译器会有警告,但是不会报错</li>
+<li>可以在分类中访问原有类的.h 中的属性</li>
+<li><strong>如果分类中有和原有类同名的方法,会优先调用分类中的方法,也就是会忽略原有类的方法,同名方法优先级&quot;分类&gt;类&gt;父类&quot;,所以分类中不要和类中原有方法同名</strong></li>
+<li>如果多个分类中都有和元类同名的方法,那么调用该方法的时候,由编译器决定,编译器会执行最后一个参与编译的分类中的方法.</li>
 </ul>
 
-<p>所以若当前线程中只有一个 AutoreleasePoolPage 对象,并记录了很多 Autorelease对象地址时,内存:<br/>
-<img src="media/15795063924352/15795075970216.jpg" alt="" style="width:520px;"/><br/>
-图中的情况，这一页再加入一个autorelease对象就要满了（也就是next指针马上指向栈顶），这时就要执行上面说的操作，建立下一页page对象，与这一页链表连接完成后，新page的next指针被初始化在栈底（begin的位置），然后继续向栈顶添加新对象。</p>
+<p><strong>拓展</strong><br/>
+<strong>主类,子类,分类中+load方法的执行顺序</strong></p>
 
-<p><mark><strong>向一个对象发送- autorelease消息，就是将这个对象加入到当前AutoreleasePoolPage的栈顶next指针指向的位置</strong></mark><br/>
-这一步只是把 Autorelease对象加入到了自动释放池,还并没有释放</p>
+<ul>
+<li>+load 方法是在 mian 函数执行之前执行的,并不会主动调用</li>
+<li>主类,分类,子类都会调用+load 方法</li>
+<li>调用顺序:主类的+load方法会先调用,然后调用子类的+load,最后调用分类的+load.</li>
+<li>所有分类的+load方法都会调用,调用顺序取决于它的编译顺序.</li>
+</ul>
 
-<h3 id="toc_2">真正释放时刻</h3>
+<p><strong>+ Initialize方法的调用顺序</strong></p>
 
-<p>每当进行一次<mark><strong>objc_autoreleasePoolPush</strong></mark>调用时，runtime向当前的AutoreleasePoolPage中add进一个哨兵对象，值为0（也就是个nil），那么这一个page就变成了下面的样子：<br/>
-<img src="media/15795063924352/15795082558655.jpg" alt="" style="width:754px;"/><br/>
-<mark>objc_autoreleasePoolPush</mark>的返回值正是这个哨兵对象的地址，被<mark>objc_autoreleasePoolPop</mark>(哨兵对象)作为入参，于是：</p>
-
-<ol>
-<li> 根据传入的哨兵对象地址找到哨兵对象所处的page</li>
-<li>在当前page中，将晚于哨兵对象插入的所有autorelease对象都发送一次- release消息，并向回移动next指针到正确位置</li>
-<li>补充2：从最新加入的对象一直向前清理，可以向前跨越若干个page，直到哨兵所在的page<br/>
-刚才的objc_autoreleasePoolPop执行后，
-<img src="media/15795063924352/15795086281414.jpg" alt="" style="width:758px;"/>
-最终变成了下面的样子:
-<img src="media/15795063924352/15795084636880.jpg" alt="" style="width:725px;"/></li>
-</ol>
-
-<p><strong>嵌套的AutoreleasePool</strong><br/>
-知道了上面的原理，嵌套的AutoreleasePool就非常简单了，pop的时候总会释放到上次push的位置为止，多层的pool就是多个哨兵对象而已，就像剥洋葱一样，每次一层，互不影响。 </p>
-
-<p><img src="media/15795063924352/15795095043776.jpg" alt="" style="width:767px;"/></p>
-
-<p><img src="media/15795063924352/15795109308256.jpg" alt="" style="width:700px;"/></p>
-
-<p>注意点:<br/>
-NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添加到该pool里面的所有OC对象都执行一遍release（retainCount-=1），如果恰好此时retainCount&lt;=0 ，那么系统会自动调用<mark>dealloc</mark>方法废弃对象。</p>
+<ul>
+<li>+ Initialize只有当真正用到的时候,并且重写了+ Initialize方法才会调用</li>
+<li>当调用子类的+ Initialize方法的时候,如果父类重写了+ Initialize方法,会先调用父类的+ Initialize,然后调用子类的+ Initialize方法,如果此时父类的分类也重写了+ Initialize方法,那么父类的+ Initialize方法就会被覆盖掉</li>
+</ul>
 
 <p>参考:<br/>
-<a href="https://www.jianshu.com/p/61d8131c6bf3">https://www.jianshu.com/p/61d8131c6bf3</a><br/>
-<a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/">https://blog.sunnyxx.com/2014/10/15/behind-autorelease/</a><br/>
-<a href="https://juejin.im/post/5d7765756fb9a06af82503b6">https://juejin.im/post/5d7765756fb9a06af82503b6</a></p>
+<a href="https://juejin.im/post/5b6a63f4e51d4534b93f770f">https://juejin.im/post/5b6a63f4e51d4534b93f770f</a></p>
 
 
     
@@ -198,16 +173,13 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
         <div class="large-6 columns">
         <p class="text-left" style="padding:15px 0px;">
       
-          <a href="15815876783958.html" 
-          title="Previous Post: iOS 中的锁">&laquo; iOS 中的锁</a>
-      
         </p>
         </div>
         <div class="large-6 columns">
       <p class="text-right" style="padding:15px 0px;">
       
-          <a  href="15791552193020.html" 
-          title="Next Post: RunLoop 详解">RunLoop 详解 &raquo;</a>
+          <a  href="15820364056941.html" 
+          title="Next Post: 关联对象 AssociatedObject 完全解析">关联对象 AssociatedObject 完全解析 &raquo;</a>
       
       </p>
         </div>
@@ -360,6 +332,8 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
+
+<script src="asset/prism.js"></script>
 
 
 <style type="text/css">

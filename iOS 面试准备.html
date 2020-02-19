@@ -277,7 +277,7 @@ static id storeWeak(id *location, objc_object *newObj)
 <p>以上就是 storeWeak 函数的实现,他做了几件事:</p>
 
 <ul>
-<li>生命了新旧散列表指针,因为 weak 修饰的变量如果之前已经指向一个对象,然后其再次改变指向另一个对象,那么按理来说我们需要从 oldTable 删除 weak 变量的记录,也就是要释放该 weak 变量,然后再给 newTable 添加新记录(weak变量),这里的新旧散列表就是这个作用</li>
+<li>声明了新旧散列表指针,因为 weak 修饰的变量如果之前已经指向一个对象,然后其再次改变指向另一个对象,那么按理来说我们需要从 oldTable 删除 weak 变量的记录,也就是要释放该 weak 变量,然后再给 newTable 添加新记录(weak变量),这里的新旧散列表就是这个作用</li>
 <li>根据新旧变量地址获取响应的 SideTable</li>
 <li>对两个表进行加锁操作,防止多线程竞争冲突</li>
 <li>进行线程冲突重处理判断</li>
@@ -1793,6 +1793,18 @@ OC 的对象是基于 C 的结构体实现的<br/>
 	      
 		      
 			      <li class="post">
+			        <a href="15820370480952.html">类 子类 分类 区别与联系</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15820364056941.html">关联对象 AssociatedObject 完全解析</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15820198947096.html">weak 的释放及原理</a>
 			      </li>
 		     
@@ -1810,16 +1822,8 @@ OC 的对象是基于 C 的结构体实现的<br/>
 		     
 		  
 		      
-			      <li class="post">
-			        <a href="15791552193020.html">RunLoop 详解</a>
-			      </li>
-		     
 		  
 		      
-			      <li class="post">
-			        <a href="15788827057157.html">Runtime</a>
-			      </li>
-		     
 		  
 		      
 		  
