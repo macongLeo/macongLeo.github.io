@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  weak 的释放及原理 - 小马同学的碎碎念
+  iOS 面试准备 - 小马同学的碎碎念
   
   </title>
   
@@ -91,36 +91,23 @@
        
 
  <script type="text/javascript">
-  $(function(){
-    $('#menu_item_index').addClass('is_active');
-  });
+	$(function(){
+		$('#menu_item_index').addClass('is_active');
+	});
 </script>
 <div class="row">
-  <div class="large-8 medium-8 columns">
-      <div class="markdown-body article-wrap">
-       <div class="article">
-          
-          <h1>weak 的释放及原理</h1>
-     
-        <div class="read-more clearfix">
-          <span class="date">2020/02/18</span>
-
-          <span>posted in&nbsp;</span> 
-          
-              <span class="posted-in"><a href='iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html'>iOS 面试准备</a></span>
-           
-         
-          <span class="comments">
-            
-
-            
-          </span>
-
-        </div>
-      </div><!-- article -->
-
-      <div class="article-content">
-      <p>1.被weak修饰的对象在被释放的时候会发生什么？是如何实现的？知道sideTable么？里面的结构可以画出来么<br/>
+	<div class="large-8 medium-8 columns">
+		<div class="markdown-body home-categories">
+		
+			<div class="article">
+                <a class="clearlink" href="15820198947096.html">
+                
+                  <h1>weak 的释放及原理</h1>
+                  <div class="a-content">
+                      
+                      <div class="a-content-text">
+                        
+                        	<p>1.被weak修饰的对象在被释放的时候会发生什么？是如何实现的？知道sideTable么？里面的结构可以画出来么<br/>
 在回答问题之前,我们先来了解一下 weak 的内部结构:</p>
 
 <blockquote>
@@ -466,43 +453,48 @@ struct weak_entry_t {
 <a href="https://www.jianshu.com/p/8577286af88e">https://www.jianshu.com/p/8577286af88e</a><br/>
 <a href="https://juejin.im/entry/58a178060ce463005644ee4a">https://juejin.im/entry/58a178060ce463005644ee4a</a></p>
 
+                        
+                      </div>
+                  </div>
+                </a>
+                <div class="read-more clearfix">
+                  <div class="more-left left">
+                  
+                    <span class="date">2020/02/18</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html'>iOS 面试准备</a></span>
+          				   
+                    
 
-    
+                  </div>
+                  <div class="more-right right">
+                  <span class="comments">
+                      
 
-      </div>
-
-      <div class="row">
-        <div class="large-6 columns">
-        <p class="text-left" style="padding:15px 0px;">
-      
-          <a href="15820364056941.html" 
-          title="Previous Post: 关联对象 AssociatedObject 完全解析">&laquo; 关联对象 AssociatedObject 完全解析</a>
-      
-        </p>
-        </div>
-        <div class="large-6 columns">
-      <p class="text-right" style="padding:15px 0px;">
-      
-          <a  href="15815876783958.html" 
-          title="Next Post: iOS 中的锁">iOS 中的锁 &raquo;</a>
-      
-      </p>
-        </div>
-      </div>
-      <div class="comments-wrap">
-        <div class="share-comments">
-          
-
-          
-
-          
-        </div>
-      </div>
-    </div><!-- article-wrap -->
-  </div><!-- large 8 -->
+                       
+                  </span>
+                  </div>
+                </div>
+              </div><!-- article -->
+        
+              
 
 
-
+			<div class="row">
+			  <div class="large-6 columns">
+			  <p class="text-left" style="padding-top:25px;">
+			   <a href="iOS 面试准备_1.html">&laquo; Prev Page</a>  
+			  </p>
+			  </div>
+			  <div class="large-6 columns">
+			<p class="text-right" style="padding-top:25px;">
+			 <a href="iOS 面试准备_3.html">&raquo; Next Page</a> 
+			</p>
+			  </div>
+			</div>
+		</div>
+	</div><!-- large 8 -->
 
  <div class="large-4 medium-4 columns">
   <div class="hide-for-small">
@@ -641,8 +633,6 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
-
-<script src="asset/prism.js"></script>
 
 
 <style type="text/css">
