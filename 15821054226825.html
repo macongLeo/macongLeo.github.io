@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  iOS 中的锁 - 小马同学的碎碎念
+  牛逼的GCD - 小马同学的碎碎念
   
   </title>
   
@@ -100,10 +100,10 @@
       <div class="markdown-body article-wrap">
        <div class="article">
           
-          <h1>iOS 中的锁</h1>
+          <h1>牛逼的GCD</h1>
      
         <div class="read-more clearfix">
-          <span class="date">2020/02/13</span>
+          <span class="date">2020/02/19</span>
 
           <span>posted in&nbsp;</span> 
           
@@ -120,108 +120,47 @@
       </div><!-- article -->
 
       <div class="article-content">
-      <ul>
-<li>自旋锁(OSSpinLock)</li>
-<li>互斥锁</li>
-<li>pthread_mutex</li>
-<li>信号量(dispatch_semaphore)</li>
-<li>NSLock</li>
-<li>递归锁(NSRecursiveLock)</li>
-<li>条件锁(NSConditionLock)</li>
-<li>@synchronized</li>
-</ul>
-
-<p><strong>自旋锁(OSSpinLock)</strong></p>
+      <p><strong>DispatchQueue</strong><br/>
+苹果官方对 GCD 的说明:</p>
 
 <blockquote>
-<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
+<p>开发者要做的只是定义想执行的任务并追加到合适的 Dispatch Queue 中</p>
 </blockquote>
 
-<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
-自旋锁的问题:<br/>
-    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
-    2. 递归调用有可能引起死锁<br/>
-    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
+<p>GCD 中包含两种队列:<br/>
+串行队列 DISPATCH_QUEUE_SERIAL<br/>
+<img src="media/15821054226825/15821156796654.jpg" alt="" style="width:566px;"/><br/>
+串行队列会阻塞当前线程的执行,等任务完成,才会进行下一个任务<br/>
+<img src="media/15821054226825/15821157466982.jpg" alt="" style="width:397px;"/></p>
 
-<p><strong>互斥锁</strong><br/>
-互斥锁属于 sleep-waiting 类型的锁.</p>
+<p><img src="media/15821054226825/15821157625913.jpg" alt="" style="width:557px;"/></p>
 
-<blockquote>
-<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
-</blockquote>
+<p>例如:<br/>
+<img src="media/15821054226825/15821164356253.jpg" alt="" style="width:629px;"/><br/>
+queue 为串行的时候,因为要等待现在执行的处理结束,所以表现就是依次执行,顺序处理.<br/>
+当 queue 为DISPATCH_QUEUE_CONCURRENT时,因为不需要等待当前执行的处理结束,先执行第一个,不管第一个是否执行完毕,都开始往下执行,并且顺序不是固定的<br/>
+<img src="media/15821054226825/15821166554297.jpg" alt="" style="width:662px;"/><br/>
+<img src="media/15821054226825/15821166798014.jpg" alt="" style="width:563px;"/></p>
 
-<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
-自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
+<p><strong>队列的创建</strong></p>
 
-<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
-互斥锁适用:</p>
+<ol>
+<li>通过dispatch_queue_create函数创建</li>
+<li>直接过去系统创建好的 MainQueue / GlobalQueue</li>
+</ol>
 
-<ul>
-<li>临界区有 IO 操作</li>
-<li>临界区代码复制或者循环量大</li>
-<li>临界区竞争非常激烈</li>
-<li>单核处理器</li>
-</ul>
+<p><strong>dispatch_after</strong><br/>
+dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定时间后追加处理到 dispatch queue</strong><br/>
+<img src="media/15821054226825/15821176029539.jpg" alt="" style="width:610px;"/></p>
 
-<p>自旋锁适用:<br/>
-临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
+<p><strong>dispatch_group</strong><br/>
+有时候需要在某几个任务结束之后,再进行新的任务,例如:<br/>
+<img src="media/15821054226825/15821182215704.jpg" alt="" style="width:553px;"/><br/>
+<img src="media/15821054226825/15821183629319.jpg" alt="" style="width:633px;"/><br/>
+<img src="media/15821054226825/15821184229942.jpg" alt="" style="width:622px;"/><br/>
+<img src="media/15821054226825/15821184582389.jpg" alt="" style="width:547px;"/></p>
 
-<blockquote>
-<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
-优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
-</blockquote>
-
-<p><strong>os_unfair_lock</strong></p>
-
-<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
-
-<p><strong>pthread_mutex</strong><br/>
-mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
-
-<p><strong>NSLock</strong><br/>
-NSLock是对 mutex 的普通锁的封装<br/>
-NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
-trylock 是尝试加锁,如果失败的话就返回 NO</p>
-
-<p><strong>信号量</strong><br/>
-    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
-    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
-
-<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
-dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
-dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
-用法:
-信号量常用于对资源进行加锁操作
-</code></pre>
-
-<pre class="line-numbers"><code class="language-text">//在init等函数初始化
-_lock = dispatch_semaphore_create(1); 
-dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
-//修改Array或字典等数据的信息
-dispatch_semaphore_signal(_lock);
-</code></pre>
-
-<p><strong>@synchronized</strong><br/>
-@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
-
-<pre class="line-numbers"><code class="language-text">// 写数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
-    }
-});
-// 读数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        id obj = [dict objectForKey:@&quot;trail&quot;];
-    }
-});
-</code></pre>
-
-<p>参考:<br/>
-<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
-<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
-<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
+<p><strong>dispatch_barrier_async(栅栏函数)</strong></p>
 
 
     
@@ -232,16 +171,16 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         <div class="large-6 columns">
         <p class="text-left" style="padding:15px 0px;">
       
-          <a href="15820198947096.html" 
-          title="Previous Post: weak 的释放及原理">&laquo; weak 的释放及原理</a>
+          <a href="15823522930291.html" 
+          title="Previous Post: 准备">&laquo; 准备</a>
       
         </p>
         </div>
         <div class="large-6 columns">
       <p class="text-right" style="padding:15px 0px;">
       
-          <a  href="15795063924352.html" 
-          title="Next Post: AutoReleasePool 自动释放池">AutoReleasePool 自动释放池 &raquo;</a>
+          <a  href="15820370480952.html" 
+          title="Next Post: 类 子类 分类 区别与联系">类 子类 分类 区别与联系 &raquo;</a>
       
       </p>
         </div>
@@ -400,8 +339,6 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
-
-<script src="asset/prism.js"></script>
 
 
 <style type="text/css">
