@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  iOS 知识集 - 小马同学的碎碎念
+  多线程 - 小马同学的碎碎念
   
   </title>
   
@@ -78,6 +78,10 @@
             <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
         
             <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
+        
+            <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
+        
+            <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
          
 
       </ul>
@@ -100,91 +104,54 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780200209710.html">
+                <a class="clearlink" href="15821054226825.html">
                 
-                  <h1>iOS 响应者链及事件传递</h1>
+                  <h1>牛逼的GCD</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">UIResponder</h2>
-
-<p>在 iOS中，所有响应事件处理事件的对象都直接或间接的继承UIResponder。</p>
-
-<p><img src="media/15780200209710/2526037-c8d367c7064cf59c.jpg" alt="2526037-c8d367c7064cf59"/></p>
-
-<p>在 iOS 视图结构中，呈现出来的是一个 N 叉树的树形结构，每个视图都只有一个父视图，可以有多个子视图。<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpldkdtyj30he0go46i.jpg" alt=""/></p>
-
-<h2 id="toc_1">寻找第一响应者</h2>
-
-<p>当用户点击某个视图或者按钮的时候，会首先响应 applocation 中的 UIWindow 一层一层的向下查找，直到找到点击的 view，这阶段用到的两个方法：</p>
-
-<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;   // recursively calls -pointInside:withEvent:. point is in the receiver&#39;s coordinate system
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;   // default returns YES if point is in bounds
-</code></pre>
-
-<p>例如有这样一个图层结构：<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpsaqbekj30e80jamy9.jpg" alt=""/></p>
-
-<p>在上图中用户点击视图中的ViewD时，UIWindow首先接收到响应，此响应包括用户点击的区域和一个封装好的UIEvent对象，然后UIWindow通过这些信息利用以下方法查找：</p>
-
-<ol>
-<li><p>UIWindow会通过调用pointInside:withEvent:方法返回的YES得知用户点击的范围在ViewA中；</p></li>
-<li><p>ViewA调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewB、ViewC)调用hitTest:withEvent:方法；</p></li>
-<li><p>在遍历中发现使用ViewC调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewC范围之内；</p></li>
-<li><p>ViewC调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewD、ViewE)调用hitTest:withEvent:方法;</p></li>
-<li><p>在遍历中发现使用ViewD调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewD范围之内;</p></li>
-<li><p>在ViewD调用hitTest:withEvent:方法之前发现View的subViews的count为0，故确定用户点击在ViewD之上。</p></li>
-</ol>
-
-<p>UIWindow会用遍历subviews，使用每一个subview调用hitTest:withEvent:方法，如果用户点击在某一个subview上，pointInside:withEvent:方法返回YES，再用这个subview调用hitTest:withEvent:方法，依次类推，直到当前view没有子view或点击的位置没有在其任何子view之上，便确定用户点击在某view上</p>
-
-<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
-    for (UIView *view in self.subviews) {
-        if([view pointInside:point withEvent:event]){
-            UIView *hitTestView = [view hitTest:point withEvent:event];
-            if(nil == hitTestView){
-                return view;
-            }
-        }
-    }
-    return nil;
-}
-</code></pre>
+                        	<p><strong>DispatchQueue</strong><br/>
+苹果官方对 GCD 的说明:</p>
 
 <blockquote>
-<p>1.Alpha=0、子视图超出父视图的情况、userInteractionEnabled=NO、hidden=YES视图会被忽略，不会调用hitTest<br/>
-2.父视图被忽略后其所有子视图也会被忽略<br/>
-3.出现视图无法响应的情况，可以考虑上诉情况来排查问题</p>
+<p>开发者要做的只是定义想执行的任务并追加到合适的 Dispatch Queue 中</p>
 </blockquote>
 
-<h2 id="toc_2">事件传递</h2>
+<p>GCD 中包含两种队列:<br/>
+串行队列 DISPATCH_QUEUE_SERIAL<br/>
+<img src="media/15821054226825/15821156796654.jpg" alt="" style="width:566px;"/><br/>
+串行队列会阻塞当前线程的执行,等任务完成,才会进行下一个任务<br/>
+<img src="media/15821054226825/15821157466982.jpg" alt="" style="width:397px;"/></p>
 
-<p>事件传递的顺序其实就是寻找第一响应者的逆序，当找到了第一响应（View，button）之后，响应者就要对事件作出响应，这里就是使用了 UIResponder 的 nextResponder 方法。</p>
+<p><img src="media/15821054226825/15821157625913.jpg" alt="" style="width:557px;"/></p>
 
-<h3 id="toc_3">nextResponder 的规则</h3>
+<p>例如:<br/>
+<img src="media/15821054226825/15821164356253.jpg" alt="" style="width:629px;"/><br/>
+queue 为串行的时候,因为要等待现在执行的处理结束,所以表现就是依次执行,顺序处理.<br/>
+当 queue 为DISPATCH_QUEUE_CONCURRENT时,因为不需要等待当前执行的处理结束,先执行第一个,不管第一个是否执行完毕,都开始往下执行,并且顺序不是固定的<br/>
+<img src="media/15821054226825/15821166554297.jpg" alt="" style="width:662px;"/><br/>
+<img src="media/15821054226825/15821166798014.jpg" alt="" style="width:563px;"/></p>
 
-<p>因为UIView和UIViewController都是继承于UIResponder，所以在调用nextResponder时有几条规则如下：</p>
+<p><strong>队列的创建</strong></p>
 
 <ol>
-<li><p>当一个view调用其nextResponder会返回其superView;</p></li>
-<li><p>如果当前的view为UIViewController的view被添加到其他view上，那么调用nextResponder会返回当前的UIViewController，而这个UIViewController的nextResponder为view的superView；</p></li>
-<li><p>如果当前的UIViewController的view没有添加到任何其他view上，当前的UIViewController的nextResponder为nil，不管它是keyWinodw或UINavigationController的rootViewController，都是如此；</p></li>
-<li><p>如果当前application的keyWindow的rootViewController为UINavigationController(或UITabViewController)，那么通过调用UINavigationController(或UITabViewController)的nextResponder得到keyWinodw；</p></li>
-<li><p>keyWinodw的nextResponder为UIApplication，UIApplication的nextResponder为AppDelegate，AppDelegate的nextResponder为nil。</p></li>
+<li>通过dispatch_queue_create函数创建</li>
+<li>直接过去系统创建好的 MainQueue / GlobalQueue</li>
 </ol>
 
-<p>通过知道了上述规则，便可以通过用户点击的ViewD，查看ViewD是否响应了点击事件，如果没有找它的nextResponder，如果没有再继续找，直到找到AppDelegate再没有响应，则此点击事件被系统丢弃，大致流程如下：<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lu7zsmnqj30fa0f8adu.jpg" alt=""/><br/>
-事件响应链的大致流程就是如此了，大概就是一个先向下找，再向上找的过程！</p>
+<p><strong>dispatch_after</strong><br/>
+dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定时间后追加处理到 dispatch queue</strong><br/>
+<img src="media/15821054226825/15821176029539.jpg" alt="" style="width:610px;"/></p>
 
-<h2 id="toc_4">无法响应的情况</h2>
+<p><strong>dispatch_group</strong><br/>
+有时候需要在某几个任务结束之后,再进行新的任务,例如:<br/>
+<img src="media/15821054226825/15821182215704.jpg" alt="" style="width:553px;"/><br/>
+<img src="media/15821054226825/15821183629319.jpg" alt="" style="width:633px;"/><br/>
+<img src="media/15821054226825/15821184229942.jpg" alt="" style="width:622px;"/><br/>
+<img src="media/15821054226825/15821184582389.jpg" alt="" style="width:547px;"/></p>
 
-<p>参考：<br/>
-<a href="">https://www.cnblogs.com/easy-coding/p/3604856.html</a></p>
-
-<p><a href="">https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/using_responders_and_the_responder_chain_to_handle_events?language=objc</a></p>
+<p><strong>dispatch_barrier_async(栅栏函数)</strong></p>
 
                         
                       </div>
@@ -193,10 +160,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
+                    <span class="date">2020/02/19</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+          					    <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
           				   
                     
 
@@ -217,7 +184,7 @@
 			<div class="row">
 			  <div class="large-6 columns">
 			  <p class="text-left" style="padding-top:25px;">
-			   <a href="iOS 知识集_11.html">&laquo; Prev Page</a>  
+			   
 			  </p>
 			  </div>
 			  <div class="large-6 columns">
@@ -268,6 +235,10 @@
             <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
         
             <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
+        
+            <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
+        
+            <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
          
         </p>
 

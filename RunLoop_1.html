@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  iOS 知识集 - 小马同学的碎碎念
+  RunLoop - 小马同学的碎碎念
   
   </title>
   
@@ -78,6 +78,10 @@
             <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
         
             <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
+        
+            <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
+        
+            <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
          
 
       </ul>
@@ -100,115 +104,144 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15815876783958.html">
+                <a class="clearlink" href="15791552193020.html">
                 
-                  <h1>iOS 中的锁</h1>
+                  <h1>RunLoop 详解</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
                         	<ul>
-<li>自旋锁(OSSpinLock)</li>
-<li>互斥锁</li>
-<li>pthread_mutex</li>
-<li>信号量(dispatch_semaphore)</li>
-<li>NSLock</li>
-<li>递归锁(NSRecursiveLock)</li>
-<li>条件锁(NSConditionLock)</li>
-<li>@synchronized</li>
+<li>RunLoop 概念</li>
+<li>RunLoop与线程的关系<br/>
+## RunLoop 概念<br/>
+一般来讲一个线程一次只能执行一个任务,执行完成后线程就会推出了,很明显,现在的 APP 都是不可能这种模式的,否则 APP 打开之后就死掉了,也就没有任何作用了.<br/>
+现在的这种模式其实是一种循环模式,保持一个线程始终存在,然后再处理各种操作(功能)等.<br/>
+现在 APP 的实现机制其实是需要线程能随时处理事件,但是并不退出,通常的代码逻辑是这样的:(伪代码)
+<img src="media/15791552193020/15794166325797.jpg" alt="" style="width:772px;"/>
+从代码可以看出是一种循环机制.<br/>
+这种模式通常被称为 EventLoop.iOS/OSX里的 runloop 就是这种模式.<br/>
+这种模式的关键点:
+<ul>
+<li>如何管理事件/消息</li>
+<li>如何让线程在没有消息处理的时候休眠,避免占用资源</li>
+<li>在有消息需要处理的时候立刻被唤醒(否则就是卡顿了)</li>
+</ul></li>
 </ul>
 
-<p><strong>自旋锁(OSSpinLock)</strong></p>
-
-<blockquote>
-<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
-</blockquote>
-
-<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
-自旋锁的问题:<br/>
-    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
-    2. 递归调用有可能引起死锁<br/>
-    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
-
-<p><strong>互斥锁</strong><br/>
-互斥锁属于 sleep-waiting 类型的锁.</p>
-
-<blockquote>
-<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
-</blockquote>
-
-<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
-自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
-
-<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
-互斥锁适用:</p>
+<p>所以 runloop 实际上就是一个对象,这个对象管理了需要其处理的事件和消息.并且提供了一个入口函数来执行上面的 EventLoop 逻辑.<br/>
+线程执行了这个函数之后,就会一直处于这个函数内部&quot;接受消息-&gt;等待-&gt;处理&quot;的循环中,知道这个循环结束,函数返回.<br/>
+OSX/iOS 中提供了两个这样对象:<strong>NSRunLoop,CFRunLoopRef</strong> .</p>
 
 <ul>
-<li>临界区有 IO 操作</li>
-<li>临界区代码复制或者循环量大</li>
-<li>临界区竞争非常激烈</li>
-<li>单核处理器</li>
+<li>CFRunLoopRef 是在 CoreFoundation 框架内的,提供的纯 C 函数的 API,所有这些 API 都是线程安全的.</li>
+<li>NSRunLoop 是基于 CFRunLoopRef 的封装,提供了面向对象的 API,但是这些 API 不是线程安全的</li>
 </ul>
 
-<p>自旋锁适用:<br/>
-临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
+<h2 id="toc_0">RunLoop 与线程的关系</h2>
 
-<blockquote>
-<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
-优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
-</blockquote>
+<p>先给结论:<br/>
+   1. RunLoop 和线程是一一对应的.<br/>
+   2. RunLoop 和线程的对应关系保存在一个全局的字典里<br/>
+   3. 线程刚创建的时候是没有 RunLoop 的,如果不主动获取就一直不会有!<br/>
+   4. RunLoop 的创建是发生在第一次获取时.<br/>
+   5. RunLoop 的销毁是发生在线程结束时<br/>
+   6. 你只能在一个线程内部获取其 RunLoop(主线程除外)<br/>
+   7. 苹果并不允许主动创建 RunLoop,只提供了两个获取的函数:CFRunLoopGetMain(),CFRunLoopGetCurrent().<br/>
+<img src="media/15791552193020/15794176750269.jpg" alt="" style="width:916px;"/></p>
 
-<p><strong>os_unfair_lock</strong></p>
+<p>在 CoreFoundation 中关于 RunLoop 有 5 个类:</p>
 
-<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
+<ul>
+<li>CFRunLoopRef</li>
+<li>CFRunLoopModeRef</li>
+<li>CFRunLoopSourceRef</li>
+<li>CFRunLoopTimerRef</li>
+<li>CFRunLoopObserverRef<br/>
+其中的 CFRunLoopModeRef 并没有对外暴露,只是通过 CFRunLoopRef 的接口对外进行了封装
+<img src="media/15791552193020/15794179265453.jpg" alt="" style="width:724px;"/>
+一个 RunLoop 包含若干个 Mode，每个 Mode 又包含若干个 Source/Timer/Observer。每次调用 RunLoop 的主函数时，只能指定其中一个 Mode，这个Mode被称作 CurrentMode。
+<strong>如果需要切换 Mode，只能退出 Loop，再重新指定一个 Mode 进入。这样做主要是为了分隔开不同组的 Source/Timer/Observer，让其互不影响。</strong></li>
+</ul>
 
-<p><strong>pthread_mutex</strong><br/>
-mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
+<p><strong>CFRunLoopSourceRef</strong> 是事件产生的地方。Source有两个版本：Source0 和 Source1。</p>
 
-<p><strong>NSLock</strong><br/>
-NSLock是对 mutex 的普通锁的封装<br/>
-NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
-trylock 是尝试加锁,如果失败的话就返回 NO</p>
+<ol>
+<li>Source0 只包含了一个回调(函数指针)</li>
+<li><p>Source1 包含了一个回调(函数指针)和一个 mach_port</p>
+<p>Source0 并不能主动触发事件,使用的时候需要先调用CFRunLoopSourceSignal(source)，将这个 Source 标记为待处理,然后手动调用CFRunLoopWakeUp(runloop) 来唤醒 RunLoop，让其处理这个事件。<br/>
+Source1 能主动唤醒 RunLoop 的线程.通常用于内核和其他线程相互发送消息</p></li>
+</ol>
 
-<p><strong>信号量</strong><br/>
-    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
-    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
+<p><strong>CFRunLoopTimerRef</strong> 是基于时间的触发器,它和 NSTimer 是toll-free bridged <sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup> 的,可以混用.其包含一个时间长度和一个回调(函数指针).当其加入 RunLoop 中时,RunLoop 会注册对应的时间点,当时间点到了,RunLoop 会被唤醒以执行那个回调.</p>
 
-<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
-dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
-dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
-用法:
-信号量常用于对资源进行加锁操作
-</code></pre>
+<p><strong>CFRunLoopObserverRef</strong> 是观察者,每个 Observer 都包含了一个回调(函数指针),当 RunLoop 的状态发生变化时,观察者就能通过回调接受到这个变化.可以观察的时间点:<br/>
+<img src="media/15791552193020/15794192089256.jpg" alt="" style="width:995px;"/></p>
 
-<pre class="line-numbers"><code class="language-text">//在init等函数初始化
-_lock = dispatch_semaphore_create(1); 
-dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
-//修改Array或字典等数据的信息
-dispatch_semaphore_signal(_lock);
-</code></pre>
+<p>上面的 Source/Timer/Observer 被统称为 mode item，一个 item 可以被同时加入多个 mode。但一个 item 被重复加入同一个 mode 时是不会有效果的。如果一个 mode 中一个 item 都没有，则 RunLoop 会直接退出，不进入循环。</p>
 
-<p><strong>@synchronized</strong><br/>
-@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
+<h2 id="toc_1">RunLoop 的 Mode</h2>
 
-<pre class="line-numbers"><code class="language-text">// 写数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
-    }
-});
-// 读数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        id obj = [dict objectForKey:@&quot;trail&quot;];
-    }
-});
-</code></pre>
+<p>CFRunLoopMode 和 CFRunLoop 的结构大致如下：<br/>
+<img src="media/15791552193020/15794203021817.jpg" alt="" style="width:1225px;"/><br/>
+这里有一个概念叫&quot;CommonModes&quot;:<br/>
+    一个 Mode 可以将自己标记为&quot;common&quot;属性(通过将其 ModeName 添加到 RunLoop 的&quot;commonModes&quot;中),每当 Runloop 的内容发生变化时,RunLoop 会自动将_commonModeItems 里的 Source/Obsever/Timer 同步到具有 Common 标记的所有 Mode 里<br/><br/>
+<img src="media/15791552193020/15794205749856.jpg" alt="" style="width:1527px;"/><br/>
+<img src="media/15791552193020/15794206571347.jpg" alt="" style="width:1537px;"/></p>
+
+<h2 id="toc_2">RunLoop 的内部逻辑</h2>
+
+<p>根据苹果在文档里的说明，RunLoop 内部的逻辑大致如下:<br/>
+<img src="media/15791552193020/15794207296297.jpg" alt="" style="width:1118px;"/></p>
+
+<p>内部代码整理:<br/>
+<img src="media/15791552193020/FireShot%20Capture%20023%20-%20%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3RunLoop%20-%20Garan%20no%20dou%20-%20blog.ibireme.com.png" alt="FireShot Capture 023 - 深入理解RunLoop - Garan no dou - blog.ibireme.co"/><br/>
+可以看到，实际上 RunLoop 就是这样一个函数，其内部是一个 do-while 循环。当你调用 CFRunLoopRun() 时，线程就会一直停留在这个循环里；直到超时或被手动停止，该函数才会返回。</p>
+
+<h2 id="toc_3">苹果用 Runloop 实现的功能</h2>
+
+<ol>
+<li>kCFRunLoopDefaultMode: App的默认 Mode，通常主线程是在这个 Mode 下运行的。</li>
+<li>UITrackingRunLoopMode: 界面跟踪 Mode，用于 ScrollView 追踪触摸滑动，保证界面滑动时不受其他 Mode 影响。</li>
+<li>UIInitializationRunLoopMode: 在刚启动 App 时第进入的第一个 Mode，启动完成后就不再使用。<br/>
+4: GSEventReceiveRunLoopMode: 接受系统事件的内部 Mode，通常用不到。<br/>
+5: kCFRunLoopCommonModes: 这是一个占位的 Mode，没有实际作用。</li>
+</ol>
+
+<h3 id="toc_4">AutoreleasePool</h3>
+
+<p>App 启动之后,苹果在主线程 RunLoop 里注册了两个 Observer,这两个观察者的回调都是_wrapRunLoopWithAutoreleasePoolHandler().</p>
+
+<ul>
+<li>第一个 Observer 监视的事件是 Entry(即将进入 Loop)其回调回调用_objc_autoreleasePoolPush()创建自动释放池,优先级最高,保证创建自动释放池在所有回调之前</li>
+<li>第二个 Observer 监视了两个事件:
+<ol>
+<li>BeforeWaiting(准备进入休眠)时调用_objc_autoreleasePoolPop()和_objc_autoreleasePoolPush()释放旧的池并创建新的自动释放池;</li>
+<li>Exit(退出Loop)时调用_objc_autoreleasePoolPop()释放自动释放池,这个 Observer 的优先级最低,保证释放自动释放池发生在所有回调之后</li>
+</ol></li>
+</ul>
+
+<h3 id="toc_5">事件响应</h3>
+
+<p>苹果注册了一个 Source1 (基于 mach port 的) 用来接收系统事件，其回调函数为 __IOHIDEventSystemClientQueueCallback()。</p>
+
+<p>当一个硬件事件(触摸/锁屏/摇晃等)发生后，首先由 IOKit.framework 生成一个 IOHIDEvent 事件并由 SpringBoard 接收。这个过程的详细情况可以参考这里。SpringBoard 只接收按键(锁屏/静音等)，触摸，加速，接近传感器等几种 Event，随后用 mach port 转发给需要的App进程。随后苹果注册的那个 Source1 就会触发回调，并调用 _UIApplicationHandleEventQueue() 进行应用内部的分发。</p>
+
+<p>_UIApplicationHandleEventQueue() 会把 IOHIDEvent 处理并包装成 UIEvent 进行处理或分发，其中包括识别 UIGesture/处理屏幕旋转/发送给 UIWindow 等。通常事件比如 UIButton 点击、touchesBegin/Move/End/Cancel 事件都是在这个回调中完成的。</p>
 
 <p>参考:<br/>
-<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
-<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
-<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
+<a href="https://blog.ibireme.com/2015/05/18/runloop/">https://blog.ibireme.com/2015/05/18/runloop/</a></p>
+
+<div class="footnotes">
+<hr/>
+<ol>
+
+<li id="fn1">
+<p>Toll-free bridging,简称为TFB，是一种允许某些ObjC类与其对应的CoreFoundation类之间可以互换使用的机制。比如 NSString与CFString是桥接(bridged)的, 这意味着可以将任意NSString当做CFString使用，也可以将任意的CFString当做NSString使用&nbsp;<a href="#fnref1" rev="footnote">&#8617;</a></p>
+</li>
+
+</ol>
+</div>
 
                         
                       </div>
@@ -217,10 +250,10 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/13</span>
+                    <span class="date">2020/01/16</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
           				   
                     
 
@@ -241,12 +274,12 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 			<div class="row">
 			  <div class="large-6 columns">
 			  <p class="text-left" style="padding-top:25px;">
-			   <a href="iOS 知识集_4.html">&laquo; Prev Page</a>  
+			   <a href="RunLoop.html">&laquo; Prev Page</a>  
 			  </p>
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			 <a href="iOS 知识集_6.html">&raquo; Next Page</a> 
+			
 			</p>
 			  </div>
 			</div>
@@ -292,6 +325,10 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
         
             <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
+        
+            <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
+        
+            <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
          
         </p>
 
