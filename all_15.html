@@ -82,6 +82,12 @@
             <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
         
             <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
+        
+            <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a></li>
+        
+            <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a></li>
+        
+            <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
          
 
       </ul>
@@ -104,45 +110,115 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="shu-xing-de-shi-zhi-shu-xing-d.html">
+                <a class="clearlink" href="15815876783958.html">
                 
-                  <h1>属性的实质</h1>
+                  <h1>iOS 中的锁</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<blockquote>
-<p>属性的实质是什么？<br/>
-包括哪几个部分？<br/>
-属性默认的关键字都有哪些？<br/>
-@dynamic关键字和@synthesize关键字是用来做什么的</p>
+                        	<ul>
+<li>自旋锁(OSSpinLock)</li>
+<li>互斥锁</li>
+<li>pthread_mutex</li>
+<li>信号量(dispatch_semaphore)</li>
+<li>NSLock</li>
+<li>递归锁(NSRecursiveLock)</li>
+<li>条件锁(NSConditionLock)</li>
+<li>@synchronized</li>
+</ul>
+
+<p><strong>自旋锁(OSSpinLock)</strong></p>
+
+<blockquote>
+<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
 </blockquote>
 
-<p>实质包含部分:</p>
+<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
+自旋锁的问题:<br/>
+    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
+    2. 递归调用有可能引起死锁<br/>
+    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
 
-<p>@property = ivar + getter + setter;</p>
+<p><strong>互斥锁</strong><br/>
+互斥锁属于 sleep-waiting 类型的锁.</p>
 
-<p>实例变量+get方法+ set方法，也就是说使用@property系统会自动生成setter和getter方法;</p>
+<blockquote>
+<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
+</blockquote>
 
-<p>默认常用关键字:</p>
+<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
+自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
 
-<p>property中我们经常使用的关键字有strong，weak，assign，copy，nonatomic，atomic....等</p>
+<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
+互斥锁适用:</p>
 
-<p>@dynamic这个关键词，通常是用不到的。<br/>
-它与@synthesize的区别在于：<br/>
-使用@synthesize编译器会确实的产生getter和setter方法，而@dynamic仅仅是告诉编译器这两个方法在运行期会有的，无需产生警告。</p>
+<ul>
+<li>临界区有 IO 操作</li>
+<li>临界区代码复制或者循环量大</li>
+<li>临界区竞争非常激烈</li>
+<li>单核处理器</li>
+</ul>
 
-<p>假设有这么个场景，B类，C类分别继承A类，A类实现某个协议（@protocol），协议中某个属性( somePropety )我不想在A中实现，而在B类，C类中分别实现。如果A中不写任何代码，编译器就会给出警告：“use @synthesize, @dynamic or provide a method implementation&quot;这时你给用@dynamic somePropety; <br/>
-编译器就不会警告，同时也不会产生任何默认代码。</p>
+<p>自旋锁适用:<br/>
+临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
 
-<p>@dynamic 就是要来告诉编译器，代码中用@dynamic修饰的属性，其getter和setter方法会在程序运行的时候或者用其他方式动态绑定，以便让编译器通过编译。<br/>
-其主要的作用就是用在NSManageObject对象的属性声明上，由于此类对象的属性一般是从Core Data的属性中生成的，Core Data框架会在程序运行的时候为此类属性生成getter和Setter方法。</p>
+<blockquote>
+<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
+优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
+</blockquote>
 
-<p>参考:</p>
+<p><strong>os_unfair_lock</strong></p>
 
-<p><a href="">https://www.jianshu.com/p/00dbeec23291</a></p>
+<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
 
-<hr/>
+<p><strong>pthread_mutex</strong><br/>
+mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
+
+<p><strong>NSLock</strong><br/>
+NSLock是对 mutex 的普通锁的封装<br/>
+NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
+trylock 是尝试加锁,如果失败的话就返回 NO</p>
+
+<p><strong>信号量</strong><br/>
+    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
+    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
+
+<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
+dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
+dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
+用法:
+信号量常用于对资源进行加锁操作
+</code></pre>
+
+<pre class="line-numbers"><code class="language-text">//在init等函数初始化
+_lock = dispatch_semaphore_create(1); 
+dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
+//修改Array或字典等数据的信息
+dispatch_semaphore_signal(_lock);
+</code></pre>
+
+<p><strong>@synchronized</strong><br/>
+@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
+
+<pre class="line-numbers"><code class="language-text">// 写数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
+    }
+});
+// 读数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        id obj = [dict objectForKey:@&quot;trail&quot;];
+    }
+});
+</code></pre>
+
+<p>参考:<br/>
+<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
+<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
+<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
 
                         
                       </div>
@@ -151,10 +227,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
+                    <span class="date">2020/02/13</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
           				   
                     
 
@@ -230,6 +306,12 @@
             <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
         
             <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
+        
+            <a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html"><strong>网络进阶</strong></a>
+        
+            <a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html"><strong>性能优化</strong></a>
+        
+            <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
          
         </p>
 
@@ -246,33 +328,39 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15833950883527.html">iOS 知识树</a>
+			        <a href="15833972720459.html">设计模式-组件化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833788745389.html">UITextView 行间距调整</a>
+			        <a href="15833972428291.html">设计模式-行为型模式</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15825371776074.html">mmap 内存映射</a>
+			        <a href="15833972335253.html">设计模式-结构型模式</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15824490308760.html">对象从创建到销毁过程的探究</a>
+			        <a href="15833971971986.html">设计模式-创建型模式</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15821054226825.html">牛逼的GCD</a>
+			        <a href="15833971627503.html">启动优化(todo)</a>
 			      </li>
 		     
+		  
+		      
+		  
+		      
+		  
+		      
 		  
 		      
 		  
