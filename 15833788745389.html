@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  Label 多行换行最后一行现在更过按钮 - 小马同学的碎碎念
+  UITextView 行间距调整 - 小马同学的碎碎念
   
   </title>
   
@@ -100,10 +100,10 @@
       <div class="markdown-body article-wrap">
        <div class="article">
           
-          <h1>Label 多行换行最后一行现在更过按钮</h1>
+          <h1>UITextView 行间距调整</h1>
      
         <div class="read-more clearfix">
-          <span class="date">2020/01/08</span>
+          <span class="date">2020/03/05</span>
 
           <span>posted in&nbsp;</span> 
           
@@ -120,25 +120,51 @@
       </div><!-- article -->
 
       <div class="article-content">
-      <p><img src="media/15784529401988/15784530763900.jpg" alt="" style="width:574px;"/><br/>
-这种多行之后（最多显示几行），最后一行还显示不下的时候，要求有更多按钮（或者全文）这种需求很常见。实现方法也比较简单，结合 NSAttributeSring 和 YYLabel 就能很简单的实现。如果最后的“更多”或者“全文”按钮要求自提颜色或者大小不一样，单独处理这个样式即可</p>
+      <p>在我们创建 UITextView 的时候,有可能默认的行间距并不合适,调整行间距也比较简单,方法也比较多,今天介绍一直比较常见的,简单的方法:<br/>
+<strong>textView.typingAttributes</strong> 属性设置<br/>
+关于 <strong>textView.typingAttributes</strong>的官方文档介绍就是:<br/>
+用于用户输入的新文本的属性,<br/>
+该字典包含用于输入文本的属性键值对,当文本视图的选择发生变化时,字典的内容自动被清除</p>
 
-<pre class="line-numbers"><code class="language-text">- (void)addSeeMoreButton {
-    
-    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:@&quot;   ... 全文&quot;];
-    //添加文字颜色
-    [text addAttribute:NSForegroundColorAttributeName value:kColor_black1 range:NSMakeRange(text.length-2, 2)];
-    [text addAttribute:NSForegroundColorAttributeName value:kColor_black2 range:NSMakeRange(0, text.length-2)];
-    
-    
-    YYLabel *seeMore = [YYLabel new];
-    seeMore.attributedText = text;
-    [seeMore sizeToFit];
-    NSMutableAttributedString *truncationToken = [NSMutableAttributedString attachmentStringWithContent:seeMore contentMode:UIViewContentModeCenter attachmentSize:seeMore.frame.size alignToFont:[UIFont systemFontOfSize:14] alignment:YYTextVerticalAlignmentCenter];
-    self.passageContentLabel.truncationToken = truncationToken;
-}
+<pre class="line-numbers"><code class="language-text">UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(20, 10, 100, 200)];
 
+textView.delegate = self;
+
+[self.view addSubview:textView];
+
+NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
+
+paragraphStyle.lineSpacing = 20;// 字体的行间距
+
+NSDictionary *attributes = @{
+                             NSFontAttributeName:[UIFont systemFontOfSize:17],
+                             NSParagraphStyleAttributeName:paragraphStyle
+                             };
+textView.typingAttributes = attributes;
 </code></pre>
+
+<p><img src="media/15833788745389/15833792273218.jpg" alt="" style="width:602px;"/><br/>
+但是这样设置会有一个问题 就是光标会变大<br/>
+<img src="media/15833788745389/15833792578456.jpg" alt="" style="width:311px;"/><br/>
+ 解决光标变大的问题 目前只有自定义 TextView ,<br/>
+ UITextView遵循了UITextInput协议，其中有返回光标frame的方法</p>
+
+<ul>
+<li>(CGRect)caretRectForPosition:(UITextPosition *)position，所以我们可以使用自定义的TextView，重写返回光标frame的方法避免光标扩大问题。</li>
+</ul>
+
+<pre class="line-numbers"><code class="language-text">- (CGRect)caretRectForPosition:(UITextPosition *)position {
+    CGRect originalRect = [super caretRectForPosition:position];
+    originalRect.size.height = self.font.lineHeight + 1;
+    originalRect.size.width = 1.5;
+
+    return originalRect;
+}
+</code></pre>
+
+<p><img src="media/15833788745389/15833794042367.jpg" alt="" style="width:704px;"/></p>
+
+<p>参考：<a href="https://www.jianshu.com/p/085ee268b43a">https://www.jianshu.com/p/085ee268b43a</a></p>
 
 
     
@@ -149,16 +175,13 @@
         <div class="large-6 columns">
         <p class="text-left" style="padding:15px 0px;">
       
-          <a href="15786431485871.html" 
-          title="Previous Post: KVO && KVC 实现原理">&laquo; KVO && KVC 实现原理</a>
-      
         </p>
         </div>
         <div class="large-6 columns">
       <p class="text-right" style="padding:15px 0px;">
       
-          <a  href="15780315733102.html" 
-          title="Next Post: 探寻 OC 对象的本质">探寻 OC 对象的本质 &raquo;</a>
+          <a  href="15825371776074.html" 
+          title="Next Post: mmap 内存映射">mmap 内存映射 &raquo;</a>
       
       </p>
         </div>

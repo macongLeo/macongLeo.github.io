@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  iOS 面试准备 - 小马同学的碎碎念
+  iOS 知识集 - 小马同学的碎碎念
   
   </title>
   
@@ -75,7 +75,7 @@
     <li><label>Categories</label></li>
 
         
-            <li><a href="iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html">iOS 面试准备</a></li>
+            <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
         
             <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
          
@@ -100,142 +100,81 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15824490308760.html">
+                <a class="clearlink" href="15795063924352.html">
                 
-                  <h1>对象从创建到销毁过程的探究</h1>
+                  <h1>AutoReleasePool 自动释放池</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><strong>NSObject</strong><br/>
-先看下NSObject的内存结构<br/>
-<img src="media/15824490308760/15824492522698.jpg" alt="" style="width:590px;"/></p>
-
-<p>实例对象的 isa 指针指向 class(类对象),根据 runtime源码我们可以看到 objc_class 是继承自 objc_object 的,本质上,类是一个对象,所以我们才会常说<strong>&quot;类对象&quot;</strong><br/>
-<strong>objc_object 有一个唯一的私有变量-isa_t 类型的 isa</strong></p>
-
-<p>objc_class 的定义还包括了:</p>
-
-<ul>
-<li>Class superclass -指向父类</li>
-<li>cathe_t cathe 方法缓存</li>
-<li>class_data_bits_t bits -存储类方法,属性,协议等数据</li>
+                        	<ul>
+<li>App启动后，苹果在主线程 RunLoop 里注册了两个 Observer，其回调都是 _wrapRunLoopWithAutoreleasePoolHandler()。</li>
+<li>第一个 Observer 监视的事件是 Entry(即将进入Loop)，其回调内会调用 _objc_autoreleasePoolPush() 创建自动释放池。其 order 是-2147483647，优先级最高，保证创建释放池发生在其他所有回调之前。</li>
+<li>第二个 Observer 监视了两个事件： BeforeWaiting(准备进入休眠) 时调用_objc_autoreleasePoolPop() 和 _objc_autoreleasePoolPush() 释放旧的池并创建新池；Exit(即将退出Loop) 时调用 _objc_autoreleasePoolPop() 来释放自动释放池。这个 Observer 的 order 是 2147483647，优先级最低，保证其释放池子发生在其他所有回调之后。</li>
+<li>在主线程执行的代码，通常是写在诸如事件回调、Timer回调内的。这些回调会被 RunLoop 创建好的 AutoreleasePool 环绕着，所以不会出现内存泄漏，开发者也不必显示创建 Pool 了。</li>
 </ul>
 
-<p><strong>isa_t isa</strong><br/>
-isa又包括哪些东西?</p>
+<p>也就是说<mark>AutoreleasePool创建是在一个RunLoop事件开始之前(push)，AutoreleasePool释放是在一个RunLoop事件即将结束之前(pop)。</mark><br/>
+AutoreleasePool里的Autorelease对象的加入是在RunLoop事件中，AutoreleasePool里的Autorelease对象的释放是在AutoreleasePool释放时。</p>
 
-<pre class="line-numbers"><code class="language-text">union isa_t 
-{
-    isa_t() { }
-    isa_t(uintptr_t value) : bits(value) { }
+<h2 id="toc_0">Autorelease对象什么时候释放？</h2>
 
-    Class cls;
-    uintptr_t bits;
+<p>在没有手动添加 AutoreleasePool的情况下,<br/>
+**Autorelease对象是在当前的 RunLoop 迭代结束的时候释放的 **<br/>
+原因:<br/>
+    系统在每个 RunLoop 迭代中都加入了自动释放池的 Push 和 Pop</p>
 
-# if __arm64__
-#   define ISA_MASK        0x0000000ffffffff8ULL
-#   define ISA_MAGIC_MASK  0x000003f000000001ULL
-#   define ISA_MAGIC_VALUE 0x000001a000000001ULL
-    struct {
-        uintptr_t nonpointer        : 1;
-        uintptr_t has_assoc         : 1;//对象含有或者曾经含有关联引用，没有关联引用的可以更快地释放内存
-        uintptr_t has_cxx_dtor      : 1;//析构器方法,如果没有析构器就会快速释放内存
-        uintptr_t shiftcls          : 33; // MACH_VM_MAX_ADDRESS 0x1000000000
-        uintptr_t magic             : 6;//用于调试器判断当前对象是真的对象还是没有初始化的空间
-        uintptr_t weakly_referenced : 1;//对象被指向或者曾经指向一个 ARC 的弱变量，没有弱引用的对象可以更快释放
-        uintptr_t deallocating      : 1;//对象正在释放内存
-        uintptr_t has_sidetable_rc  : 1;//对象的引用计数太大了，存不下
-        uintptr_t extra_rc          : 19;//对象的引用计数超过 1，会存在这个这个里面
-#       define RC_ONE   (1ULL&lt;&lt;45)
-#       define RC_HALF  (1ULL&lt;&lt;18)
-    };
+<h2 id="toc_1">AutoreleasePool原理</h2>
 
-# elif __x86_64__
-#   define ISA_MASK        0x00007ffffffffff8ULL
-#   define ISA_MAGIC_MASK  0x001f800000000001ULL
-#   define ISA_MAGIC_VALUE 0x001d800000000001ULL
-    struct {
-        uintptr_t nonpointer        : 1;
-        uintptr_t has_assoc         : 1;
-        uintptr_t has_cxx_dtor      : 1;
-        uintptr_t shiftcls          : 44; // MACH_VM_MAX_ADDRESS 0x7fffffe00000
-        uintptr_t magic             : 6;
-        uintptr_t weakly_referenced : 1;
-        uintptr_t deallocating      : 1;
-        uintptr_t has_sidetable_rc  : 1;
-        uintptr_t extra_rc          : 8;
-#       define RC_ONE   (1ULL&lt;&lt;56)
-#       define RC_HALF  (1ULL&lt;&lt;7)
-    };
+<p><img src="media/15795063924352/15795107102374.jpg" alt="" style="width:702px;"/></p>
 
-# else
-#   error unknown architecture for packed isa
-# endif
+<p><img src="media/15795063924352/15795070852300.jpg" alt="" style="width:536px;"/></p>
 
-// SUPPORT_PACKED_ISA
-#endif
+<ul>
+<li>AutoreleasePool并没有单独的结构,而是由若干个 AutoreleasePoolPage 以双向链表的形式结合而成(分别对应图中的 parent 和 child 指针)</li>
+<li>AutoreleasePool是按线程一一对应的(结构中的 thread 指向当前线程)</li>
+<li>AutoreleasePoolPage 每个对象会开辟 4096 个字节内存(一页虚拟内存的大小)除了上面的实例变量所占的空间,剩下的空间都用来存储 Autorelease对象</li>
+<li>上面的 id *next 指针作为游标指向栈顶最新 add 进来的 Autorelease对象的下一个位置</li>
+<li>一个 AutoreleasePoolPage 的空间被沾满时,会创建一个新的 AutoreleasePoolPage 对象,连接链表,后来的 Autorelease对象在新的 page 加入</li>
+</ul>
 
+<p>所以若当前线程中只有一个 AutoreleasePoolPage 对象,并记录了很多 Autorelease对象地址时,内存:<br/>
+<img src="media/15795063924352/15795075970216.jpg" alt="" style="width:520px;"/><br/>
+图中的情况，这一页再加入一个autorelease对象就要满了（也就是next指针马上指向栈顶），这时就要执行上面说的操作，建立下一页page对象，与这一页链表连接完成后，新page的next指针被初始化在栈底（begin的位置），然后继续向栈顶添加新对象。</p>
 
-#if SUPPORT_INDEXED_ISA
+<p><mark><strong>向一个对象发送- autorelease消息，就是将这个对象加入到当前AutoreleasePoolPage的栈顶next指针指向的位置</strong></mark><br/>
+这一步只是把 Autorelease对象加入到了自动释放池,还并没有释放</p>
 
-# if  __ARM_ARCH_7K__ &gt;= 2
+<h3 id="toc_2">真正释放时刻</h3>
 
-#   define ISA_INDEX_IS_NPI      1
-#   define ISA_INDEX_MASK        0x0001FFFC
-#   define ISA_INDEX_SHIFT       2
-#   define ISA_INDEX_BITS        15
-#   define ISA_INDEX_COUNT       (1 &lt;&lt; ISA_INDEX_BITS)
-#   define ISA_INDEX_MAGIC_MASK  0x001E0001
-#   define ISA_INDEX_MAGIC_VALUE 0x001C0001
-    struct {
-        uintptr_t nonpointer        : 1;
-        uintptr_t has_assoc         : 1;
-        uintptr_t indexcls          : 15;
-        uintptr_t magic             : 4;
-        uintptr_t has_cxx_dtor      : 1;
-        uintptr_t weakly_referenced : 1;
-        uintptr_t deallocating      : 1;
-        uintptr_t has_sidetable_rc  : 1;
-        uintptr_t extra_rc          : 7;
-#       define RC_ONE   (1ULL&lt;&lt;25)
-#       define RC_HALF  (1ULL&lt;&lt;6)
-    };
+<p>每当进行一次<mark><strong>objc_autoreleasePoolPush</strong></mark>调用时，runtime向当前的AutoreleasePoolPage中add进一个哨兵对象，值为0（也就是个nil），那么这一个page就变成了下面的样子：<br/>
+<img src="media/15795063924352/15795082558655.jpg" alt="" style="width:754px;"/><br/>
+<mark>objc_autoreleasePoolPush</mark>的返回值正是这个哨兵对象的地址，被<mark>objc_autoreleasePoolPop</mark>(哨兵对象)作为入参，于是：</p>
 
-# else
-#   error unknown architecture for indexed isa
-# endif
+<ol>
+<li> 根据传入的哨兵对象地址找到哨兵对象所处的page</li>
+<li>在当前page中，将晚于哨兵对象插入的所有autorelease对象都发送一次- release消息，并向回移动next指针到正确位置</li>
+<li>补充2：从最新加入的对象一直向前清理，可以向前跨越若干个page，直到哨兵所在的page<br/>
+刚才的objc_autoreleasePoolPop执行后，
+<img src="media/15795063924352/15795086281414.jpg" alt="" style="width:758px;"/>
+最终变成了下面的样子:
+<img src="media/15795063924352/15795084636880.jpg" alt="" style="width:725px;"/></li>
+</ol>
 
-// SUPPORT_INDEXED_ISA
-#endif
+<p><strong>嵌套的AutoreleasePool</strong><br/>
+知道了上面的原理，嵌套的AutoreleasePool就非常简单了，pop的时候总会释放到上次push的位置为止，多层的pool就是多个哨兵对象而已，就像剥洋葱一样，每次一层，互不影响。 </p>
 
-};
-</code></pre>
+<p><img src="media/15795063924352/15795095043776.jpg" alt="" style="width:767px;"/></p>
 
-<p><img src="media/15824490308760/15825274310751.jpg" alt="" style="width:646px;"/></p>
+<p><img src="media/15795063924352/15795109308256.jpg" alt="" style="width:700px;"/></p>
 
-<p><img src="media/15824490308760/15825274646479.jpg" alt="" style="width:655px;"/></p>
-
-<p><strong>alloc</strong><br/>
-alloc流程简化图<br/>
-<img src="media/15824490308760/15825282816904.jpg" alt="" style="width:655px;"/><br/>
-alloc 方法包含了非常多的流程和判断,这里做了简化,当我们写一个[Class alloc]的时候,会调用 objc_alloc(Class cls)方法,进而执行 callAlloc方法,最终执行_class_createInstanceFromZone方法:<br/>
-<img src="media/15824490308760/15825284978214.jpg" alt="" style="width:595px;"/><br/>
-<img src="media/15824490308760/15825287722180.jpg" alt="" style="width:668px;"/></p>
-
-<p><strong>malloc</strong></p>
-
-<p>在 iOS 进程地址空间的各个区域中,最灵活的就是堆区,它为进程动态分配内存.<br/>
-从苹果公开的malloc源码上来看，malloc的原理大致如下：</p>
-
-<p>malloc内存分配基于malloc zone，并将内存分配按大小分为nano、tiny、small、large几种类型，申请时按需进行最适分配<br/>
-malloc在首次调用时，初始化default zone，在64位情况下，会初始化default zone为nano zone，同时初始化一个scalable zone作为helper zone，nano zone负责nano大小的分配，scalable zone则负责tiny、small和large内存的分配<br/>
-每次malloc时，根据传入的size参数，优先交给nano zone做分配处理，如果大小不在nano范围，则转交给helper zone处理。<br/>
-<img src="media/15824490308760/15825291171434.jpg" alt="" style="width:711px;"/></p>
+<p>注意点:<br/>
+NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添加到该pool里面的所有OC对象都执行一遍release（retainCount-=1），如果恰好此时retainCount&lt;=0 ，那么系统会自动调用<mark>dealloc</mark>方法废弃对象。</p>
 
 <p>参考:<br/>
-<a href="https://juejin.im/entry/58a178060ce463005644ee4a">https://juejin.im/entry/58a178060ce463005644ee4a</a><br/>
-<a href="https://yq.aliyun.com/articles/3065">https://yq.aliyun.com/articles/3065</a></p>
+<a href="https://www.jianshu.com/p/61d8131c6bf3">https://www.jianshu.com/p/61d8131c6bf3</a><br/>
+<a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/">https://blog.sunnyxx.com/2014/10/15/behind-autorelease/</a><br/>
+<a href="https://juejin.im/post/5d7765756fb9a06af82503b6">https://juejin.im/post/5d7765756fb9a06af82503b6</a></p>
 
                         
                       </div>
@@ -244,10 +183,10 @@ malloc在首次调用时，初始化default zone，在64位情况下，会初始
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/23</span>
+                    <span class="date">2020/01/20</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html'>iOS 面试准备</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
           				   
                     
 
@@ -268,12 +207,12 @@ malloc在首次调用时，初始化default zone，在64位情况下，会初始
 			<div class="row">
 			  <div class="large-6 columns">
 			  <p class="text-left" style="padding-top:25px;">
-			   
+			   <a href="iOS 知识集_4.html">&laquo; Prev Page</a>  
 			  </p>
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			 <a href="iOS 面试准备_1.html">&raquo; Next Page</a> 
+			 <a href="iOS 知识集_6.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -316,7 +255,7 @@ malloc在首次调用时，初始化default zone，在64位情况下，会初始
 
       	<p class="cat-list">
         
-            <a href="iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html"><strong>iOS 面试准备</strong></a>
+            <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
         
             <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
          
@@ -333,6 +272,18 @@ malloc在首次调用时，初始化default zone，在64位情况下，会初始
                 <div class="side-content">
                 <ul class="posts-list">
 	      
+		      
+			      <li class="post">
+			        <a href="15833788745389.html">UITextView 行间距调整</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15825371776074.html">mmap 内存映射</a>
+			      </li>
+		     
+		  
 		      
 			      <li class="post">
 			        <a href="15824490308760.html">对象从创建到销毁过程的探究</a>
@@ -352,16 +303,8 @@ malloc在首次调用时，初始化default zone，在64位情况下，会初始
 		     
 		  
 		      
-			      <li class="post">
-			        <a href="15820364056941.html">关联对象 AssociatedObject 完全解析</a>
-			      </li>
-		     
 		  
 		      
-			      <li class="post">
-			        <a href="15820198947096.html">weak 的释放及原理</a>
-			      </li>
-		     
 		  
 		      
 		  

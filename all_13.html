@@ -75,7 +75,7 @@
     <li><label>Categories</label></li>
 
         
-            <li><a href="iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html">iOS 面试准备</a></li>
+            <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
         
             <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
          
@@ -100,90 +100,101 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780200209710.html">
+                <a class="clearlink" href="15780315733102.html">
                 
-                  <h1>iOS 响应者链及事件传递</h1>
+                  <h1>探寻 OC 对象的本质</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">UIResponder</h2>
+                        	<blockquote>
+<p>面试题：一个 NSObject 对象占用多少内存？</p>
+</blockquote>
 
-<p>在 iOS中，所有响应事件处理事件的对象都直接或间接的继承UIResponder。<br/>
-<img src="media/15780200209710/2526037-c8d367c7064cf59c.jpg" alt="2526037-c8d367c7064cf59"/></p>
+<p>我们平时编写的代码都是 Objective-C 的代码，但是底层实现其实都是 C/C++的代码</p>
 
-<p>在 iOS 视图结构中，呈现出来的是一个 N 叉树的树形结构，每个视图都只有一个父视图，可以有多个子视图。<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpldkdtyj30he0go46i.jpg" alt=""/></p>
+<pre class="line-numbers"><code class="language-text">#import &lt;Foundation/Foundation.h&gt;
+#import &lt;malloc/malloc.h&gt;
+#import &lt;objc/runtime.h&gt;
 
-<h2 id="toc_1">寻找第一响应者</h2>
+int main(int argc, const char * argv[]) {
+    @autoreleasepool {
+        NSObject *obj = [[NSObject alloc] init];
+        // 创建一个实例对象，实际上分配多少内存 - 16
+        NSLog(@&quot;%zd&quot;, malloc_size((__bridge const void *)obj));
 
-<p>当用户点击某个视图或者按钮的时候，会首先响应 applocation 中的 UIWindow 一层一层的向下查找，直到找到点击的 view，这阶段用到的两个方法：</p>
-
-<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;   // recursively calls -pointInside:withEvent:. point is in the receiver&#39;s coordinate system
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;   // default returns YES if point is in bounds
-</code></pre>
-
-<p>例如有这样一个图层结构：<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpsaqbekj30e80jamy9.jpg" alt=""/></p>
-
-<p>在上图中用户点击视图中的ViewD时，UIWindow首先接收到响应，此响应包括用户点击的区域和一个封装好的UIEvent对象，然后UIWindow通过这些信息利用以下方法查找：</p>
-
-<ol>
-<li><p>UIWindow会通过调用pointInside:withEvent:方法返回的YES得知用户点击的范围在ViewA中；</p></li>
-<li><p>ViewA调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewB、ViewC)调用hitTest:withEvent:方法；</p></li>
-<li><p>在遍历中发现使用ViewC调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewC范围之内；</p></li>
-<li><p>ViewC调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewD、ViewE)调用hitTest:withEvent:方法;</p></li>
-<li><p>在遍历中发现使用ViewD调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewD范围之内;</p></li>
-<li><p>在ViewD调用hitTest:withEvent:方法之前发现View的subViews的count为0，故确定用户点击在ViewD之上。</p></li>
-</ol>
-
-<p>UIWindow会用遍历subviews，使用每一个subview调用hitTest:withEvent:方法，如果用户点击在某一个subview上，pointInside:withEvent:方法返回YES，再用这个subview调用hitTest:withEvent:方法，依次类推，直到当前view没有子view或点击的位置没有在其任何子view之上，便确定用户点击在某view上</p>
-
-<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
-    for (UIView *view in self.subviews) {
-        if([view pointInside:point withEvent:event]){
-            UIView *hitTestView = [view hitTest:point withEvent:event];
-            if(nil == hitTestView){
-                return view;
-            }
-        }
+        // 创建一个实例对象，至少需要多少内存 - 8
+        NSLog(@&quot;%zd&quot;, class_getInstanceSize([NSObject class]));
     }
-    return nil;
+    return 0;
 }
 </code></pre>
 
+<ul>
+<li>系统分配了 16 个字节给 NSObject 对象（通过 malloc——size 函数获得）</li>
+<li><p>OC 源码显示分配给对象的内存为 16 个字节的整数倍，至少是 16 个字节</p>
+<p><img src="media/15780315733102/15780350303674.jpg" alt="" style="width:660px;"/></p></li>
+</ul>
+
 <blockquote>
-<p>1.Alpha=0、子视图超出父视图的情况、userInteractionEnabled=NO、hidden=YES视图会被忽略，不会调用hitTest<br/>
-2.父视图被忽略后其所有子视图也会被忽略<br/>
-3.出现视图无法响应的情况，可以考虑上诉情况来排查问题</p>
+<p>OC的对象、类主要是基于C\C++的什么数据结构实现的呢？<br/>
+结构体<br/>
+OC 的对象是基于 C 的结构体实现的<br/>
+这个结构体只有一个成员：isa 指针，而指针在 64 位架构中占 8 个字节。<br/>
+那么这个结构体占多大的内存空间呢，我们发现这个结构体只有一个成员，isa指针，而指针在64位架构中占8个字节。也就是说一个NSObjec对象所占用的内存是8个字节。到这里我们已经可以基本解答第一个问题。但是我们发现NSObject对象中还有很多方法，那这些方法不占用内存空间吗？其实类的方法等也占用内存空间，但是这些方法所占用的存储空间并不在NSObject对象中。</p>
 </blockquote>
 
-<h2 id="toc_2">事件传递</h2>
+<h2 id="toc_0">实例对象 类（对象） 元类</h2>
 
-<p>事件传递的顺序其实就是寻找第一响应者的逆序，当找到了第一响应（View，button）之后，响应者就要对事件作出响应，这里就是使用了 UIResponder 的 nextResponder 方法。</p>
+<p><img src="media/15780315733102/15780363563241.jpg" alt="" style="width:552px;"/></p>
 
-<h3 id="toc_3">nextResponder 的规则</h3>
-
-<p>因为UIView和UIViewController都是继承于UIResponder，所以在调用nextResponder时有几条规则如下：</p>
-
+<blockquote>
 <ol>
-<li><p>当一个view调用其nextResponder会返回其superView;</p></li>
-<li><p>如果当前的view为UIViewController的view被添加到其他view上，那么调用nextResponder会返回当前的UIViewController，而这个UIViewController的nextResponder为view的superView；</p></li>
-<li><p>如果当前的UIViewController的view没有添加到任何其他view上，当前的UIViewController的nextResponder为nil，不管它是keyWinodw或UINavigationController的rootViewController，都是如此；</p></li>
-<li><p>如果当前application的keyWindow的rootViewController为UINavigationController(或UITabViewController)，那么通过调用UINavigationController(或UITabViewController)的nextResponder得到keyWinodw；</p></li>
-<li><p>keyWinodw的nextResponder为UIApplication，UIApplication的nextResponder为AppDelegate，AppDelegate的nextResponder为nil。</p></li>
+<li>instance的isa指向class</li>
+<li>class的isa指向meta-class</li>
+<li>meta-class的isa指向基类的meta-class，基类的isa指向自己</li>
+<li>class的superclass指向父类的class，如果没有父类，superclass指针为nil</li>
+<li>meta-class的superclass指向父类的meta-class，基类的meta-class的superclass指向基类的class</li>
+<li>instance调用对象方法的轨迹，isa找到class，方法不存在，就通过superclass找父类</li>
+<li>class调用类方法的轨迹，isa找meta-class，方法不存在，就通过superclass找父类</li>
 </ol>
+</blockquote>
 
-<p>通过知道了上述规则，便可以通过用户点击的ViewD，查看ViewD是否响应了点击事件，如果没有找它的nextResponder，如果没有再继续找，直到找到AppDelegate再没有响应，则此点击事件被系统丢弃，大致流程如下：<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lu7zsmnqj30fa0f8adu.jpg" alt=""/><br/>
-事件响应链的大致流程就是如此了，大概就是一个先向下找，再向上找的过程！</p>
+<h2 id="toc_1">为什么会存在元类？</h2>
 
-<h2 id="toc_4">无法响应的情况</h2>
+<p>元类是一个类对象的类<br/>
+简而言之：<br/>
+当你向一个对象发送一条消息的时候，运行时会在对象的类的方法列表中查找这条消息是否存在。<br/>
+当你向一个类发送一条消息的时候，运行时会在类的元类的方法列表中查找这条消息是否存在。</p>
+
+<p>元类的存在是必需的，因为他存储了一个类的所有类方法。每个类的元类都是独一无二的，因为每个类都有一系列独特的类方法。<br/>
+什么是元类的类</p>
+
+<p>元类，和类一样，也是一个对象。这表示你能够对元类调用方法。自然的，这表示他必须也有一个类指针。</p>
+
+<p>所有元类使用基类的元类（即继承链顶端的类的元类）作为他们的类，而所有类的基类都是 NSObject（大多数类是这样的），所以大多数元类使用 NSObject 的元类作为他的类。</p>
+
+<p>根据规则所有元类使用基类的元类作为他们的类，那么基类的元类就是他自己的类（他们的isa指针指向了自己）。这表明NSObject的元类的指针指向的是他自己（他是一个他自己的实例）。</p>
+
+<h2 id="toc_2">继承类和元类</h2>
+
+<p>同样的，类使用 super_class 指针指向他们的 superclass，元类也有 super_class 指针来指向 superclass。<br/>
+这里又有一个奇怪的地方，基类的元类设置的 superclass 是基类自己。<br/>
+这种继承结构导致的结果是所有结构中的实例、类以及元类都继承自结构中的基类。</p>
+
+<p>所有实例、类和元类都在 NSObject 的层级下，这表明所有 NSObject 的实例方法都能够被使用，同样的，对类以及元类来说，所有 NSObject 的类方法也是有效的。</p>
+
+<h2 id="toc_3">元类总结：</h2>
+
+<p>元类是一个类对象的类。每一个类有他自己独一无二的元类（因为每个类能够有自己独一无二的方法列表）。这就意味着类对象的类并不是和他们一样的类。</p>
+
+<p>元类能确保类对象有所有底层类的实例和类方法，中间加上所有自己的类方法。所有类继承自NSObject，这意味着NSObject所有的实例和协议方法为所有类（和元类）对象都定义了。</p>
+
+<p>所有元类使用基类的元类（NSObject 元类）来作为他们的类，包括只在运行时自定义的类的元类。</p>
 
 <p>参考：<br/>
-<a href="">https://www.cnblogs.com/easy-coding/p/3604856.html</a></p>
-
-<p><a href="">https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/using_responders_and_the_responder_chain_to_handle_events?language=objc</a></p>
+<a href="https://juejin.im/post/5ac81c75518825556534c0af">https://juejin.im/post/5ac81c75518825556534c0af</a><br/>
+<a href="https://www.jianshu.com/p/79b06fabb459">https://www.jianshu.com/p/79b06fabb459</a></p>
 
                         
                       </div>
@@ -195,7 +206,7 @@
                     <span class="date">2020/01/03</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html'>iOS 面试准备</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
           				   
                     
 
@@ -221,7 +232,7 @@
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			
+			 <a href="all_14.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -264,7 +275,7 @@
 
       	<p class="cat-list">
         
-            <a href="iOS%20%E9%9D%A2%E8%AF%95%E5%87%86%E5%A4%87.html"><strong>iOS 面试准备</strong></a>
+            <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
         
             <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
          
@@ -281,6 +292,18 @@
                 <div class="side-content">
                 <ul class="posts-list">
 	      
+		      
+			      <li class="post">
+			        <a href="15833788745389.html">UITextView 行间距调整</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15825371776074.html">mmap 内存映射</a>
+			      </li>
+		     
+		  
 		      
 			      <li class="post">
 			        <a href="15824490308760.html">对象从创建到销毁过程的探究</a>
@@ -300,16 +323,8 @@
 		     
 		  
 		      
-			      <li class="post">
-			        <a href="15820364056941.html">关联对象 AssociatedObject 完全解析</a>
-			      </li>
-		     
 		  
 		      
-			      <li class="post">
-			        <a href="15820198947096.html">weak 的释放及原理</a>
-			      </li>
-		     
 		  
 		      
 		  

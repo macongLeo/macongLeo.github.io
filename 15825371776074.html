@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  Label 多行换行最后一行现在更过按钮 - 小马同学的碎碎念
+  mmap 内存映射 - 小马同学的碎碎念
   
   </title>
   
@@ -100,14 +100,14 @@
       <div class="markdown-body article-wrap">
        <div class="article">
           
-          <h1>Label 多行换行最后一行现在更过按钮</h1>
+          <h1>mmap 内存映射</h1>
      
         <div class="read-more clearfix">
-          <span class="date">2020/01/08</span>
+          <span class="date">2020/02/24</span>
 
           <span>posted in&nbsp;</span> 
           
-              <span class="posted-in"><a href='iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html'>iOS 开发技巧整理</a></span>
+              <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
            
          
           <span class="comments">
@@ -120,25 +120,29 @@
       </div><!-- article -->
 
       <div class="article-content">
-      <p><img src="media/15784529401988/15784530763900.jpg" alt="" style="width:574px;"/><br/>
-这种多行之后（最多显示几行），最后一行还显示不下的时候，要求有更多按钮（或者全文）这种需求很常见。实现方法也比较简单，结合 NSAttributeSring 和 YYLabel 就能很简单的实现。如果最后的“更多”或者“全文”按钮要求自提颜色或者大小不一样，单独处理这个样式即可</p>
+      <p><img src="media/15825371776074/15825373318908.jpg" alt="" style="width:943px;"/></p>
 
-<pre class="line-numbers"><code class="language-text">- (void)addSeeMoreButton {
-    
-    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:@&quot;   ... 全文&quot;];
-    //添加文字颜色
-    [text addAttribute:NSForegroundColorAttributeName value:kColor_black1 range:NSMakeRange(text.length-2, 2)];
-    [text addAttribute:NSForegroundColorAttributeName value:kColor_black2 range:NSMakeRange(0, text.length-2)];
-    
-    
-    YYLabel *seeMore = [YYLabel new];
-    seeMore.attributedText = text;
-    [seeMore sizeToFit];
-    NSMutableAttributedString *truncationToken = [NSMutableAttributedString attachmentStringWithContent:seeMore contentMode:UIViewContentModeCenter attachmentSize:seeMore.frame.size alignToFont:[UIFont systemFontOfSize:14] alignment:YYTextVerticalAlignmentCenter];
-    self.passageContentLabel.truncationToken = truncationToken;
-}
+<p><strong>什么是内存映射?</strong><br/>
+所谓内存映射,就是将<strong>文件的磁盘扇区映射到进程的虚拟内存空间</strong>的过程.</p>
 
-</code></pre>
+<p><strong>操作系统读写文件流程</strong><br/>
+<strong>读写操作流程:</strong></p>
+
+<ol>
+<li>进程发起一个读文件请求</li>
+<li>内核通过查找<strong>进程文件符表</strong>,定位到内核已打开的文件集上的文件信息,从而找到对应文件的 inode;</li>
+<li>inode 在地址空间上查找要请求的文件是否已经缓存在内核页的高速缓存中,如果存在,则直接放回该文件的内容</li>
+<li>如果文件不存在高速缓存中,则通过 inode 定位到文件的磁盘地址,将数据从磁盘复制到内核页高速缓存.之后再次读页面的过程,将内核高速缓存中的数据发送给用户进程</li>
+</ol>
+
+<blockquote>
+<p><strong>什么是 inode?</strong><br/>
+全程为 index node,即为存储文件元信息的区域,中文译名&quot;索引节点&quot;.<br/>
+例如包含:文件权限,文件拥有者的 UID,文件的大小等等</p>
+</blockquote>
+
+<p>参考:<br/>
+<a href="https://juejin.im/post/5caaf564f265da24d60e9c8d">https://juejin.im/post/5caaf564f265da24d60e9c8d</a></p>
 
 
     
@@ -149,16 +153,16 @@
         <div class="large-6 columns">
         <p class="text-left" style="padding:15px 0px;">
       
-          <a href="15786431485871.html" 
-          title="Previous Post: KVO && KVC 实现原理">&laquo; KVO && KVC 实现原理</a>
+          <a href="15833788745389.html" 
+          title="Previous Post: UITextView 行间距调整">&laquo; UITextView 行间距调整</a>
       
         </p>
         </div>
         <div class="large-6 columns">
       <p class="text-right" style="padding:15px 0px;">
       
-          <a  href="15780315733102.html" 
-          title="Next Post: 探寻 OC 对象的本质">探寻 OC 对象的本质 &raquo;</a>
+          <a  href="15824490308760.html" 
+          title="Next Post: 对象从创建到销毁过程的探究">对象从创建到销毁过程的探究 &raquo;</a>
       
       </p>
         </div>
@@ -319,8 +323,6 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
-
-<script src="asset/prism.js"></script>
 
 
 <style type="text/css">
