@@ -110,115 +110,358 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15815876783958.html">
+                <a class="clearlink" href="15820198947096.html">
                 
-                  <h1>iOS 中的锁</h1>
+                  <h1>weak 的释放及原理</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ul>
-<li>自旋锁(OSSpinLock)</li>
-<li>互斥锁</li>
-<li>pthread_mutex</li>
-<li>信号量(dispatch_semaphore)</li>
-<li>NSLock</li>
-<li>递归锁(NSRecursiveLock)</li>
-<li>条件锁(NSConditionLock)</li>
-<li>@synchronized</li>
-</ul>
-
-<p><strong>自旋锁(OSSpinLock)</strong></p>
+                        	<p>1.被weak修饰的对象在被释放的时候会发生什么？是如何实现的？知道sideTable么？里面的结构可以画出来么<br/>
+在回答问题之前,我们先来了解一下 weak 的内部结构:</p>
 
 <blockquote>
-<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
+<p>我们常说的 weak,其实是 runtime 维护的用于存储对象的所有 weak 指针的 hash 表,<mark>key 是对象的指针,value 是 weak 指针的地址(这个地址的值是所指对象的地址)数组</mark></p>
 </blockquote>
 
-<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
-自旋锁的问题:<br/>
-    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
-    2. 递归调用有可能引起死锁<br/>
-    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
+<p>例如:</p>
 
-<p><strong>互斥锁</strong><br/>
-互斥锁属于 sleep-waiting 类型的锁.</p>
+<pre class="line-numbers"><code class="language-text">NSObject *b = [NSObject new];
+__weak id a = b;
+</code></pre>
 
-<blockquote>
-<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
-</blockquote>
+<p>这里的 b 就是 weak 表的 key,&amp;a(a的内存地址)就是 value;</p>
 
-<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
-自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
+<p><strong>weak 的实现原理简单的概括就三步:</strong></p>
 
-<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
-互斥锁适用:</p>
+<ol>
+<li>初始化时:runtime 会调用objc_initWeak 函数,初始化一个新的 weak 指针指向对象的地址</li>
+<li>添加引用时:objc_initWeak 函数会调用 objc_storeWeak()函数,objc_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
+<li>释放时:调用 clearDeallocating 函数.clearDeallocating函数首先根据对象地址获取所有 weak 指针地址的数组,然后遍历这个数组把其中的数据置为 nil,最后把这个 entry 从 weak 表中删除,最后清理对象的记录.</li>
+</ol>
+
+<p>在 runtime 里,weak 修饰符变量是通过 objc_initWeak 函数来初始化的,在变量作用域结束的时候通过 objc_destroyWeak 函数来释放的.</p>
+
+<p>这两个函数长这样:</p>
+
+<pre class="line-numbers"><code class="language-text">id objc_initWeak(id *location, id newObj)
+{
+    // 查看对象实例是否有效
+    // 无效对象直接导致指针释放
+    if (!newObj) {
+        *location = nil;
+        return nil;
+    }
+    // 这里传递了三个 bool 数值
+    // 使用 template 进行常量参数传递是为了优化性能
+    return storeWeak&lt;false/*old*/, true/*new*/, true/*crash*/&gt;
+        (location, (objc_object*)newObj);
+}
+</code></pre>
+
+<pre class="line-numbers"><code class="language-text">void objc_destroyWeak(id *location)
+{
+    (void)storeWeak&lt;true/*old*/, false/*new*/, false/*crash*/&gt;
+        (location, nil);
+}
+</code></pre>
+
+<p>注意点:</p>
+
+<ol>
+<li>objc_initWeak 函数有一个前提条件,就是 object 必须是一个没有被注册为 weak 对象的有效指针,而 value 则可以是 null,或者指向一个有效的对象</li>
+<li>添加引用时,object_initWeak 函数会调用 object_storeWeak()函数,object_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
+</ol>
+
+<p>从上面两个代码能看出来他们都调用了 storeWeak 这个函数,但是传入的参数确有点不一样<br/>
+init 方法中,第一个参数为 weak 的修饰变量,第二个参数为引用计数对象,但是在 destoryWeak 函数,第一参数依旧为 weak 修饰变量,第二个为 nil.参数不同到底代表了什么?下面继续分析 storeWeak 这个函数:</p>
+
+<pre class="line-numbers"><code class="language-text">// 更新一个弱引用变量
+// 如果 HaveOld 是 true, 变量是个有效值，需要被及时清理。变量可以为 nil。
+// 如果 HaveNew 是 true, 需要一个新的 value 来替换变量。变量可以为 nil
+// 如果crashifdeallocation 是 ture ，那么如果 newObj 是 deallocating，或者 newObj 的类不支持弱引用，则该进程就会停止。
+// 如果crashifdeallocation 是 false，那么 nil 会被存储。
+
+template &lt;bool HaveOld, bool HaveNew, bool CrashIfDeallocating&gt;
+static id storeWeak(id *location, objc_object *newObj)
+{
+    assert(HaveOld  ||  HaveNew);
+    if (!HaveNew) assert(newObj == nil);
+
+    Class previouslyInitializedClass = nil;
+    id oldObj;
+    
+    // 创建新旧散列表
+    SideTable *oldTable;
+    SideTable *newTable;
+
+    // Acquire locks for old and new values.
+    // 获得新值和旧值的锁存位置 (用地址作为唯一标示)
+    // Order by lock address to prevent lock ordering problems.
+    // 通过地址来建立索引标志，防止桶重复
+    // Retry if the old value changes underneath us.
+    // 下面指向的操作会改变旧值
+ retry:
+    if (HaveOld) {
+    // 如果 HaveOld 为 true ，更改指针，获得以 oldObj 为索引所存储的值地址
+        oldObj = *location;
+        oldTable = &amp;SideTables()[oldObj];
+    } else {
+        oldTable = nil;
+    }
+    if (HaveNew) {
+    // 获得以 newObj 为索引所存储的值对象
+        newTable = &amp;SideTables()[newObj];
+    } else {
+        newTable = nil;
+    }
+    
+// 对两个 table 进行加锁操作，防止多线程中竞争冲突
+    SideTable::lockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+
+//  location 应该与 oldObj 保持一致，如果不同，说明当前的 location 已经处理过 oldObj 可是又被其他线程所修改, 保证线程安全，这个判断用来避免线程冲突重处理问题
+    if (HaveOld  &amp;&amp;  *location != oldObj) {
+        SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+        goto retry;
+    }
+
+    // Prevent a deadlock between the weak reference machinery
+    // and the +initialize machinery by ensuring that no 
+    // weakly-referenced object has an un-+initialized isa.
+    // 防止弱引用之间发生死锁，并且通过 +initialize 初始化构造器保证所有弱引用的 isa 非空指向
+    if (HaveNew  &amp;&amp;  newObj) {
+        // 获得新对象的 isa 指针
+        Class cls = newObj-&gt;getIsa();
+        // 判断 isa 非空且已经初始化
+        if (cls != previouslyInitializedClass  &amp;&amp;  
+            !((objc_class *)cls)-&gt;isInitialized()) 
+        {
+            // 对两个表解锁
+            SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+            _class_initialize(_class_getNonMetaClass(cls, (id)newObj));
+
+            // If this class is finished with +initialize then we&#39;re good.
+            // If this class is still running +initialize on this thread 
+            // (i.e. +initialize called storeWeak on an instance of itself)
+            // then we may proceed but it will appear initializing and 
+            // not yet initialized to the check above.
+            // Instead set previouslyInitializedClass to recognize it on retry.
+            // 如果该类已经完成执行 +initialize 方法是最好的，如果该类 + initialize 在线程中，例如 +initialize 正在调用storeWeak 方法，那么则需要手动对其增加保护策略，并设置 previouslyInitializedClass 指针进行标记然后重新尝试
+            previouslyInitializedClass = cls;
+
+            goto retry;
+        }
+    }
+
+    // Clean up old value, if any. 清除旧值
+    if (HaveOld) {
+        weak_unregister_no_lock(&amp;oldTable-&gt;weak_table, oldObj, location);
+    }
+
+    // Assign new value, if any. 分配新值
+    if (HaveNew) {
+        newObj = (objc_object *)weak_register_no_lock(&amp;newTable-&gt;weak_table, 
+                                                      (id)newObj, location, 
+                                                      CrashIfDeallocating);
+        // weak_register_no_lock returns nil if weak store should be rejected
+        // 如果弱引用被释放则该方法返回 nil
+        // Set is-weakly-referenced bit in refcount table.
+        // 在引用计数表中设置弱引用标记位
+        if (newObj  &amp;&amp;  !newObj-&gt;isTaggedPointer()) {
+            newObj-&gt;setWeaklyReferenced_nolock();
+        }
+
+        // Do not set *location anywhere else. That would introduce a race.
+        *location = (id)newObj;
+    }
+    else {
+        // No new value. The storage is not changed.
+    }
+    
+    SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+
+    return (id)newObj;
+}
+</code></pre>
+
+<p>以上就是 storeWeak 函数的实现,他做了几件事:</p>
 
 <ul>
-<li>临界区有 IO 操作</li>
-<li>临界区代码复制或者循环量大</li>
-<li>临界区竞争非常激烈</li>
-<li>单核处理器</li>
+<li>声明了新旧散列表指针,因为 weak 修饰的变量如果之前已经指向一个对象,然后其再次改变指向另一个对象,那么按理来说我们需要从 oldTable 删除 weak 变量的记录,也就是要释放该 weak 变量,然后再给 newTable 添加新记录(weak变量),这里的新旧散列表就是这个作用</li>
+<li>根据新旧变量地址获取响应的 SideTable</li>
+<li>对两个表进行加锁操作,防止多线程竞争冲突</li>
+<li>进行线程冲突重处理判断</li>
+<li>判断其 isa 指针是否为空,为空则需要初始化</li>
+<li>如果存在旧值,调用 weak_unregister_no_lock 函数清楚旧值</li>
+<li>调用weak_register_no_lock 函数分配新值</li>
+<li>解锁两个表,返回第二参数</li>
 </ul>
 
-<p>自旋锁适用:<br/>
-临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
+<p>tip:</p>
 
 <blockquote>
-<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
-优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
+<p>你可以把objc_storeWeak(id *location, objc_object *newObj)理解为：objc_storeWeak(value, key)，并且当key变nil，将value置nil。<br/>
+结合最开始的例子我们可以理解为objc_storeWeak(&amp;a, b)<br/>
+在b非nil时，a和b指向同一个内存地址，在b变nil时，a变nil。此时向a发送消息不会崩溃：在Objective-C中向nil发送消息是安全的。<br/>
+而如果a是由 assign 修饰的，则： 在 b 非 nil 时，a 和 b 指向同一个内存地址，在 b 变 nil 时，a 还是指向该内存地址，变野指针。此时向 a 发送消息<mark>极易崩溃</mark>,不是一定会奔溃,涉及到 assgin 的释放问题下面再说。</p>
 </blockquote>
 
-<p><strong>os_unfair_lock</strong></p>
+<p>初始化弱引用对象流程图:<br/>
+<img src="media/15820198947096/15820219239893.jpg" alt="" style="width:546px;"/></p>
 
-<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
+<p><strong>数据结构分析(* SideTables、RefcountMap、weak_table_t*)</strong><br/>
+<img src="media/15820198947096/15820337143051.jpg" alt="" style="width:601px;"/></p>
 
-<p><strong>pthread_mutex</strong><br/>
-mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
+<p><strong>SideTable</strong></p>
 
-<p><strong>NSLock</strong><br/>
-NSLock是对 mutex 的普通锁的封装<br/>
-NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
-trylock 是尝试加锁,如果失败的话就返回 NO</p>
+<p>SideTable主要用于管理对象的引用计数和 weak 表为了管理所有对象的引用计数和 weak 指针,苹果创建了一个全局的 SideTables,是一个全局的 Hash 表,里面装的都是 SideTable结构体.他使用对象的内存地址当他的key.</p>
 
-<p><strong>信号量</strong><br/>
-    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
-    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
-
-<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
-dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
-dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
-用法:
-信号量常用于对资源进行加锁操作
+<pre class="line-numbers"><code class="language-text">struct SideTable {
+// 保证原子操作的自旋锁
+    spinlock_t slock;
+    // 引用计数的 hash 表
+    RefcountMap refcnts;
+    // weak 引用全局 hash 表
+    weak_table_t weak_table;
+}
 </code></pre>
 
-<pre class="line-numbers"><code class="language-text">//在init等函数初始化
-_lock = dispatch_semaphore_create(1); 
-dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
-//修改Array或字典等数据的信息
-dispatch_semaphore_signal(_lock);
+<p><img src="media/15820198947096/15820337366643.jpg" alt="" style="width:469px;"/></p>
+
+<p>从声明中可以看出,SideTable内部包含了一个是防止多线程竞争的自旋锁(slock),第二个是协助对象的 isa 指针的 extra_rc 共同引用计数变量,这里主要看 weak_table_t 的结构和作用</p>
+
+<p><strong>1,一把自旋锁。spinlock_t  slock;</strong></p>
+
+<blockquote>
+<p>自旋锁比较适用于锁使用者保持锁时间比较短的情况。正是由于自旋锁使用者一般保持锁时间非常短，因此选择自旋而不是睡眠是非常必要的，自旋锁的效率远高于互斥锁。信号量和读写信号量适合于保持时间较长的情况，它们会导致调用者睡眠，因此只能在进程上下文使用，而自旋锁适合于保持时间非常短的情况，它可以在任何上下文使用。</p>
+</blockquote>
+
+<p><strong>2,引用计数器 RefcountMap  refcnts;</strong><br/>
+对象的具体引用计数数量是记录在这里的<br/>
+这里的RefcountMap其实是个 C++的 Map.<br/>
+<img src="media/15820198947096/15820340809229.jpg" alt="" style="width:571px;"/></p>
+
+<p><strong>weak_table_t</strong><br/>
+weak_table_t结构体存储了某个对象相关的所有弱引用信息</p>
+
+<pre class="line-numbers"><code class="language-text">/**
+ * The global weak references table. Stores object ids as keys,
+ * and weak_entry_t structs as their values.
+ */
+struct weak_table_t {
+    // 保存了所有指向指定对象的 weak 指针
+    weak_entry_t *weak_entries;
+    // 存储空间
+    size_t    num_entries;
+    // 参与判断引用计数辅助量
+    uintptr_t mask;
+    // hash key 最大偏移值
+    uintptr_t max_hash_displacement;
+};
 </code></pre>
 
-<p><strong>@synchronized</strong><br/>
-@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
+<p>使用 weak 指针指向的对象地址作为 key,用 weak_entry_t 类型结构体对象作为 value.其中的 weak_entries 成员,就是弱引用表入口;<br/>
+<strong>weak_entry_t</strong><br/>
+weak_entry_t负责维护和存储指向一个对象的所有弱引用 hash 表:</p>
 
-<pre class="line-numbers"><code class="language-text">// 写数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
+<pre class="line-numbers"><code class="language-text">typedef objc_object ** weak_referrer_t;
+struct weak_entry_t {
+    DisguisedPtrobjc_object&gt; referent;
+    union {
+        struct {
+            weak_referrer_t *referrers;
+            uintptr_t        out_of_line : 1;
+            uintptr_t        num_refs : PTR_MINUS_1;
+            uintptr_t        mask;
+            uintptr_t        max_hash_displacement;
+        };
+        struct {// out_of_line=0 is LSB of one of these (don&#39;t care which)
+            weak_referrer_t  inline_referrers[WEAK_INLINE_COUNT];
+        };
     }
-});
-// 读数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        id obj = [dict objectForKey:@&quot;trail&quot;];
-    }
-});
+}
 </code></pre>
+
+<ul>
+<li>referent:被值对象的地址,前面循环遍历查找的时候就是判断目标地址是否和他相等</li>
+<li>referrers:可变数组,里面保存着所指向这个对象的弱引用的地址,当这个对象被释放的时候.referrers里面的所有指针都会被置为 nil</li>
+<li>inline_referrers:只有 4 个元素的数组,默认情况下,用它来存储弱引用的指针,当大于 4 个的时候使用referrers来存储指针<br/>
+用一张图来表示就是:
+<img src="media/15820198947096/15820227824222.jpg" alt="" style="width:894px;"/></li>
+</ul>
+
+<p><strong>weak_unregister_no_lock</strong><br/>
+下面来看一下weak_unregister_no_lock是怎么清除旧值的</p>
+
+<pre class="line-numbers"><code class="language-text">void weak_unregister_no_lock(weak_table_t *weak_table, id referent_id, 
+                        id *referrer_id)
+{
+    objc_object *referent = (objc_object *)referent_id;
+    objc_object **referrer = (objc_object **)referrer_id;
+
+    weak_entry_t *entry;
+
+    if (!referent) return;
+
+    if ((entry = weak_entry_for_referent(weak_table, referent))) {
+        remove_referrer(entry, referrer);
+        bool empty = true;
+        if (entry-&gt;out_of_line  &amp;&amp;  entry-&gt;num_refs != 0) {
+            empty = false;
+        }
+        else {
+            for (size_t i = 0; i &lt; WEAK_INLINE_COUNT; i++) {
+                if (entry-&gt;inline_referrers[i]) {
+                    empty = false; 
+                    break;
+                }
+            }
+        }
+
+        if (empty) {
+            weak_entry_remove(weak_table, entry);
+        }
+    }
+
+    // Do not set *referrer = nil. objc_storeWeak() requires that the 
+    // value not change.
+}
+</code></pre>
+
+<p>该方法主要作用是将旧对象在 weak_table 中解除 weak 指针的对应绑定,根据函数名称,我们称他为解除注册操作<br/>
+这个函数的逻辑:首先是 weak_table_t 表,键和值.声明 weak_entry_t 变量,如果 key(referent)为空,直接返回,根据全局入口表和键获取对应的 weak_entry_t 对象entry.获取到 entry 后,将 entry 以及 weak_table 作为参数传入 remove_referrer 函数中,这个函数就是解除操作,然后判断 entry 是否为空,若果为空,从全局记录表中清除相应的 entry.</p>
+
+<p><strong>weak_entry_for_referent</strong></p>
+
+<pre class="line-numbers"><code class="language-text">static weak_entry_t *weak_entry_for_referent(weak_table_t *weak_table, objc_object *referent)
+{
+    assert(referent);
+
+    weak_entry_t *weak_entries = weak_table-&gt;weak_entries;
+
+    if (!weak_entries) return nil;
+
+    size_t index = hash_pointer(referent) &amp; weak_table-&gt;mask;
+    size_t hash_displacement = 0;
+    while (weak_table-&gt;weak_entries[index].referent != referent) {
+        index = (index+1) &amp; weak_table-&gt;mask;
+        hash_displacement++;
+        if (hash_displacement &gt; weak_table-&gt;max_hash_displacement) {
+            return nil;
+        }
+    }
+
+    return &amp;weak_table-&gt;weak_entries[index];
+}
+</code></pre>
+
+<p>这个函数的逻辑就是先获取全局 weak 表入口,然后将引用计数的地址进行 hash 化后与 weak_table-&gt;mask 做与操作,作为下标,在全局 weak 表中查找,若找到,返回 entry,若没有,返回 nil</p>
 
 <p>参考:<br/>
-<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
-<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
-<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
+<a href="https://www.jianshu.com/p/10c0f49f4755">https://www.jianshu.com/p/10c0f49f4755</a><br/>
+<a href="https://www.jianshu.com/p/ef6d9bf8fe59">https://www.jianshu.com/p/ef6d9bf8fe59</a><br/>
+<a href="https://www.jianshu.com/p/8577286af88e">https://www.jianshu.com/p/8577286af88e</a><br/>
+<a href="https://juejin.im/entry/58a178060ce463005644ee4a">https://juejin.im/entry/58a178060ce463005644ee4a</a></p>
 
                         
                       </div>
@@ -227,10 +470,10 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/13</span>
+                    <span class="date">2020/02/18</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -328,6 +571,12 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 	      
 		      
 			      <li class="post">
+			        <a href="15834860456410.html">Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15833975374504.html">Runtime 底层1- isa&Class</a>
 			      </li>
 		     
@@ -347,12 +596,6 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 		      
 			      <li class="post">
 			        <a href="15833972335253.html">设计模式-结构型模式</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833971971986.html">设计模式-创建型模式</a>
 			      </li>
 		     
 		  

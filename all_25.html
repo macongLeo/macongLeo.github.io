@@ -110,80 +110,91 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15834860456410.html">
+                <a class="clearlink" href="15780200209710.html">
                 
-                  <h1>Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</h1>
+                  <h1>iOS 响应者链及事件传递</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>isMemberOfClass和isKindOfClass一直以来都是想当然的使用,有时候得不到想要的结果,最后决定探究一下,彻底搞清楚,闲话不多说,先看下源码;</p>
+                        	<h2 id="toc_0">UIResponder</h2>
 
-<h2 id="toc_0">isMemberOfClass</h2>
+<p>在 iOS中，所有响应事件处理事件的对象都直接或间接的继承UIResponder。</p>
 
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isMemberOfClass:(Class)cls {
-    return object_getClass((id)self) == cls;
-}
-- (BOOL)isMemberOfClass:(Class)cls {
-    return [self class] == cls;
+<p><img src="media/15780200209710/2526037-c8d367c7064cf59c.jpg" alt="2526037-c8d367c7064cf59"/></p>
+
+<p>在 iOS 视图结构中，呈现出来的是一个 N 叉树的树形结构，每个视图都只有一个父视图，可以有多个子视图。<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpldkdtyj30he0go46i.jpg" alt=""/></p>
+
+<h2 id="toc_1">寻找第一响应者</h2>
+
+<p>当用户点击某个视图或者按钮的时候，会首先响应 applocation 中的 UIWindow 一层一层的向下查找，直到找到点击的 view，这阶段用到的两个方法：</p>
+
+<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;   // recursively calls -pointInside:withEvent:. point is in the receiver&#39;s coordinate system
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;   // default returns YES if point is in bounds
+</code></pre>
+
+<p>例如有这样一个图层结构：<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpsaqbekj30e80jamy9.jpg" alt=""/></p>
+
+<p>在上图中用户点击视图中的ViewD时，UIWindow首先接收到响应，此响应包括用户点击的区域和一个封装好的UIEvent对象，然后UIWindow通过这些信息利用以下方法查找：</p>
+
+<ol>
+<li><p>UIWindow会通过调用pointInside:withEvent:方法返回的YES得知用户点击的范围在ViewA中；</p></li>
+<li><p>ViewA调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewB、ViewC)调用hitTest:withEvent:方法；</p></li>
+<li><p>在遍历中发现使用ViewC调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewC范围之内；</p></li>
+<li><p>ViewC调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewD、ViewE)调用hitTest:withEvent:方法;</p></li>
+<li><p>在遍历中发现使用ViewD调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewD范围之内;</p></li>
+<li><p>在ViewD调用hitTest:withEvent:方法之前发现View的subViews的count为0，故确定用户点击在ViewD之上。</p></li>
+</ol>
+
+<p>UIWindow会用遍历subviews，使用每一个subview调用hitTest:withEvent:方法，如果用户点击在某一个subview上，pointInside:withEvent:方法返回YES，再用这个subview调用hitTest:withEvent:方法，依次类推，直到当前view没有子view或点击的位置没有在其任何子view之上，便确定用户点击在某view上</p>
+
+<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
+    for (UIView *view in self.subviews) {
+        if([view pointInside:point withEvent:event]){
+            UIView *hitTestView = [view hitTest:point withEvent:event];
+            if(nil == hitTestView){
+                return view;
+            }
+        }
+    }
+    return nil;
 }
 </code></pre>
 
-<p>isMemberOfClass有两个方法,一个是实例方法,一个是类方法,他俩的区别是:</p>
+<blockquote>
+<p>1.Alpha=0、子视图超出父视图的情况、userInteractionEnabled=NO、hidden=YES视图会被忽略，不会调用hitTest<br/>
+2.父视图被忽略后其所有子视图也会被忽略<br/>
+3.出现视图无法响应的情况，可以考虑上诉情况来排查问题</p>
+</blockquote>
 
-<ul>
-<li>实例方法- (BOOL)isMemberOfClass:(Class)cls: 根据实例对象取得类对象,再去判断</li>
-<li>类方法 + (BOOL)isMemberOfClass:(Class)cls:根据对象取得元类对象,再去判断</li>
-</ul>
+<h2 id="toc_2">事件传递</h2>
 
-<p>其实简单的说是根据传入的类的 isa,来判断,因为实例对象的 isa 是实例的类对象,类对象的 isa 指向的是类的元类,Meta Class</p>
+<p>事件传递的顺序其实就是寻找第一响应者的逆序，当找到了第一响应（View，button）之后，响应者就要对事件作出响应，这里就是使用了 UIResponder 的 nextResponder 方法。</p>
 
-<p>验证:<br/>
-创建两个类,Person 类继承自 NSObject<br/>
-Student 类继承自 Person<br/>
-<img src="media/15834860456410/15834866616638.jpg" alt="" style="width:259px;"/><br/>
-<img src="media/15834860456410/15834866735409.jpg" alt="" style="width:232px;"/></p>
+<h3 id="toc_3">nextResponder 的规则</h3>
 
-<p>先看代码,思考一下打印结果是什么<br/>
-<img src="media/15834860456410/15834890909476.jpg" alt="" style="width:554px;"/><br/>
-res1 : [Person class] Person 类的元类 是不是和[NSObject class]类一致? 肯定是不一致 所以返回 NO<br/>
-res2: [Person class] Person 类的元类 是不是和[Person class]类一致? 元类和类肯定也是不一致 所以返回 NO</p>
+<p>因为UIView和UIViewController都是继承于UIResponder，所以在调用nextResponder时有几条规则如下：</p>
 
-<p>实例对象;<br/>
-<img src="media/15834860456410/15834894446040.jpg" alt="" style="width:524px;"/><br/>
-第一行,Person new 出来一个实例,该实例的 isa 指向类 Person, 而 Person 很明显不是 NSObject类,所以为 0;<br/>
-第二行,Person new 出来一个实例,该实例的 isa 指向类 Person, 判断 Person 类是不是 Person,答案是肯定的,所以为 1;</p>
+<ol>
+<li><p>当一个view调用其nextResponder会返回其superView;</p></li>
+<li><p>如果当前的view为UIViewController的view被添加到其他view上，那么调用nextResponder会返回当前的UIViewController，而这个UIViewController的nextResponder为view的superView；</p></li>
+<li><p>如果当前的UIViewController的view没有添加到任何其他view上，当前的UIViewController的nextResponder为nil，不管它是keyWinodw或UINavigationController的rootViewController，都是如此；</p></li>
+<li><p>如果当前application的keyWindow的rootViewController为UINavigationController(或UITabViewController)，那么通过调用UINavigationController(或UITabViewController)的nextResponder得到keyWinodw；</p></li>
+<li><p>keyWinodw的nextResponder为UIApplication，UIApplication的nextResponder为AppDelegate，AppDelegate的nextResponder为nil。</p></li>
+</ol>
 
-<p><img src="media/15834860456410/15834896748734.jpg" alt="" style="width:765px;"/></p>
+<p>通过知道了上述规则，便可以通过用户点击的ViewD，查看ViewD是否响应了点击事件，如果没有找它的nextResponder，如果没有再继续找，直到找到AppDelegate再没有响应，则此点击事件被系统丢弃，大致流程如下：<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lu7zsmnqj30fa0f8adu.jpg" alt=""/><br/>
+事件响应链的大致流程就是如此了，大概就是一个先向下找，再向上找的过程！</p>
 
-<p><strong>object_getClass(cls)</strong> 这个方法返回是传入类的元类 </p>
+<h2 id="toc_4">无法响应的情况</h2>
 
-<h2 id="toc_1">isKindOfClass</h2>
+<p>参考：<br/>
+<a href="">https://www.cnblogs.com/easy-coding/p/3604856.html</a></p>
 
-<ul>
-<li>调用者是传入的类的实例对象，或者调用者是传入类的继承者链中的类的实例对象，则返回YES</li>
-<li>判断调用者是否是传入对象的子类，别弄反了</li>
-<li>去父类递归查找判断</li>
-</ul>
-
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isKindOfClass:(Class)cls {
-    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
--（BOOL)isKindOfClass:(Class)cls {
-    for(Class tcls = [self class]; tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
-</code></pre>
-
-<p><img src="media/15834860456410/15834900954033.jpg" alt="" style="width:783px;"/></p>
-
-<p>参考:<br/>
-<a href="https://www.lagou.com/lgeduarticle/14758.html">https://www.lagou.com/lgeduarticle/14758.html</a></p>
+<p><a href="">https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/using_responders_and_the_responder_chain_to_handle_events?language=objc</a></p>
 
                         
                       </div>
@@ -192,10 +203,10 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/06</span>
+                    <span class="date">2020/01/03</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
           				   
                     
 
@@ -216,12 +227,12 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
 			<div class="row">
 			  <div class="large-6 columns">
 			  <p class="text-left" style="padding-top:25px;">
-			   
+			   <a href="all_24.html">&laquo; Prev Page</a>  
 			  </p>
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			 <a href="all_1.html">&raquo; Next Page</a> 
+			
 			</p>
 			  </div>
 			</div>
