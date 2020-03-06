@@ -110,194 +110,358 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15788827057157.html">
+                <a class="clearlink" href="15820198947096.html">
                 
-                  <h1>Runtime</h1>
+                  <h1>weak 的释放及原理</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15788827057157/15788999942773.jpg" alt="" style="width:939px;"/><br/>
-Runtime 的特性主要是消息（方法）传递，如果消息（方法）在对象中找不到，就会进行消息转发。</p>
-
-<h2 id="toc_0">Runtime 介绍</h2>
+                        	<p>1.被weak修饰的对象在被释放的时候会发生什么？是如何实现的？知道sideTable么？里面的结构可以画出来么<br/>
+在回答问题之前,我们先来了解一下 weak 的内部结构:</p>
 
 <blockquote>
-<p>Objective-C 拓展了 C语言，并且加入了面向对象特性和 SmallTalk 式的消息传递机制，而这个拓展的核心就是用 C 和编译语言写的Runtime库。Runtime是面向对象的基础。</p>
+<p>我们常说的 weak,其实是 runtime 维护的用于存储对象的所有 weak 指针的 hash 表,<mark>key 是对象的指针,value 是 weak 指针的地址(这个地址的值是所指对象的地址)数组</mark></p>
 </blockquote>
 
-<p><img src="media/15788827057157/15789003887697.jpg" alt="" style="width:684px;"/></p>
+<p>例如:</p>
 
-<h2 id="toc_1">Runtime 消息传递</h2>
+<pre class="line-numbers"><code class="language-text">NSObject *b = [NSObject new];
+__weak id a = b;
+</code></pre>
 
-<p>一个对象的方法[obj foo]，编译器转成消息转发：<strong>objc_msgSend(obj, foo)</strong><br/>
-Runtime 执行的流程如下：</p>
+<p>这里的 b 就是 weak 表的 key,&amp;a(a的内存地址)就是 value;</p>
 
-<ul>
-<li>首先通过 obj 的 isa 指针， 找到他的 Class</li>
-<li>在 class 的 methodlist（方法列表） 列表中找方法： foo</li>
-<li>如果 class 中没有找到 foo，就向上去父类的方法列表中继续查找；</li>
-<li>如果找到了就执行，去实现 IMP。</li>
-</ul>
-
-<p><img src="media/15788827057157/15789011491768.jpg" alt="" style="width:687px;"/><br/>
-<img src="media/15788827057157/15789013576022.jpg" alt="" style="width:664px;"/></p>
+<p><strong>weak 的实现原理简单的概括就三步:</strong></p>
 
 <ol>
-<li>系统首先找到消息的接收对象,然后通过对象的 isa 找到他的类 class.</li>
-<li>然后在他的类中查找 method_list,是否有 selector 方法</li>
-<li>没有找到则继续查找父类的 method_list.</li>
-<li>找到对应的 method,执行他的 IMP</li>
-<li>转发 IMP 的 return 值.</li>
+<li>初始化时:runtime 会调用objc_initWeak 函数,初始化一个新的 weak 指针指向对象的地址</li>
+<li>添加引用时:objc_initWeak 函数会调用 objc_storeWeak()函数,objc_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
+<li>释放时:调用 clearDeallocating 函数.clearDeallocating函数首先根据对象地址获取所有 weak 指针地址的数组,然后遍历这个数组把其中的数据置为 nil,最后把这个 entry 从 weak 表中删除,最后清理对象的记录.</li>
 </ol>
 
-<p>下面讲一下消息传递中用到的概念:</p>
+<p>在 runtime 里,weak 修饰符变量是通过 objc_initWeak 函数来初始化的,在变量作用域结束的时候通过 objc_destroyWeak 函数来释放的.</p>
+
+<p>这两个函数长这样:</p>
+
+<pre class="line-numbers"><code class="language-text">id objc_initWeak(id *location, id newObj)
+{
+    // 查看对象实例是否有效
+    // 无效对象直接导致指针释放
+    if (!newObj) {
+        *location = nil;
+        return nil;
+    }
+    // 这里传递了三个 bool 数值
+    // 使用 template 进行常量参数传递是为了优化性能
+    return storeWeak&lt;false/*old*/, true/*new*/, true/*crash*/&gt;
+        (location, (objc_object*)newObj);
+}
+</code></pre>
+
+<pre class="line-numbers"><code class="language-text">void objc_destroyWeak(id *location)
+{
+    (void)storeWeak&lt;true/*old*/, false/*new*/, false/*crash*/&gt;
+        (location, nil);
+}
+</code></pre>
+
+<p>注意点:</p>
+
+<ol>
+<li>objc_initWeak 函数有一个前提条件,就是 object 必须是一个没有被注册为 weak 对象的有效指针,而 value 则可以是 null,或者指向一个有效的对象</li>
+<li>添加引用时,object_initWeak 函数会调用 object_storeWeak()函数,object_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
+</ol>
+
+<p>从上面两个代码能看出来他们都调用了 storeWeak 这个函数,但是传入的参数确有点不一样<br/>
+init 方法中,第一个参数为 weak 的修饰变量,第二个参数为引用计数对象,但是在 destoryWeak 函数,第一参数依旧为 weak 修饰变量,第二个为 nil.参数不同到底代表了什么?下面继续分析 storeWeak 这个函数:</p>
+
+<pre class="line-numbers"><code class="language-text">// 更新一个弱引用变量
+// 如果 HaveOld 是 true, 变量是个有效值，需要被及时清理。变量可以为 nil。
+// 如果 HaveNew 是 true, 需要一个新的 value 来替换变量。变量可以为 nil
+// 如果crashifdeallocation 是 ture ，那么如果 newObj 是 deallocating，或者 newObj 的类不支持弱引用，则该进程就会停止。
+// 如果crashifdeallocation 是 false，那么 nil 会被存储。
+
+template &lt;bool HaveOld, bool HaveNew, bool CrashIfDeallocating&gt;
+static id storeWeak(id *location, objc_object *newObj)
+{
+    assert(HaveOld  ||  HaveNew);
+    if (!HaveNew) assert(newObj == nil);
+
+    Class previouslyInitializedClass = nil;
+    id oldObj;
+    
+    // 创建新旧散列表
+    SideTable *oldTable;
+    SideTable *newTable;
+
+    // Acquire locks for old and new values.
+    // 获得新值和旧值的锁存位置 (用地址作为唯一标示)
+    // Order by lock address to prevent lock ordering problems.
+    // 通过地址来建立索引标志，防止桶重复
+    // Retry if the old value changes underneath us.
+    // 下面指向的操作会改变旧值
+ retry:
+    if (HaveOld) {
+    // 如果 HaveOld 为 true ，更改指针，获得以 oldObj 为索引所存储的值地址
+        oldObj = *location;
+        oldTable = &amp;SideTables()[oldObj];
+    } else {
+        oldTable = nil;
+    }
+    if (HaveNew) {
+    // 获得以 newObj 为索引所存储的值对象
+        newTable = &amp;SideTables()[newObj];
+    } else {
+        newTable = nil;
+    }
+    
+// 对两个 table 进行加锁操作，防止多线程中竞争冲突
+    SideTable::lockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+
+//  location 应该与 oldObj 保持一致，如果不同，说明当前的 location 已经处理过 oldObj 可是又被其他线程所修改, 保证线程安全，这个判断用来避免线程冲突重处理问题
+    if (HaveOld  &amp;&amp;  *location != oldObj) {
+        SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+        goto retry;
+    }
+
+    // Prevent a deadlock between the weak reference machinery
+    // and the +initialize machinery by ensuring that no 
+    // weakly-referenced object has an un-+initialized isa.
+    // 防止弱引用之间发生死锁，并且通过 +initialize 初始化构造器保证所有弱引用的 isa 非空指向
+    if (HaveNew  &amp;&amp;  newObj) {
+        // 获得新对象的 isa 指针
+        Class cls = newObj-&gt;getIsa();
+        // 判断 isa 非空且已经初始化
+        if (cls != previouslyInitializedClass  &amp;&amp;  
+            !((objc_class *)cls)-&gt;isInitialized()) 
+        {
+            // 对两个表解锁
+            SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+            _class_initialize(_class_getNonMetaClass(cls, (id)newObj));
+
+            // If this class is finished with +initialize then we&#39;re good.
+            // If this class is still running +initialize on this thread 
+            // (i.e. +initialize called storeWeak on an instance of itself)
+            // then we may proceed but it will appear initializing and 
+            // not yet initialized to the check above.
+            // Instead set previouslyInitializedClass to recognize it on retry.
+            // 如果该类已经完成执行 +initialize 方法是最好的，如果该类 + initialize 在线程中，例如 +initialize 正在调用storeWeak 方法，那么则需要手动对其增加保护策略，并设置 previouslyInitializedClass 指针进行标记然后重新尝试
+            previouslyInitializedClass = cls;
+
+            goto retry;
+        }
+    }
+
+    // Clean up old value, if any. 清除旧值
+    if (HaveOld) {
+        weak_unregister_no_lock(&amp;oldTable-&gt;weak_table, oldObj, location);
+    }
+
+    // Assign new value, if any. 分配新值
+    if (HaveNew) {
+        newObj = (objc_object *)weak_register_no_lock(&amp;newTable-&gt;weak_table, 
+                                                      (id)newObj, location, 
+                                                      CrashIfDeallocating);
+        // weak_register_no_lock returns nil if weak store should be rejected
+        // 如果弱引用被释放则该方法返回 nil
+        // Set is-weakly-referenced bit in refcount table.
+        // 在引用计数表中设置弱引用标记位
+        if (newObj  &amp;&amp;  !newObj-&gt;isTaggedPointer()) {
+            newObj-&gt;setWeaklyReferenced_nolock();
+        }
+
+        // Do not set *location anywhere else. That would introduce a race.
+        *location = (id)newObj;
+    }
+    else {
+        // No new value. The storage is not changed.
+    }
+    
+    SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+
+    return (id)newObj;
+}
+</code></pre>
+
+<p>以上就是 storeWeak 函数的实现,他做了几件事:</p>
 
 <ul>
-<li>类对象(objc_class)</li>
-<li>实例对象(objc_object)</li>
-<li>元类(Meta Class)</li>
-<li>Method(objc_method)</li>
-<li>SEL(objc_selector)</li>
-<li>IMP</li>
-<li>类缓存(objc_cache)</li>
-<li>Category(objc_category)</li>
+<li>声明了新旧散列表指针,因为 weak 修饰的变量如果之前已经指向一个对象,然后其再次改变指向另一个对象,那么按理来说我们需要从 oldTable 删除 weak 变量的记录,也就是要释放该 weak 变量,然后再给 newTable 添加新记录(weak变量),这里的新旧散列表就是这个作用</li>
+<li>根据新旧变量地址获取响应的 SideTable</li>
+<li>对两个表进行加锁操作,防止多线程竞争冲突</li>
+<li>进行线程冲突重处理判断</li>
+<li>判断其 isa 指针是否为空,为空则需要初始化</li>
+<li>如果存在旧值,调用 weak_unregister_no_lock 函数清楚旧值</li>
+<li>调用weak_register_no_lock 函数分配新值</li>
+<li>解锁两个表,返回第二参数</li>
 </ul>
 
-<h3 id="toc_2">类对象(objc_class)</h3>
+<p>tip:</p>
 
-<p>在 OC 中类是有 Class 类型表示的,它实际上是一个指向 objc_class 的结构体指针<br/>
-<img src="media/15788827057157/15789018290104.jpg" alt="" style="width:295px;"/><br/>
-<img src="media/15788827057157/15789018799631.jpg" alt="" style="width:960px;"/><br/>
-struct objc_class结构体定义了很多变量，通过命名不难发现，<br/>
-结构体里保存了指向父类的指针、类的名字、版本、实例大小、实例变量列表、方法列表、缓存、遵守的协议列表等，<br/>
-一个类包含的信息也不就正是这些吗？没错，类对象就是一个结构体struct objc_class，这个结构体存放的数据称为元数据(metadata)，<br/>
-该结构体的第一个成员变量也是isa指针，这就说明了Class本身其实也是一个对象，因此我们称之为类对象，类对象在编译期产生用于创建实例对象，是单例。</p>
+<blockquote>
+<p>你可以把objc_storeWeak(id *location, objc_object *newObj)理解为：objc_storeWeak(value, key)，并且当key变nil，将value置nil。<br/>
+结合最开始的例子我们可以理解为objc_storeWeak(&amp;a, b)<br/>
+在b非nil时，a和b指向同一个内存地址，在b变nil时，a变nil。此时向a发送消息不会崩溃：在Objective-C中向nil发送消息是安全的。<br/>
+而如果a是由 assign 修饰的，则： 在 b 非 nil 时，a 和 b 指向同一个内存地址，在 b 变 nil 时，a 还是指向该内存地址，变野指针。此时向 a 发送消息<mark>极易崩溃</mark>,不是一定会奔溃,涉及到 assgin 的释放问题下面再说。</p>
+</blockquote>
 
-<h3 id="toc_3">实例(objc_object)</h3>
+<p>初始化弱引用对象流程图:<br/>
+<img src="media/15820198947096/15820219239893.jpg" alt="" style="width:546px;"/></p>
 
-<p><img src="media/15788827057157/15789019974820.jpg" alt="" style="width:420px;"/></p>
+<p><strong>数据结构分析(* SideTables、RefcountMap、weak_table_t*)</strong><br/>
+<img src="media/15820198947096/15820337143051.jpg" alt="" style="width:601px;"/></p>
 
-<p>类对象中的元数据存储的都是如何创建一个实例相关的信息,那么类对象和类方法应该从哪里创建呢? 就是 isa 指针指向的结构体创建,类对象的 isa 指针指向的我们称为元类,元类中保存了创建类对象及类方法所需的所有信息,所以经典的那张图又来了:<br/>
-<img src="media/15788827057157/15789021597096.jpg" alt="" style="width:934px;"/></p>
+<p><strong>SideTable</strong></p>
 
-<h3 id="toc_4">元类(Meta Class)</h3>
+<p>SideTable主要用于管理对象的引用计数和 weak 表为了管理所有对象的引用计数和 weak 指针,苹果创建了一个全局的 SideTables,是一个全局的 Hash 表,里面装的都是 SideTable结构体.他使用对象的内存地址当他的key.</p>
 
-<p>通过上图我们可以发现整个体系构成了一个自闭环, <strong>struct objc_object</strong> 的结构体实例, 它的 isa 指向类对象,类对象的 isa 指向元类,super_class 指针指向父类的类对象,而元类的 super_class 的指针指向了父类的元类,那元类的指针又指向了自己.<br/>
-元类是一个类对象的类,在上面我们提到所有的类自身也是一个对象,我们可以像这个对象发送消息(调用方法),为了调用类方法,这个类的 isa 指针必须指向一个包含这些类方法的一个 objc_class 结构体,这就引出了元类(meta-class)的概念.<br/>
-元类中保存了创建类对象以及类方法所需的所有信息。 任何NSObject继承体系下的meta-class都使用NSObject的meta-class作为自己的所属类，而<strong>基类的meta-class的isa指针是指向它自己</strong>。</p>
+<pre class="line-numbers"><code class="language-text">struct SideTable {
+// 保证原子操作的自旋锁
+    spinlock_t slock;
+    // 引用计数的 hash 表
+    RefcountMap refcnts;
+    // weak 引用全局 hash 表
+    weak_table_t weak_table;
+}
+</code></pre>
 
-<p><img src="media/15788827057157/15789044962794.jpg" alt="" style="width:881px;"/></p>
+<p><img src="media/15820198947096/15820337366643.jpg" alt="" style="width:469px;"/></p>
+
+<p>从声明中可以看出,SideTable内部包含了一个是防止多线程竞争的自旋锁(slock),第二个是协助对象的 isa 指针的 extra_rc 共同引用计数变量,这里主要看 weak_table_t 的结构和作用</p>
+
+<p><strong>1,一把自旋锁。spinlock_t  slock;</strong></p>
+
+<blockquote>
+<p>自旋锁比较适用于锁使用者保持锁时间比较短的情况。正是由于自旋锁使用者一般保持锁时间非常短，因此选择自旋而不是睡眠是非常必要的，自旋锁的效率远高于互斥锁。信号量和读写信号量适合于保持时间较长的情况，它们会导致调用者睡眠，因此只能在进程上下文使用，而自旋锁适合于保持时间非常短的情况，它可以在任何上下文使用。</p>
+</blockquote>
+
+<p><strong>2,引用计数器 RefcountMap  refcnts;</strong><br/>
+对象的具体引用计数数量是记录在这里的<br/>
+这里的RefcountMap其实是个 C++的 Map.<br/>
+<img src="media/15820198947096/15820340809229.jpg" alt="" style="width:571px;"/></p>
+
+<p><strong>weak_table_t</strong><br/>
+weak_table_t结构体存储了某个对象相关的所有弱引用信息</p>
+
+<pre class="line-numbers"><code class="language-text">/**
+ * The global weak references table. Stores object ids as keys,
+ * and weak_entry_t structs as their values.
+ */
+struct weak_table_t {
+    // 保存了所有指向指定对象的 weak 指针
+    weak_entry_t *weak_entries;
+    // 存储空间
+    size_t    num_entries;
+    // 参与判断引用计数辅助量
+    uintptr_t mask;
+    // hash key 最大偏移值
+    uintptr_t max_hash_displacement;
+};
+</code></pre>
+
+<p>使用 weak 指针指向的对象地址作为 key,用 weak_entry_t 类型结构体对象作为 value.其中的 weak_entries 成员,就是弱引用表入口;<br/>
+<strong>weak_entry_t</strong><br/>
+weak_entry_t负责维护和存储指向一个对象的所有弱引用 hash 表:</p>
+
+<pre class="line-numbers"><code class="language-text">typedef objc_object ** weak_referrer_t;
+struct weak_entry_t {
+    DisguisedPtrobjc_object&gt; referent;
+    union {
+        struct {
+            weak_referrer_t *referrers;
+            uintptr_t        out_of_line : 1;
+            uintptr_t        num_refs : PTR_MINUS_1;
+            uintptr_t        mask;
+            uintptr_t        max_hash_displacement;
+        };
+        struct {// out_of_line=0 is LSB of one of these (don&#39;t care which)
+            weak_referrer_t  inline_referrers[WEAK_INLINE_COUNT];
+        };
+    }
+}
+</code></pre>
 
 <ul>
-<li>SEL method_name    方法名</li>
-<li>char *method_types 方法类型</li>
-<li>IMP method_imp     方法实现</li>
+<li>referent:被值对象的地址,前面循环遍历查找的时候就是判断目标地址是否和他相等</li>
+<li>referrers:可变数组,里面保存着所指向这个对象的弱引用的地址,当这个对象被释放的时候.referrers里面的所有指针都会被置为 nil</li>
+<li>inline_referrers:只有 4 个元素的数组,默认情况下,用它来存储弱引用的指针,当大于 4 个的时候使用referrers来存储指针<br/>
+用一张图来表示就是:
+<img src="media/15820198947096/15820227824222.jpg" alt="" style="width:894px;"/></li>
 </ul>
 
-<p><img src="media/15788827057157/15789046998441.jpg" alt="" style="width:728px;"/></p>
+<p><strong>weak_unregister_no_lock</strong><br/>
+下面来看一下weak_unregister_no_lock是怎么清除旧值的</p>
 
-<p>objc_msgSend 函数第二个参数类型为 SEL.它是 selector 在 OC 中的表示类型(Swift 中是 Selector 类).selector 是方法选择器,可以理解为区分方法的 ID,而这个 ID 的数据结构是 SEL.<br/>
-<img src="media/15788827057157/15789049888500.jpg" alt="" style="width:972px;"/></p>
+<pre class="line-numbers"><code class="language-text">void weak_unregister_no_lock(weak_table_t *weak_table, id referent_id, 
+                        id *referrer_id)
+{
+    objc_object *referent = (objc_object *)referent_id;
+    objc_object **referrer = (objc_object **)referrer_id;
 
-<p><img src="media/15788827057157/15789050086371.jpg" alt="" style="width:988px;"/></p>
+    weak_entry_t *entry;
 
-<p><img src="media/15788827057157/15789060707679.jpg" alt="" style="width:978px;"/></p>
+    if (!referent) return;
 
-<p><img src="media/15788827057157/15789062512658.jpg" alt="" style="width:547px;"/></p>
+    if ((entry = weak_entry_for_referent(weak_table, referent))) {
+        remove_referrer(entry, referrer);
+        bool empty = true;
+        if (entry-&gt;out_of_line  &amp;&amp;  entry-&gt;num_refs != 0) {
+            empty = false;
+        }
+        else {
+            for (size_t i = 0; i &lt; WEAK_INLINE_COUNT; i++) {
+                if (entry-&gt;inline_referrers[i]) {
+                    empty = false; 
+                    break;
+                }
+            }
+        }
 
-<ul>
-<li>name:是指 class_name 而不是 category_name。</li>
-<li>cls:要扩展的类对象，编译期间是不会定义的，而是在Runtime阶段通过name对 应到对应的类对象。</li>
-<li>instanceMethods：category中所有给类添加的实例方法的列表。</li>
-<li>classMethods：category中所有添加的类方法的列表。</li>
-<li>protocols：category实现的所有协议的列表。</li>
-<li>instanceProperties：表示Category里所有的properties，这就是我们可以通过objc_setAssociatedObject和objc_getAssociatedObject增加实例变量的原因，不过这个和一般的实例变量是不一样的。</li>
-</ul>
+        if (empty) {
+            weak_entry_remove(weak_table, entry);
+        }
+    }
 
-<p><img src="media/15788827057157/15789063762697.jpg" alt="" style="width:983px;"/></p>
+    // Do not set *referrer = nil. objc_storeWeak() requires that the 
+    // value not change.
+}
+</code></pre>
 
-<h2 id="toc_5">Runtime 消息转发</h2>
+<p>该方法主要作用是将旧对象在 weak_table 中解除 weak 指针的对应绑定,根据函数名称,我们称他为解除注册操作<br/>
+这个函数的逻辑:首先是 weak_table_t 表,键和值.声明 weak_entry_t 变量,如果 key(referent)为空,直接返回,根据全局入口表和键获取对应的 weak_entry_t 对象entry.获取到 entry 后,将 entry 以及 weak_table 作为参数传入 remove_referrer 函数中,这个函数就是解除操作,然后判断 entry 是否为空,若果为空,从全局记录表中清除相应的 entry.</p>
 
-<p>消息转发的最后三次机会</p>
+<p><strong>weak_entry_for_referent</strong></p>
 
-<ul>
-<li>动态方法解析</li>
-<li>备用接受者</li>
-<li>完整消息转发</li>
-</ul>
+<pre class="line-numbers"><code class="language-text">static weak_entry_t *weak_entry_for_referent(weak_table_t *weak_table, objc_object *referent)
+{
+    assert(referent);
 
-<p><img src="media/15788827057157/15789064378501.jpg" alt="" style="width:974px;"/></p>
+    weak_entry_t *weak_entries = weak_table-&gt;weak_entries;
 
-<h3 id="toc_6">动态方法解析</h3>
+    if (!weak_entries) return nil;
 
-<p><img src="media/15788827057157/15789066286973.jpg" alt="" style="width:964px;"/></p>
+    size_t index = hash_pointer(referent) &amp; weak_table-&gt;mask;
+    size_t hash_displacement = 0;
+    while (weak_table-&gt;weak_entries[index].referent != referent) {
+        index = (index+1) &amp; weak_table-&gt;mask;
+        hash_displacement++;
+        if (hash_displacement &gt; weak_table-&gt;max_hash_displacement) {
+            return nil;
+        }
+    }
 
-<p>可以看到虽然没有实现foo:这个函数，但是我们通过class_addMethod动态添加fooMethod函数，并执行fooMethod这个函数的IMP。从打印结果看，成功实现了。<br/>
-如果resolve方法返回 NO ，运行时就会移到下一步：<strong>forwardingTargetForSelector</strong>。</p>
+    return &amp;weak_table-&gt;weak_entries[index];
+}
+</code></pre>
 
-<h3 id="toc_7">备用接受者</h3>
+<p>这个函数的逻辑就是先获取全局 weak 表入口,然后将引用计数的地址进行 hash 化后与 weak_table-&gt;mask 做与操作,作为下标,在全局 weak 表中查找,若找到,返回 entry,若没有,返回 nil</p>
 
-<p>如果目标对象实现了<strong>-forwardingTargetForSelector:</strong>，Runtime 这时就会调用这个方法，给你把这个消息转发给其他对象的机会。</p>
-
-<p>实现一个备用接收者的例子如下：</p>
-
-<p><img src="media/15788827057157/15789068795712.jpg" alt="" style="width:667px;"/><br/>
-可以看到我们通过forwardingTargetForSelector把当前ViewController的方法转发给了Person去执行了。打印结果也证明我们成功实现了转发。</p>
-
-<h3 id="toc_8">完整消息转发</h3>
-
-<p>如果在上一步还不能处理未知消息，则唯一能做的就是启用完整的消息转发机制了。<br/>
-首先它会发送<strong>-methodSignatureForSelector:</strong>消息获得函数的参数和返回值类型。如果-<strong>methodSignatureForSelector:</strong>返回nil ，Runtime则会发出 <strong>-doesNotRecognizeSelector:</strong> 消息，程序这时也就挂掉了。如果返回了一个函数签名，Runtime就会创建一个<strong>NSInvocation</strong> 对象并发送 <strong>-forwardInvocation:</strong>消息给目标对象。</p>
-
-<p><img src="media/15788827057157/15789070035039.jpg" alt="" style="width:765px;"/><br/>
-<img src="media/15788827057157/15789070187925.jpg" alt="" style="width:774px;"/><br/>
-从打印结果来看，我们实现了完整的转发。通过签名，Runtime生成了一个对象anInvocation，发送给了forwardInvocation，我们在forwardInvocation方法里面让Person对象去执行了foo函数。签名参数v@:怎么解释呢，这里苹果文档Type Encodings有详细的解释。<br/>
-以上就是Runtime的三次转发流程。下面我们讲讲Runtime的实际应用。<br/>
-<img src="media/15788827057157/15789072653201.jpg" alt="" style="width:987px;"/></p>
-
-<h2 id="toc_9">Runtime 应用</h2>
-
-<ul>
-<li>AOP 面向切片编程(埋点方面用的比较多)
-<img src="media/15788827057157/15789071021461.jpg" alt="" style="width:702px;"/>
-<img src="media/15788827057157/15789071215521.jpg" alt="" style="width:811px;"/></li>
-</ul>
-
-<p>下面实现一个UIView的Category添加自定义属性defaultColor。<br/>
-<img src="media/15788827057157/15789080004602.jpg" alt="" style="width:839px;"/><br/>
-<img src="media/15788827057157/15789080309274.jpg" alt="" style="width:969px;"/></p>
-
-<p><img src="media/15788827057157/15789079081069.jpg" alt="" style="width:961px;"/><br/>
-<strong><em>注:weak 的关联内存管理策略是什么?</em></strong><br/>
-<a href="https://dayon.gitbooks.io/-ios/content/chapter8.html">https://dayon.gitbooks.io/-ios/content/chapter8.html</a></p>
-
-<h3 id="toc_10">方法添加</h3>
-
-<p><img src="media/15788827057157/15789083218769.jpg" alt="" style="width:943px;"/></p>
-
-<h3 id="toc_11">方法替换</h3>
-
-<p>下面实现一个替换ViewController的viewDidLoad方法的例子。<br/>
-<img src="media/15788827057157/15789085581682.jpg" alt="" style="width:1074px;"/><br/>
-swizzling应该只在+load中完成。 在 Objective-C 的运行时中，每个类有两个方法都会自动调用。+load 是在一个类被初始装载时调用，+initialize 是在应用第一次调用该类的类方法或实例方法前调用的。两个方法都是可选的，并且只有在方法被实现的情况下才会被调用。<br/>
-swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的状态，所以我们需要确保每个预防措施在运行时都是可用的。原子操作就是这样一个用于确保代码只会被执行一次的预防措施，就算是在不同的线程中也能确保代码只执行一次。Grand Central Dispatch 的 dispatch_once满足了所需要的需求，并且应该被当做使用swizzling 的初始化单例方法的标准。</p>
-
-<h3 id="toc_12">KVO实现</h3>
-
-<p><img src="media/15788827057157/15789086448973.jpg" alt="" style="width:924px;"/><br/>
-<img src="media/15788827057157/15789086852696.jpg" alt="" style="width:941px;"/><br/>
-<img src="media/15788827057157/15789087796562.jpg" alt="" style="width:950px;"/></p>
-
-<p>注:<br/>
-消息转发中&quot;v@:&quot;含义:<br/>
-<img src="media/15788827057157/15789066840487.jpg" alt="" style="width:712px;"/></p>
-
-<p>参考：<br/>
-<a href="https://juejin.im/post/5ac0a6116fb9a028de44d717">https://juejin.im/post/5ac0a6116fb9a028de44d717</a><br/>
-<a href="https://bujige.net/blog/iOS-Runtime-01.html">https://bujige.net/blog/iOS-Runtime-01.html</a><br/>
-<a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100">https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100</a><br/>
-<a href="https://www.jianshu.com/p/ab966e8a82e2">https://www.jianshu.com/p/ab966e8a82e2</a></p>
+<p>参考:<br/>
+<a href="https://www.jianshu.com/p/10c0f49f4755">https://www.jianshu.com/p/10c0f49f4755</a><br/>
+<a href="https://www.jianshu.com/p/ef6d9bf8fe59">https://www.jianshu.com/p/ef6d9bf8fe59</a><br/>
+<a href="https://www.jianshu.com/p/8577286af88e">https://www.jianshu.com/p/8577286af88e</a><br/>
+<a href="https://juejin.im/entry/58a178060ce463005644ee4a">https://juejin.im/entry/58a178060ce463005644ee4a</a></p>
 
                         
                       </div>
@@ -306,7 +470,7 @@ swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/13</span>
+                    <span class="date">2020/02/18</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
@@ -335,7 +499,7 @@ swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的�
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			
+			 <a href="Runtime_3.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -407,6 +571,12 @@ swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的�
 	      
 		      
 			      <li class="post">
+			        <a href="15833975374504.html">Runtime 底层1- isa&Class</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15833972720459.html">设计模式-组件化</a>
 			      </li>
 		     
@@ -426,12 +596,6 @@ swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的�
 		      
 			      <li class="post">
 			        <a href="15833971971986.html">设计模式-创建型模式</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833971627503.html">启动优化(todo)</a>
 			      </li>
 		     
 		  
