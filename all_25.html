@@ -110,91 +110,45 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780200209710.html">
+                <a class="clearlink" href="shu-xing-de-shi-zhi-shu-xing-d.html">
                 
-                  <h1>iOS 响应者链及事件传递</h1>
+                  <h1>属性的实质</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">UIResponder</h2>
-
-<p>在 iOS中，所有响应事件处理事件的对象都直接或间接的继承UIResponder。</p>
-
-<p><img src="media/15780200209710/2526037-c8d367c7064cf59c.jpg" alt="2526037-c8d367c7064cf59"/></p>
-
-<p>在 iOS 视图结构中，呈现出来的是一个 N 叉树的树形结构，每个视图都只有一个父视图，可以有多个子视图。<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpldkdtyj30he0go46i.jpg" alt=""/></p>
-
-<h2 id="toc_1">寻找第一响应者</h2>
-
-<p>当用户点击某个视图或者按钮的时候，会首先响应 applocation 中的 UIWindow 一层一层的向下查找，直到找到点击的 view，这阶段用到的两个方法：</p>
-
-<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;   // recursively calls -pointInside:withEvent:. point is in the receiver&#39;s coordinate system
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;   // default returns YES if point is in bounds
-</code></pre>
-
-<p>例如有这样一个图层结构：<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpsaqbekj30e80jamy9.jpg" alt=""/></p>
-
-<p>在上图中用户点击视图中的ViewD时，UIWindow首先接收到响应，此响应包括用户点击的区域和一个封装好的UIEvent对象，然后UIWindow通过这些信息利用以下方法查找：</p>
-
-<ol>
-<li><p>UIWindow会通过调用pointInside:withEvent:方法返回的YES得知用户点击的范围在ViewA中；</p></li>
-<li><p>ViewA调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewB、ViewC)调用hitTest:withEvent:方法；</p></li>
-<li><p>在遍历中发现使用ViewC调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewC范围之内；</p></li>
-<li><p>ViewC调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewD、ViewE)调用hitTest:withEvent:方法;</p></li>
-<li><p>在遍历中发现使用ViewD调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewD范围之内;</p></li>
-<li><p>在ViewD调用hitTest:withEvent:方法之前发现View的subViews的count为0，故确定用户点击在ViewD之上。</p></li>
-</ol>
-
-<p>UIWindow会用遍历subviews，使用每一个subview调用hitTest:withEvent:方法，如果用户点击在某一个subview上，pointInside:withEvent:方法返回YES，再用这个subview调用hitTest:withEvent:方法，依次类推，直到当前view没有子view或点击的位置没有在其任何子view之上，便确定用户点击在某view上</p>
-
-<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
-    for (UIView *view in self.subviews) {
-        if([view pointInside:point withEvent:event]){
-            UIView *hitTestView = [view hitTest:point withEvent:event];
-            if(nil == hitTestView){
-                return view;
-            }
-        }
-    }
-    return nil;
-}
-</code></pre>
-
-<blockquote>
-<p>1.Alpha=0、子视图超出父视图的情况、userInteractionEnabled=NO、hidden=YES视图会被忽略，不会调用hitTest<br/>
-2.父视图被忽略后其所有子视图也会被忽略<br/>
-3.出现视图无法响应的情况，可以考虑上诉情况来排查问题</p>
+                        	<blockquote>
+<p>属性的实质是什么？<br/>
+包括哪几个部分？<br/>
+属性默认的关键字都有哪些？<br/>
+@dynamic关键字和@synthesize关键字是用来做什么的</p>
 </blockquote>
 
-<h2 id="toc_2">事件传递</h2>
+<p>实质包含部分:</p>
 
-<p>事件传递的顺序其实就是寻找第一响应者的逆序，当找到了第一响应（View，button）之后，响应者就要对事件作出响应，这里就是使用了 UIResponder 的 nextResponder 方法。</p>
+<p>@property = ivar + getter + setter;</p>
 
-<h3 id="toc_3">nextResponder 的规则</h3>
+<p>实例变量+get方法+ set方法，也就是说使用@property系统会自动生成setter和getter方法;</p>
 
-<p>因为UIView和UIViewController都是继承于UIResponder，所以在调用nextResponder时有几条规则如下：</p>
+<p>默认常用关键字:</p>
 
-<ol>
-<li><p>当一个view调用其nextResponder会返回其superView;</p></li>
-<li><p>如果当前的view为UIViewController的view被添加到其他view上，那么调用nextResponder会返回当前的UIViewController，而这个UIViewController的nextResponder为view的superView；</p></li>
-<li><p>如果当前的UIViewController的view没有添加到任何其他view上，当前的UIViewController的nextResponder为nil，不管它是keyWinodw或UINavigationController的rootViewController，都是如此；</p></li>
-<li><p>如果当前application的keyWindow的rootViewController为UINavigationController(或UITabViewController)，那么通过调用UINavigationController(或UITabViewController)的nextResponder得到keyWinodw；</p></li>
-<li><p>keyWinodw的nextResponder为UIApplication，UIApplication的nextResponder为AppDelegate，AppDelegate的nextResponder为nil。</p></li>
-</ol>
+<p>property中我们经常使用的关键字有strong，weak，assign，copy，nonatomic，atomic....等</p>
 
-<p>通过知道了上述规则，便可以通过用户点击的ViewD，查看ViewD是否响应了点击事件，如果没有找它的nextResponder，如果没有再继续找，直到找到AppDelegate再没有响应，则此点击事件被系统丢弃，大致流程如下：<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lu7zsmnqj30fa0f8adu.jpg" alt=""/><br/>
-事件响应链的大致流程就是如此了，大概就是一个先向下找，再向上找的过程！</p>
+<p>@dynamic这个关键词，通常是用不到的。<br/>
+它与@synthesize的区别在于：<br/>
+使用@synthesize编译器会确实的产生getter和setter方法，而@dynamic仅仅是告诉编译器这两个方法在运行期会有的，无需产生警告。</p>
 
-<h2 id="toc_4">无法响应的情况</h2>
+<p>假设有这么个场景，B类，C类分别继承A类，A类实现某个协议（@protocol），协议中某个属性( somePropety )我不想在A中实现，而在B类，C类中分别实现。如果A中不写任何代码，编译器就会给出警告：“use @synthesize, @dynamic or provide a method implementation&quot;这时你给用@dynamic somePropety; <br/>
+编译器就不会警告，同时也不会产生任何默认代码。</p>
 
-<p>参考：<br/>
-<a href="">https://www.cnblogs.com/easy-coding/p/3604856.html</a></p>
+<p>@dynamic 就是要来告诉编译器，代码中用@dynamic修饰的属性，其getter和setter方法会在程序运行的时候或者用其他方式动态绑定，以便让编译器通过编译。<br/>
+其主要的作用就是用在NSManageObject对象的属性声明上，由于此类对象的属性一般是从Core Data的属性中生成的，Core Data框架会在程序运行的时候为此类属性生成getter和Setter方法。</p>
 
-<p><a href="">https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/using_responders_and_the_responder_chain_to_handle_events?language=objc</a></p>
+<p>参考:</p>
+
+<p><a href="">https://www.jianshu.com/p/00dbeec23291</a></p>
+
+<hr/>
 
                         
                       </div>
@@ -232,7 +186,7 @@
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			
+			 <a href="all_26.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -304,6 +258,12 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15841783263270.html">TCP协议与UDP协议的区别</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15834860456410.html">Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</a>
 			      </li>
 		     
@@ -323,12 +283,6 @@
 		      
 			      <li class="post">
 			        <a href="15833972428291.html">设计模式-行为型模式</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833972335253.html">设计模式-结构型模式</a>
 			      </li>
 		     
 		  

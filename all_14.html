@@ -110,58 +110,54 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15820370480952.html">
+                <a class="clearlink" href="15821054226825.html">
                 
-                  <h1>类 子类 分类 区别与联系</h1>
+                  <h1>牛逼的GCD</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><strong>分类(category)</strong><br/>
-分类允许开发者在不改变原有类的情况下,对该类进行拓展,分类是 OC 的特有语法,他是表示一个指向分类的结构体指针,原则上分类只能增加方法,不能增加实例变量,因为在分类中,类的实例变量布局已经固定,所以不能添加实例变量,但是可以利用 runtime 的特性,添加关联属性.</p>
+                        	<p><strong>DispatchQueue</strong><br/>
+苹果官方对 GCD 的说明:</p>
 
-<pre class="line-numbers"><code class="language-text">Category
-Category 是表示一个指向分类的结构体的指针，其定义如下：
-typedef struct objc_category *Category;
-struct objc_category {
-  char *category_name                          OBJC2_UNAVAILABLE; // 分类名
-  char *class_name                             OBJC2_UNAVAILABLE; // 分类所属的类名
-  struct objc_method_list *instance_methods    OBJC2_UNAVAILABLE; // 实例方法列表
-  struct objc_method_list *class_methods       OBJC2_UNAVAILABLE; // 类方法列表
-  struct objc_protocol_list *protocols         OBJC2_UNAVAILABLE; // 分类所实现的协议列表
-}
-</code></pre>
+<blockquote>
+<p>开发者要做的只是定义想执行的任务并追加到合适的 Dispatch Queue 中</p>
+</blockquote>
 
-<p>从上面可以看出,这个结构体主要包含了分类定义的实例方法与类方法,但是这里面并没有属性列表,也就没办法直接添加属性(实例变量)<br/>
-<strong>要点</strong>:</p>
+<p>GCD 中包含两种队列:<br/>
+串行队列 DISPATCH_QUEUE_SERIAL<br/>
+<img src="media/15821054226825/15821156796654.jpg" alt="" style="width:566px;"/><br/>
+串行队列会阻塞当前线程的执行,等任务完成,才会进行下一个任务<br/>
+<img src="media/15821054226825/15821157466982.jpg" alt="" style="width:397px;"/></p>
 
-<ul>
-<li>分类是用于给原有类添加方法的,因为在分类的结构体中只有方法列表,没有属性列表.</li>
-<li>分类中可以写@property,但是不会生成 getter/setter 方法,也不会生成实例变量.编译器会有警告,但是不会报错</li>
-<li>可以在分类中访问原有类的.h 中的属性</li>
-<li><strong>如果分类中有和原有类同名的方法,会优先调用分类中的方法,也就是会忽略原有类的方法,同名方法优先级&quot;分类&gt;类&gt;父类&quot;,所以分类中不要和类中原有方法同名</strong></li>
-<li>如果多个分类中都有和元类同名的方法,那么调用该方法的时候,由编译器决定,编译器会执行最后一个参与编译的分类中的方法.</li>
-</ul>
+<p><img src="media/15821054226825/15821157625913.jpg" alt="" style="width:557px;"/></p>
 
-<p><strong>拓展</strong><br/>
-<strong>主类,子类,分类中+load方法的执行顺序</strong></p>
+<p>例如:<br/>
+<img src="media/15821054226825/15821164356253.jpg" alt="" style="width:629px;"/><br/>
+queue 为串行的时候,因为要等待现在执行的处理结束,所以表现就是依次执行,顺序处理.<br/>
+当 queue 为DISPATCH_QUEUE_CONCURRENT时,因为不需要等待当前执行的处理结束,先执行第一个,不管第一个是否执行完毕,都开始往下执行,并且顺序不是固定的<br/>
+<img src="media/15821054226825/15821166554297.jpg" alt="" style="width:662px;"/><br/>
+<img src="media/15821054226825/15821166798014.jpg" alt="" style="width:563px;"/></p>
 
-<ul>
-<li>+load 方法是在 mian 函数执行之前执行的,并不会主动调用</li>
-<li>主类,分类,子类都会调用+load 方法</li>
-<li>调用顺序:主类的+load方法会先调用,然后调用子类的+load,最后调用分类的+load.</li>
-<li>所有分类的+load方法都会调用,调用顺序取决于它的编译顺序.</li>
-</ul>
+<p><strong>队列的创建</strong></p>
 
-<p><strong>+ Initialize方法的调用顺序</strong></p>
+<ol>
+<li>通过dispatch_queue_create函数创建</li>
+<li>直接过去系统创建好的 MainQueue / GlobalQueue</li>
+</ol>
 
-<ul>
-<li>+ Initialize只有当真正用到的时候,并且重写了+ Initialize方法才会调用</li>
-<li>当调用子类的+ Initialize方法的时候,如果父类重写了+ Initialize方法,会先调用父类的+ Initialize,然后调用子类的+ Initialize方法,如果此时父类的分类也重写了+ Initialize方法,那么父类的+ Initialize方法就会被覆盖掉</li>
-</ul>
+<p><strong>dispatch_after</strong><br/>
+dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定时间后追加处理到 dispatch queue</strong><br/>
+<img src="media/15821054226825/15821176029539.jpg" alt="" style="width:610px;"/></p>
 
-<p>参考:<br/>
-<a href="https://juejin.im/post/5b6a63f4e51d4534b93f770f">https://juejin.im/post/5b6a63f4e51d4534b93f770f</a></p>
+<p><strong>dispatch_group</strong><br/>
+有时候需要在某几个任务结束之后,再进行新的任务,例如:<br/>
+<img src="media/15821054226825/15821182215704.jpg" alt="" style="width:553px;"/><br/>
+<img src="media/15821054226825/15821183629319.jpg" alt="" style="width:633px;"/><br/>
+<img src="media/15821054226825/15821184229942.jpg" alt="" style="width:622px;"/><br/>
+<img src="media/15821054226825/15821184582389.jpg" alt="" style="width:547px;"/></p>
+
+<p><strong>dispatch_barrier_async(栅栏函数)</strong></p>
 
                         
                       </div>
@@ -170,8 +166,10 @@ struct objc_category {
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/18</span>
-                    
+                    <span class="date">2020/02/19</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
           				   
                     
 
@@ -269,6 +267,12 @@ struct objc_category {
 	      
 		      
 			      <li class="post">
+			        <a href="15841783263270.html">TCP协议与UDP协议的区别</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15834860456410.html">Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</a>
 			      </li>
 		     
@@ -288,12 +292,6 @@ struct objc_category {
 		      
 			      <li class="post">
 			        <a href="15833972428291.html">设计模式-行为型模式</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833972335253.html">设计模式-结构型模式</a>
 			      </li>
 		     
 		  
