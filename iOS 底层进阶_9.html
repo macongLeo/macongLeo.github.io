@@ -1,603 +1,254 @@
-<!doctype html>
-<html class="no-js" lang="en">
+<!DOCTYPE html>
+<html lang="zh">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>
+      
+    iOS 底层进阶 - 脚踏实地,潜心修炼,加油
     
-  iOS 底层进阶 - 小马同学的碎碎念
-  
-  </title>
-  
-  
-  <link href="atom.xml" rel="alternate" title="小马同学的碎碎念" type="application/atom+xml">
-    <link rel="stylesheet" href="asset/css/foundation.min.css" />
-    <link rel="stylesheet" href="asset/css/docs.css" />
-    <script src="asset/js/vendor/modernizr.js"></script>
-    <script src="asset/js/vendor/jquery.js"></script>
- 
-<script type="text/javascript">
-  function before_search(){
-    var searchVal = 'site: ' + document.getElementById('search_input').value;
-    document.getElementById('search_q').value = searchVal;
-    return true;
-  }
-</script>
-  </head>
-  <body class="antialiased hide-extras">
+    </title>
     
-    <div class="marketing off-canvas-wrap" data-offcanvas>
-      <div class="inner-wrap">
 
-
-<nav class="top-bar docs-bar hide-for-small" data-topbar>
-
-
-  <section class="top-bar-section">
-  <div class="row">
-      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
-        <ul id="main-menu" class="left">
-        
-        <li id=""><a target="self" href="index.html">Home</a></li>
-        
-        <li id=""><a target="_self" href="archives.html">Archives</a></li>
-        
-        </ul>
-
-        <ul class="right" id="search-wrap">
-          <li>
-<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
-    <input type="hidden" id="search_q" name="q" value="" />
-    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
-</form>
-</li>
-          </ul>
-      </div></div>
-  </div>
-  </section>
-
-</nav>
-
-        <nav class="tab-bar show-for-small">
-  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
-    <span> &nbsp; 小马同学的碎碎念</span>
-  </a>
-</nav>
-
-<aside class="left-off-canvas-menu">
-      <ul class="off-canvas-list">
-        
-        <li><a target="self" href="index.html">Home</a></li>
-        
-        <li><a target="_self" href="archives.html">Archives</a></li>
-        
-
-    <li><label>Categories</label></li>
-
-        
-            <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
-        
-            <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
-        
-            <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
-        
-            <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
-        
-            <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a></li>
-        
-            <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a></li>
-        
-            <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
-         
-
-      </ul>
-    </aside>
-
-<a class="exit-off-canvas" href="#"></a>
-
-
-        <section id="main-content" role="main" class="scroll-container">
-        
-       
-
- <script type="text/javascript">
-	$(function(){
-		$('#menu_item_index').addClass('is_active');
-	});
-</script>
-<div class="row">
-	<div class="large-8 medium-8 columns">
-		<div class="markdown-body home-categories">
-		
-			<div class="article">
-                <a class="clearlink" href="15786431485871.html">
+    
+    
+    <link href="atom.xml" rel="alternate" title="脚踏实地,潜心修炼,加油" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/style.min.css">
+    <link rel="stylesheet" href="asset/css/doc.css">
+    <script src="asset/app.js"></script>
+</head>
+  <body>
+    <section class="hero">
+      <div class="hero-head">
+          <nav class="navbar" role="navigation" aria-label="main navigation">
+              <div class="container">
+              <div class="navbar-brand">
                 
-                  <h1>KVO && KVC 实现原理</h1>
-                  <div class="a-content">
-                      
-                      <div class="a-content-text">
-                        
-                        	<p><img src="media/15786431485871/15786484212119.jpg" alt="" style="width:643px;"/></p>
+                <a target="self" class="navbar-item " href="index.html">Home</a>
+                
+                <a target="_self" class="navbar-item " href="archives.html">Archives</a>
+                
 
-<h2 id="toc_0">一、什么是 KVO？（Key-VauleObserving）</h2>
-
-<p>KVO 是 OC 对观察者模式的实现，也是 CocoaBinding 的基础，当被观察的对象的某个属性发生改变的时候，观察者对象就会获得通知</p>
-
-<p>面试题：</p>
-
-<blockquote>
-<p>addObserver:forKeyPath:options:context:各个参数的作用分别是什么, observer中需要实现哪个方法才能获得KVO回调？</p>
-</blockquote>
-
-<pre class="line-numbers"><code class="language-text">**
- 1. self.person：要监听的对象
- 2. 参数说明：
-    * @param addObserver  观察者，负责处理监听事件的对象
-    * @param forKeyPath 要监听的属性
-    * @param  options 观察的选项（观察新、旧值，也可以都观察）
-    * @param context 上下文，用于传递数据，可以利用上下文区分不同的监听
- */
-[self.person addObserver:self 
-              forKeyPath:@&quot;name&quot; 
-                 options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld 
-                 context:@&quot;Person Name&quot;];
-
-/**
- *  当监控的某个属性的值改变了就会调用
- *
- *  @param keyPath 监听的属性名
- *  @param object  属性所属的对象
- *  @param change  属性的修改情况（属性原来的值`oldValue`、属性最新的值`newValue`）
- *  @param context 传递的上下文数据，与监听的时候传递的一致，可以利用上下文区分不同的监听
- */
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
-{
-    NSLog(@&quot;%@对象的%@属性改变了：%@&quot;, object, keyPath, change);
-}
-</code></pre>
-
-<h2 id="toc_1">二、KVO 内部实现原理</h2>
-
-<p>官方文档的说法：</p>
-
-<blockquote>
-<p>Automatic key-value observing is implemented using a technique called isa-swizzling.<br/>
-KVO使用了名为isa-swizzling的技术</p>
-
-<p>The isa pointer, as the name suggests, points to the object&#39;s class which maintains a dispatch table. This dispatch table essentially contains pointers to the methods the class implements, among other data.<br/>
-isa指针指向一个对象的类,这个类包含了一个方法派发表</p>
-
-<p>When an observer is registered for an attribute of an object the isa pointer of the observed object is modified, pointing to an intermediate class rather than at the true class. As a result the value of the isa pointer does not necessarily reflect the actual class of the instance.<br/>
-被观察对象的isa指针会被修改,指向一个中间类,而非真实的类.isa指针的值并不必须反应实例对象的真实对应的类</p>
-
-<p>You should never rely on the isa pointer to determine class membership. Instead, you should use the class method to determine the class of an object instance.<br/>
-因而,应该调用对象的class方法来确定实例对应的类而不是isa指针的值</p>
-</blockquote>
-
-<ol>
-<li><p>KVO 是基于 runtime 机制实现的。</p>
-<blockquote>
-<p>KVO 运用了一个 isa-swizzling 技术（类型混合指针机制），将两个对象的 isa 指针互相调换，就是俗称的黑魔法。</p>
-</blockquote></li>
-<li><p>当某个类的对象 <strong><u><em>第一次被观察</em></u></strong> 的时候，系统就会在运行期<strong><u><em>动态的创建该类的一个派生类</em></u></strong>， 在这个派生类中重写基类中任何被观察属性的 setter 方法，派生类在被重写的 setter 方法内部实现真正的通知机制。</p>
-<blockquote>
-<p>如果原类为Person，那么生成的派生类名为NSKVONotifying_Person</p>
-</blockquote></li>
-<li><p>每个类对象中都有一个isa 指针指向当前类，当一个类对象的属性第一次被观察，那么系统就会将 isa 指针指向动态生成的派生类，从而在给被监控的属性赋值的时候执行的是派生类的 setter 方法。</p></li>
-<li><p>键值观察通知（KVO）依赖于 NSObject 的两个方法：</p>
-<blockquote>
-<p>willChangeValueForKey: 和 didChangevlueForKey：<br/>
-当一个被观察的属性发生改变之前，willChangeValueForKey： 一定会被调用，这就会记录旧值，当发生改变之后，didChangevlueForKey：会被调用，继而observeValueForKey:ofObject:change:context: 也会被调用。</p>
-</blockquote></li>
-</ol>
-
-<blockquote>
-<p>KVO 的这套实现机制中，苹果还偷偷实现了 class 方法，让我们误以为使用的还是当前的类，从而达到隐藏派生类的目的<br/>
-<img src="media/15786431485871/15786460750917.jpg" alt="" style="width:926px;"/></p>
-</blockquote>
-
-<h2 id="toc_2">三，如何手动触发 KVO</h2>
-
-<p>手动触发 KVO 必须实现两个方法：<br/>
-willChangeValueForKey:和didChangeValueForKey:</p>
-
-<ul>
-<li>如何自己动手实现 KVO？<br/>
-1，Block 模拟实现 KVO<br/>
-大体步骤：<br/>
-    1，创建 NSObject 的分类，增加添加观察者的 API，并实现</li>
-</ul>
-
-<pre class="line-numbers"><code class="language-text">- (void)PG_addObserver:(NSObject *)observer
-                forKey:(NSString *)key
-             withBlock:(PGObservingBlock)block {
-    //检查对象的类有没有相应的 setter 方法。如果没有抛出异常；
-    SEL setterSelector = NSSelectorFromString(setterForGetter(key));
-    Method setterMethod = class_getInstanceMethod([self class], setterSelector);
-    if (!setterMethod) {
-        // throw invalid argument exception
-    }
- 
-    Class clazz = object_getClass(self);
-    NSString *clazzName = NSStringFromClass(clazz);
- 
-    // 检查对象 isa 指向的类是不是一个 KVO 类。如果不是，新建一个继承原来类的子类，并把 isa 指向这个新建的子类；
-    if (![clazzName hasPrefix:kPGKVOClassPrefix]) {
-        clazz = [self makeKvoClassWithOriginalClassName:clazzName];
-        object_setClass(self, clazz);
-    }
- 
-    // 检查对象的 KVO 类重写过没有这个 setter 方法。如果没有，添加重写的 setter 方法；
-    //          hasn&#39;t implemented the setter
-    if (![self hasSelector:setterSelector]) {
-        const char *types = method_getTypeEncoding(setterMethod);
-        class_addMethod(clazz, setterSelector, (IMP)kvo_setter, types);
-    }
- 
-    // 添加这个观察者
-    PGObservationInfo *info = [[PGObservationInfo alloc] initWithObserver:observer Key:key block:block];
-    NSMutableArray *observers = objc_getAssociatedObject(self, (__bridge const void *)(kPGKVOAssociatedObservers));
-    if (!observers) {
-        observers = [NSMutableArray array];
-        objc_setAssociatedObject(self, (__bridge const void *)(kPGKVOAssociatedObservers), observers, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    [observers addObject:info];
-}
-
-</code></pre>
-
-<p>再来一步一步细看。<br/>
-第一步里，先通过 setterForGetter() 方法获得相应的 setter 的名字（SEL）。也就是把 key 的首字母大写，然后前面加上 set 后面加上 :，这样 key 就变成了 setKey:。然后再用 class_getInstanceMethod 去获得 setKey: 的实现（Method）。如果没有，自然要抛出异常。</p>
-
-<p>第二步，我们先看类名有没有我们定义的前缀。如果没有，我们就去创建新的子类，并通过 object_setClass() 修改 isa 指针。</p>
-
-<pre class="line-numbers"><code class="language-text">- (Class)makeKvoClassWithOriginalClassName:(NSString *)originalClazzName {
-    NSString *kvoClazzName = [kPGKVOClassPrefix stringByAppendingString:originalClazzName];
-    Class clazz = NSClassFromString(kvoClazzName);
- 
-    if (clazz) {
-        return clazz;
-    }
- 
-    // class doesn&#39;t exist yet, make it
-    Class originalClazz = object_getClass(self);
-    Class kvoClazz = objc_allocateClassPair(originalClazz, kvoClazzName.UTF8String, 0);
- 
-    // grab class method&#39;s signature so we can borrow it
-    Method clazzMethod = class_getInstanceMethod(originalClazz, @selector(class));
-    const char *types = method_getTypeEncoding(clazzMethod);
-    class_addMethod(kvoClazz, @selector(class), (IMP)kvo_class, types);
- 
-    objc_registerClassPair(kvoClazz);
- 
-    return kvoClazz;
-}
-</code></pre>
-
-<p>动态创建新的类需要用 objc/runtime.h 中定义的 objc_allocateClassPair() 函数。传一个父类，类名，然后额外的空间（通常为 0），它返回给你一个类。然后就给这个类添加方法，也可以添加变量。这里，我们只重写了 class 方法。哈哈，跟 Apple 一样，这时候我们也企图隐藏这个子类的存在。最后 objc_registerClassPair() 告诉 Runtime 这个类的存在。</p>
-
-<p>第三步，重写 setter 方法。新的 setter 在调用原 setter 方法后，通知每个观察者（调用之前传入的 block ）：</p>
-
-<pre class="line-numbers"><code class="language-text">static void kvo_setter(id self, SEL _cmd, id newValue)  
-{
-    NSString *setterName = NSStringFromSelector(_cmd);
-    NSString *getterName = getterForSetter(setterName);
- 
-    if (!getterName) {
-        // throw invalid argument exception
-    }
- 
-    id oldValue = [self valueForKey:getterName];
- 
-    struct objc_super superclazz = {
-        .receiver = self,
-        .super_class = class_getSuperclass(object_getClass(self))
-    };
- 
-    // cast our pointer so the compiler won&#39;t complain
-    void (*objc_msgSendSuperCasted)(void *, SEL, id) = (void *)objc_msgSendSuper;
- 
-    // call super&#39;s setter, which is original class&#39;s setter method
-    objc_msgSendSuperCasted(&amp;superclazz, _cmd, newValue);
- 
-    // look up observers and call the blocks
-    NSMutableArray *observers = objc_getAssociatedObject(self, (__bridge const void *)(kPGKVOAssociatedObservers));
-    for (PGObservationInfo *each in observers) {
-        if ([each.key isEqualToString:getterName]) {
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                each.block(self, getterName, oldValue, newValue);
-            });
-        }
-    }
-}
-</code></pre>
-
-<p>细心的同学会发现我们对 objc_msgSendSuper 进行类型转换。在 Xcode 6 里，新的 LLVM 会对 objc_msgSendSuper 以及 objc_msgSend 做严格的类型检查，如果不做类型转换。Xcode 会抱怨有 too many arguments 的错误。（在 WWDC 2014 的视频 What new in LLVM 中有提到过这个问题。）</p>
-
-<p>最后一步，把这个观察的相关信息存在 associatedObject 里。观察的相关信息（观察者，被观察的 key, 和传入的 block ）封装在 PGObservationInfo 类里。</p>
-
-<pre class="line-numbers"><code class="language-text">@interface PGObservationInfo : NSObject
- 
-@property (nonatomic, weak) NSObject *observer;
-@property (nonatomic, copy) NSString *key;
-@property (nonatomic, copy) PGObservingBlock block;
- 
-@end
-</code></pre>
-
-<p>就此，一个基本的 KVO 就可以 work 了。当然，这只是一个一天多做出来的小东西，会有 bug，也有很多可以优化完善的地方。但作为 demo 演示如何利用 Runtime 动态创建类、如何实现 KVO，足已。</p>
-
-<ul>
-<li>KVO 使用注意点<br/>
-苹果提供的KVO自身存在很多问题，首要问题在于，KVO如果使用不当很容易崩溃。例如重复add和remove导致的Crash，Observer被释放导致的崩溃，keyPath传错导致的崩溃等。</li>
-</ul>
-
-<p>在调用KVO时需要传入一个keyPath，由于keyPath是字符串的形式，所以其对应的属性发生改变后，字符串没有改变容易导致Crash。我们可以利用系统的反射机制将keyPath反射出来，这样编译器可以在@selector()中进行合法性检查。<br/>
-KVO是一种事件绑定机制的实现，在keyPath对应的值发生改变后会回调对应的方法。这种数据绑定机制，在对象关系很复杂的情况下，很容易导致不好排查的bug。例如keyPath对应的属性被调用的关系很复杂，就不太建议对这个属性进行KVO，可以想一下RAC的信号脑补一下。</p>
-
-<h2 id="toc_3">KVC 是什么</h2>
-
-<blockquote>
-<p>KVC（Key-value coding）键值编码，就是指iOS的开发中，可以允许开发者通过Key名直接访问对象的属性，或者给对象的属性赋值。而不需要调用明确的存取方法。这样就可以在运行时动态地访问和修改对象的属性。而不是在编译时确定，这也是iOS开发中的黑魔法之一。很多高级的iOS开发技巧都是基于KVC实现的。</p>
-</blockquote>
-
-<p>KVC最为重要的四个方法：</p>
-
-<pre class="line-numbers"><code class="language-text">- (nullable id)valueForKey:(NSString *)key;                          //直接通过Key来取值
-
-- (void)setValue:(nullable id)value forKey:(NSString *)key;          //通过Key来设值
-
-- (nullable id)valueForKeyPath:(NSString *)keyPath;                  //通过KeyPath来取值
-
-- (void)setValue:(nullable id)value forKeyPath:(NSString *)keyPath;  //通过KeyPath来设值
-</code></pre>
-
-<h2 id="toc_4">isa 指针是什么类型的？</h2>
-
-<p>runtime 中，class 和 object 的定义：</p>
-
-<pre class="line-numbers"><code class="language-text">typedef struct objc_class *Class;
-typedef struct objc_object {
-    Class isa;
-} *id;
-</code></pre>
-
-<p>Class 是一个 objc_class 结构类型的指针；<br/>
-而 id（任意对象） 是一个 objc_object 结构类型的指针，其第一个成员是一个 objc_class 结构类型的指针。注意这里有一关键的引申解读：内存布局以一个 objc_class 指针为开始的所有东东都可以当做一个 object 来对待！ <br/>
-那 objc_class 又是怎样一个结构体呢？</p>
-
-<pre class="line-numbers"><code class="language-text">struct objc_class {
-    struct objc_class* isa;
-    struct objc_class* super_class;
-    const char* name;
-    long version;
-    long info;
-    long instance_size;
-    struct objc_ivar_list* ivars;
-    struct objc_method_list** methodLists;
-    struct objc_cache* cache;
-    struct objc_protocol_list* protocols;
-};
-</code></pre>
-
-<p>objc_class 结构体的各成员介绍如下：</p>
-
-<p>isa：是一个 objc_class 类型的指针，看到这里，想起我前面的引申解读了没？内存布局以一个 objc_class 指针为开始的所有东东都可以当做一个 object 来对待！ 这就是说 objc_class 或者说类其实也可以当做一个 objc_object 对象来对待！对象是对象，类也是对象，是不是有点混淆？别急，ObjC发明（or 重用）了一个术语来区分这两种不同的对象：类对象（class object）与实例对象（instance object）。OK，名称混淆的问题解决，下面我将使用这两个术语来区分不同的对象，而使用“对象”这一术语来泛指所有的对象。ObjC还对类对象与实例对象中的 isa 所指向的类结构作了不同的命名：类对象中的 isa 指向类结构被称作 metaclass，metaclass 存储类的static类成员变量与static类成员方法（+开头的方法）；实例对象中的 isa 指向类结构称作 class（普通的），class 结构存储类的普通成员变量与普通成员方法（-开头的方法）。</p>
-
-<p>super_class：一看就明白，指向该类的父类呗！如果该类已经是最顶层的根类（如 NSObject 或 NSProxy），那么 super_class 就为 NULL。</p>
-
-<p>好，先中断一下其他类结构成员的介绍，让我们厘清一下在继承层次中，子类，父类，根类（这些都是普通 class）以及其对应的 metaclass 的 isa 与 super_class 之间关系:</p>
-
-<p>规则一：类的实例对象的 isa 指向该类；该类的 isa 指向该类的 metaclass；<br/>
-规则二：类的 super_class 指向其父类，如果该类为根类则值为 NULL；<br/>
-规则三：metaclass 的 isa 指向根 metaclass，如果该 metaclass 是根 metaclass 则指向自身；<br/>
-规则四：metaclass 的 super_class 指向父 metaclass，如果该 metaclass 是根 metaclass 则指向该 metaclass 对应的类；</p>
-
-<p>好吧，文字总是那么乏力，有图有真相！<br/>
-<img src="media/15786431485871/15786497073771.jpg" alt="" style="width:601px;"/></p>
-
-<p>那么 class 与 metaclass 有什么区别呢？</p>
-
-<p>class 是 instance object 的类类型。当我们向实例对象发送消息（实例方法）时，我们在该实例对象的 class 结构的 methodlists 中去查找响应的函数，如果没找到匹配的响应函数则在该 class 的父类中的 methodlists 去查找（查找链为上图的中间那一排）。如下面的代码中，向str 实例对象发送 lowercaseString 消息，会在 NSString 类结构的 methodlists 中去查找 lowercaseString 的响应函数。</p>
-
-<p>metaclass 是 class object 的类类型。当我们向类对象发送消息（类方法）时，我们在该类对象的 metaclass 结构的 methodlists 中去查找响应的函数，如果没有找到匹配的响应函数则在该 metaclass 的父类中的 methodlists 去查找（查找链为上图的最右边那一排）。如下面的代码中，向 NSString 类对象发送 stringWithString 消息，会在 NSString 的 metaclass 类结构的 methodlists 中去查找 stringWithString 的响应函数。</p>
-
-<hr/>
-
-<p>参考：<br/>
-<a href="https://www.jianshu.com/p/829864680648">https://www.jianshu.com/p/829864680648</a><br/>
-<a href="https://xiaozhuanlan.com/topic/0892715634">https://xiaozhuanlan.com/topic/0892715634</a><br/>
-<a href="https://tech.glowing.com/cn/implement-kvo/">https://tech.glowing.com/cn/implement-kvo/</a><br/>
-<a href="https://juejin.im/post/5aeff463f265da0b851cc6ac">https://juejin.im/post/5aeff463f265da0b851cc6ac</a><br/>
-<a href="https://blog.csdn.net/Zsk_Zane/article/details/48194975">https://blog.csdn.net/Zsk_Zane/article/details/48194975</a><br/>
-<a href="https://juejin.im/post/5aef18b76fb9a07aa34a28e6">https://juejin.im/post/5aef18b76fb9a07aa34a28e6</a></p>
-
-                        
-                      </div>
-                  </div>
+                <a role="button" id="navbarSNSRssSwitchBtn" class="navbar-burger burger" aria-label="menu" aria-expanded="false" data-target="navbarSNSRssButtons">
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
                 </a>
-                <div class="read-more clearfix">
-                  <div class="more-left left">
+              </div>
+            
+              <div id="navbarSNSRssButtons" class="navbar-menu">
+                <div class="navbar-start">
                   
-                    <span class="date">2020/01/10</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='KVO&&KVC.html'>KVO&&KVC</a></span>
-          				   
-                    
-
-                  </div>
-                  <div class="more-right right">
-                  <span class="comments">
+                </div>
+            
+                <div class="navbar-end">
+                  <div class="navbar-item">
+                    <!--buttons start-->
+                    <div class="buttons">
                       
+                        
+                        
+                        
+                        <a href="https://github.com/macongLeo/macongLeo.github.io.git" target="_blank" title="github">
+                            <span class="icon is-large has-text-grey-darker">
+                               <svg class="svg-inline--fa fa-github fa-w-16 fa-lg" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="github" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512" data-fa-i2svg=""><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"></path></svg><!-- <i class="fab fa-github fa-lg"></i> -->
+                            </span>
+                          </a>
+                        
+                        
+                      
+                      <a href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" target="_blank" title="weibo">
+                          <span class="icon is-large has-text-grey-darker">
+                            <svg class="svg-inline--fa fa-weibo fa-w-16 fa-lg" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="weibo" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M407 177.6c7.6-24-13.4-46.8-37.4-41.7-22 4.8-28.8-28.1-7.1-32.8 50.1-10.9 92.3 37.1 76.5 84.8-6.8 21.2-38.8 10.8-32-10.3zM214.8 446.7C108.5 446.7 0 395.3 0 310.4c0-44.3 28-95.4 76.3-143.7C176 67 279.5 65.8 249.9 161c-4 13.1 12.3 5.7 12.3 6 79.5-33.6 140.5-16.8 114 51.4-3.7 9.4 1.1 10.9 8.3 13.1 135.7 42.3 34.8 215.2-169.7 215.2zm143.7-146.3c-5.4-55.7-78.5-94-163.4-85.7-84.8 8.6-148.8 60.3-143.4 116s78.5 94 163.4 85.7c84.8-8.6 148.8-60.3 143.4-116zM347.9 35.1c-25.9 5.6-16.8 43.7 8.3 38.3 72.3-15.2 134.8 52.8 111.7 124-7.4 24.2 29.1 37 37.4 12 31.9-99.8-55.1-195.9-157.4-174.3zm-78.5 311c-17.1 38.8-66.8 60-109.1 46.3-40.8-13.1-58-53.4-40.3-89.7 17.7-35.4 63.1-55.4 103.4-45.1 42 10.8 63.1 50.2 46 88.5zm-86.3-30c-12.9-5.4-30 .3-38 12.9-8.3 12.9-4.3 28 8.6 34 13.1 6 30.8.3 39.1-12.9 8-13.1 3.7-28.3-9.7-34zm32.6-13.4c-5.1-1.7-11.4.6-14.3 5.4-2.9 5.1-1.4 10.6 3.7 12.9 5.1 2 11.7-.3 14.6-5.4 2.8-5.2 1.1-10.9-4-12.9z"></path></svg><!-- <i class="fab fa-weibo fa-lg"></i> -->
+                          </span>
+                      </a>
+                      
+                      <a href="atom.xml" target="_blank" title="RSS">
+                          <span class="icon is-large has-text-black-bis">
+                              <svg class="svg-inline--fa fa-rss fa-w-14 fa-lg" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="rss" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"></path></svg><!-- <i class="fas fa-rss fa-lg"></i> -->
+                          </span>
+                      </a>
+                    </div>
+                    <!--buttons end-->
 
-                       
-                  </span>
                   </div>
                 </div>
-              </div><!-- article -->
-        
-              
-
-
-			<div class="row">
-			  <div class="large-6 columns">
-			  <p class="text-left" style="padding-top:25px;">
-			   <a href="iOS 底层进阶_8.html">&laquo; Prev Page</a>  
-			  </p>
-			  </div>
-			  <div class="large-6 columns">
-			<p class="text-right" style="padding-top:25px;">
-			
-			</p>
-			  </div>
-			</div>
-		</div>
-	</div><!-- large 8 -->
-
- <div class="large-4 medium-4 columns">
-  <div class="hide-for-small">
-    <div id="sidebar" class="sidebar">
-          <div id="site-info" class="site-info">
-            
-                <div class="site-a-logo"><img src="img/icon.jpg" /></div>
-            
-                <h1>小马同学的碎碎念</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
-                <div class="social">
-
-
-
-
-
-
-
-<a target="_blank" class="weibo" href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" title="weibo">Weibo</a>
-
-<a target="_blank" class="github" target="_blank" href="https://github.com/macongLeo/macongLeo.github.io.git" title="GitHub">GitHub</a>
-
-  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
-                
-              	 </div>
-          	</div>
-
-             
-
-              <div id="site-categories" class="side-item ">
-                <div class="side-header">
-                  <h2>Categories</h2>
-                </div>
-                <div class="side-content">
-
-      	<p class="cat-list">
-        
-            <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
-        
-            <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
-        
-            <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
-        
-            <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
-        
-            <a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html"><strong>网络进阶</strong></a>
-        
-            <a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html"><strong>性能优化</strong></a>
-        
-            <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
-         
-        </p>
-
-
                 </div>
               </div>
-
-              <div id="site-categories" class="side-item">
-                <div class="side-header">
-                  <h2>Recent Posts</h2>
-                </div>
-                <div class="side-content">
-                <ul class="posts-list">
-	      
-		      
-			      <li class="post">
-			        <a href="15841783263270.html">TCP协议与UDP协议的区别</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15834860456410.html">Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833975374504.html">Runtime 底层1- isa&Class</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833972720459.html">设计模式-组件化</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833972428291.html">设计模式-行为型模式</a>
-			      </li>
-		     
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		   
-		  		</ul>
-                </div>
-              </div>
-        </div><!-- sidebar -->
-      </div><!-- hide for small -->
-</div><!-- large 4 -->
-
-</div><!-- row -->
-
- <div class="page-bottom clearfix">
-  <div class="row">
-   <p class="copyright">Copyright &copy; 2015
-Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
-Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
-  </div>
-</div>
-
-        </section>
+            </nav>
       </div>
-    </div>
+
+ 
+<div class="hero-body ct-body">
+        <div class="container">
+              <div class="columns is-centered">
+                  <div class="column  is-four-fifths">
+                      <div class="columns is-mobile">
+                          <div class="column">
+                              <h1 class="title">
+脚踏实地,潜心修炼,加油
+              
+                              </h1>
+                              <h2 class="subtitle">
+                                 中国加油!武汉加油!
+                              </h2>
+                          </div>
+                          <div class="column is-narrow"><figure class="image is-128x128">
+                            
+                              <img class="is-rounded" src="img/icon.jpg">
+                            
+                            </figure></div>
+                      </div>
+                        
+                      
+                  </div>
+                  
+                </div>
+            
+              
+        
+        </div>
+      </div>
+</section>
+<section class="ct-body">
+      <div class="container">
+          <div class="columns is-variable bd-klmn-columns is-4">
+              <div class="column is-two-thirds">
+                
+                  <div class="card">
+                    
+                      <div class="card-content">
+                        <div class="content">
+                          <a href="15786431485871.html"> 
+                            <h2 class="title">KVO && KVC 实现原理</h2>
+                          </a>        
+                                                    
+                          <p> 
+                            <a href="15786431485871.html"><span class="tran-readmore">Read more...</span></a>&nbsp;&nbsp; 
+                            <span class="date">2020/01/10</span>
+                            <span class="tran-posted-in">posted in</span>&nbsp; 
+                            
+                                <span class="posted-in"><a href='KVO&&KVC.html'>KVO&&KVC</a></span>
+                                                      
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  
+
+                  <nav class="pagination is-centered" role="navigation" aria-label="pagination">
+                    <a class="pagination-previous"   href="iOS 底层进阶_8.html" ><span class="tran-prev-page">&laquo; Prev Page</span></a>  
+                    <a class="pagination-next"  disabled="disabled" ><span class="tran-next-page">Next Page &raquo;</span></a>                   
+                  </nav>
+
+              </div><!-- end column -->
+              <div class="column">
+                  <div class="card">
+                      <header class="card-header">
+                        <p class="card-header-title">
+                           <span class="tran-site-categories">Categories</span> 
+                        </p>
+                     
+                      </header>
+                      <div class="card-content site-categories">
+                        <div class="content"> 
+                          <ul>
+                          
+                                <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a>
+                                   <ul> 
+                                  
+                                        <li><a href="Runtime.html">Runtime</a></li>
+                                  
+                                        <li><a href="RunLoop.html">RunLoop</a></li>
+                                  
+                                        <li><a href="KVO&&KVC.html">KVO&&KVC</a></li>
+                                  
+                                   </ul> 
+                                </li> 
+                          
+                                <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                          </ul>
+                        </div>
+                      </div>
+                     
+                    </div>
+
+                    <div class="card">
+                        <header class="card-header">
+                          <p class="card-header-title">
+                              <span class="tran-site-tags">Tags</span> 
+                          </p>
+                       
+                        </header>
+                        <div class="card-content site-tags">
+                          <div class="content">
+                           <div class="tags">
+                            
+                           </div>
+                             
+                          </div>
+                        </div>
+                       
+                      </div>
+
+              </div>
+            </div>
+
+          
+      </div>
+    </section>
+
+    <footer class="footer">
+        <div class="content has-text-centered">
+          <p>
+              Copyright &copy; 2019
+              Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+              Theme used <a target="_blank" href="https://bulma.io/">Bulma CSS</a>.
+          </p>
+        </div>
+      </footer>
 
 
 
@@ -616,215 +267,10 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
-<style type="text/css">
-figure{margin: 0;padding: 0;}
-figcaption{text-align:center;}
-
-/* PrismJS 1.14.0
- http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
-/**
- * prism.js default theme for JavaScript, CSS and HTML
- * Based on dabblet (http://dabblet.com)
- * @author Lea Verou
- */
-
-code[class*="language-"],
-pre[class*="language-"] {
-    color: black;
-    background: none;
-    text-shadow: 0 1px white;
-    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-    text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
-    word-wrap: normal;
-    line-height: 1.5;
-    
-    -moz-tab-size: 4;
-    -o-tab-size: 4;
-    tab-size: 4;
-    
-    -webkit-hyphens: none;
-    -moz-hyphens: none;
-    -ms-hyphens: none;
-    hyphens: none;
-}
-
-pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
-code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
-    text-shadow: none;
-    background:#b3d4fc;
-}
-
-pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
-code[class*="language-"]::selection, code[class*="language-"] ::selection {
-    text-shadow: none;
-    background: #b3d4fc;
-}
-
-@media print {
-    code[class*="language-"],
-    pre[class*="language-"] {
-        text-shadow: none;
-    }
-}
-
-/* Code blocks */
-pre[class*="language-"] {
-    padding: 1em;
-    margin: .5em 0;
-    overflow: auto;
-}
-
-:not(pre) > code[class*="language-"],
-pre[class*="language-"] {
-    background: #F7F7F7;
-}
-
-/* Inline code */
-:not(pre) > code[class*="language-"] {
-    padding: .1em;
-    border-radius: .3em;
-    white-space: normal;
-}
-
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-    color: slategray;
-}
-
-.token.punctuation {
-    color: #999;
-}
-
-.namespace {
-    opacity: .7;
-}
-
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol,
-.token.deleted {
-    color: #905;
-}
-
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin,
-.token.inserted {
-    color: #690;
-}
-
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string {
-    color: #9a6e3a;
-    background: hsla(0, 0%, 100%, .5);
-}
-
-.token.atrule,
-.token.attr-value,
-.token.keyword {
-    color: #07a;
-}
-
-.token.function,
-.token.class-name {
-    color: #DD4A68;
-}
-
-.token.regex,
-.token.important,
-.token.variable {
-    color: #e90;
-}
-
-.token.important,
-.token.bold {
-    font-weight: bold;
-}
-.token.italic {
-    font-style: italic;
-}
-
-.token.entity {
-    cursor: help;
-}
-
-
-pre[class*="language-"].line-numbers {
-    position: relative;
-    padding-left: 3.8em;
-    counter-reset: linenumber;
-}
-
-pre[class*="language-"].line-numbers > code {
-    position: relative;
-    white-space: inherit;
-}
-
-.line-numbers .line-numbers-rows {
-    position: absolute;
-    pointer-events: none;
-    top: 0;
-    font-size: 100%;
-    left: -3.8em;
-    width: 3em; /* works for line-numbers below 1000 lines */
-    letter-spacing: -1px;
-    border-right: 1px solid #999;
-
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-
-}
-
-    .line-numbers-rows > span {
-        pointer-events: none;
-        display: block;
-        counter-increment: linenumber;
-    }
-
-        .line-numbers-rows > span:before {
-            content: counter(linenumber);
-            color: #999;
-            display: block;
-            padding-right: 0.8em;
-            text-align: right;
-        }
-
-</style>
 
   
     
 
-    <script src="asset/js/foundation.min.js"></script>
-    <script>
-      $(document).foundation();
-      function fixSidebarHeight(){
-        var w1 = $('.markdown-body').height();
-          var w2 = $('#sidebar').height();
-          if (w1 > w2) { $('#sidebar').height(w1); };
-      }
-      $(function(){
-        fixSidebarHeight();
-      })
-      $(window).load(function(){
-          fixSidebarHeight();
-      });
-     
-    </script>
 
 
 
