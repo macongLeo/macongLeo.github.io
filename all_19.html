@@ -90,6 +90,8 @@
             <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
         
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
+        
+            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
          
 
       </ul>
@@ -112,54 +114,58 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15821054226825.html">
+                <a class="clearlink" href="15833788745389.html">
                 
-                  <h1>牛逼的GCD</h1>
+                  <h1>UITextView 行间距调整</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><strong>DispatchQueue</strong><br/>
-苹果官方对 GCD 的说明:</p>
+                        	<p>在我们创建 UITextView 的时候,有可能默认的行间距并不合适,调整行间距也比较简单,方法也比较多,今天介绍一直比较常见的,简单的方法:<br/>
+<strong>textView.typingAttributes</strong> 属性设置<br/>
+关于 <strong>textView.typingAttributes</strong>的官方文档介绍就是:<br/>
+用于用户输入的新文本的属性,<br/>
+该字典包含用于输入文本的属性键值对,当文本视图的选择发生变化时,字典的内容自动被清除</p>
 
-<blockquote>
-<p>开发者要做的只是定义想执行的任务并追加到合适的 Dispatch Queue 中</p>
-</blockquote>
+<pre class="line-numbers"><code class="language-text">UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(20, 10, 100, 200)];
 
-<p>GCD 中包含两种队列:<br/>
-串行队列 DISPATCH_QUEUE_SERIAL<br/>
-<img src="media/15821054226825/15821156796654.jpg" alt="" style="width:566px;"/><br/>
-串行队列会阻塞当前线程的执行,等任务完成,才会进行下一个任务<br/>
-<img src="media/15821054226825/15821157466982.jpg" alt="" style="width:397px;"/></p>
+textView.delegate = self;
 
-<p><img src="media/15821054226825/15821157625913.jpg" alt="" style="width:557px;"/></p>
+[self.view addSubview:textView];
 
-<p>例如:<br/>
-<img src="media/15821054226825/15821164356253.jpg" alt="" style="width:629px;"/><br/>
-queue 为串行的时候,因为要等待现在执行的处理结束,所以表现就是依次执行,顺序处理.<br/>
-当 queue 为DISPATCH_QUEUE_CONCURRENT时,因为不需要等待当前执行的处理结束,先执行第一个,不管第一个是否执行完毕,都开始往下执行,并且顺序不是固定的<br/>
-<img src="media/15821054226825/15821166554297.jpg" alt="" style="width:662px;"/><br/>
-<img src="media/15821054226825/15821166798014.jpg" alt="" style="width:563px;"/></p>
+NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
 
-<p><strong>队列的创建</strong></p>
+paragraphStyle.lineSpacing = 20;// 字体的行间距
 
-<ol>
-<li>通过dispatch_queue_create函数创建</li>
-<li>直接过去系统创建好的 MainQueue / GlobalQueue</li>
-</ol>
+NSDictionary *attributes = @{
+                             NSFontAttributeName:[UIFont systemFontOfSize:17],
+                             NSParagraphStyleAttributeName:paragraphStyle
+                             };
+textView.typingAttributes = attributes;
+</code></pre>
 
-<p><strong>dispatch_after</strong><br/>
-dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定时间后追加处理到 dispatch queue</strong><br/>
-<img src="media/15821054226825/15821176029539.jpg" alt="" style="width:610px;"/></p>
+<p><img src="media/15833788745389/15833792273218.jpg" alt="" style="width:602px;"/><br/>
+但是这样设置会有一个问题 就是光标会变大<br/>
+<img src="media/15833788745389/15833792578456.jpg" alt="" style="width:311px;"/><br/>
+ 解决光标变大的问题 目前只有自定义 TextView ,<br/>
+ UITextView遵循了UITextInput协议，其中有返回光标frame的方法</p>
 
-<p><strong>dispatch_group</strong><br/>
-有时候需要在某几个任务结束之后,再进行新的任务,例如:<br/>
-<img src="media/15821054226825/15821182215704.jpg" alt="" style="width:553px;"/><br/>
-<img src="media/15821054226825/15821183629319.jpg" alt="" style="width:633px;"/><br/>
-<img src="media/15821054226825/15821184229942.jpg" alt="" style="width:622px;"/><br/>
-<img src="media/15821054226825/15821184582389.jpg" alt="" style="width:547px;"/></p>
+<ul>
+<li>(CGRect)caretRectForPosition:(UITextPosition *)position，所以我们可以使用自定义的TextView，重写返回光标frame的方法避免光标扩大问题。</li>
+</ul>
 
-<p><strong>dispatch_barrier_async(栅栏函数)</strong></p>
+<pre class="line-numbers"><code class="language-text">- (CGRect)caretRectForPosition:(UITextPosition *)position {
+    CGRect originalRect = [super caretRectForPosition:position];
+    originalRect.size.height = self.font.lineHeight + 1;
+    originalRect.size.width = 1.5;
+
+    return originalRect;
+}
+</code></pre>
+
+<p><img src="media/15833788745389/15833794042367.jpg" alt="" style="width:704px;"/></p>
+
+<p>参考：<a href="https://www.jianshu.com/p/085ee268b43a">https://www.jianshu.com/p/085ee268b43a</a></p>
 
                         
                       </div>
@@ -168,10 +174,10 @@ dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/19</span>
+                    <span class="date">2020/03/05</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html'>iOS 开发技巧整理</a></span>
           				   
                     
 
@@ -255,6 +261,8 @@ dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定
             <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
         
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
+        
+            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
          
         </p>
 
@@ -271,6 +279,24 @@ dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定
 	      
 		      
 			      <li class="post">
+			        <a href="15846246156341.html">两数之和问题</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
 			      </li>
 		     
@@ -278,24 +304,6 @@ dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定
 		      
 			      <li class="post">
 			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的 TODO</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841925821639.html">iOS 中的图片解码</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841870085283.html">网络七层模型与四层模型区别</a>
 			      </li>
 		     
 		  

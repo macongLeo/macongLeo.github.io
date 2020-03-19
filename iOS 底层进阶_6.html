@@ -90,6 +90,8 @@
             <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
         
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
+        
+            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
          
 
       </ul>
@@ -112,81 +114,115 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15795063924352.html">
+                <a class="clearlink" href="15815876783958.html">
                 
-                  <h1>AutoReleasePool 自动释放池</h1>
+                  <h1>iOS 中的锁</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
                         	<ul>
-<li>App启动后，苹果在主线程 RunLoop 里注册了两个 Observer，其回调都是 _wrapRunLoopWithAutoreleasePoolHandler()。</li>
-<li>第一个 Observer 监视的事件是 Entry(即将进入Loop)，其回调内会调用 _objc_autoreleasePoolPush() 创建自动释放池。其 order 是-2147483647，优先级最高，保证创建释放池发生在其他所有回调之前。</li>
-<li>第二个 Observer 监视了两个事件： BeforeWaiting(准备进入休眠) 时调用_objc_autoreleasePoolPop() 和 _objc_autoreleasePoolPush() 释放旧的池并创建新池；Exit(即将退出Loop) 时调用 _objc_autoreleasePoolPop() 来释放自动释放池。这个 Observer 的 order 是 2147483647，优先级最低，保证其释放池子发生在其他所有回调之后。</li>
-<li>在主线程执行的代码，通常是写在诸如事件回调、Timer回调内的。这些回调会被 RunLoop 创建好的 AutoreleasePool 环绕着，所以不会出现内存泄漏，开发者也不必显示创建 Pool 了。</li>
+<li>自旋锁(OSSpinLock)</li>
+<li>互斥锁</li>
+<li>pthread_mutex</li>
+<li>信号量(dispatch_semaphore)</li>
+<li>NSLock</li>
+<li>递归锁(NSRecursiveLock)</li>
+<li>条件锁(NSConditionLock)</li>
+<li>@synchronized</li>
 </ul>
 
-<p>也就是说<mark>AutoreleasePool创建是在一个RunLoop事件开始之前(push)，AutoreleasePool释放是在一个RunLoop事件即将结束之前(pop)。</mark><br/>
-AutoreleasePool里的Autorelease对象的加入是在RunLoop事件中，AutoreleasePool里的Autorelease对象的释放是在AutoreleasePool释放时。</p>
+<p><strong>自旋锁(OSSpinLock)</strong></p>
 
-<h2 id="toc_0">Autorelease对象什么时候释放？</h2>
+<blockquote>
+<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
+</blockquote>
 
-<p>在没有手动添加 AutoreleasePool的情况下,<br/>
-**Autorelease对象是在当前的 RunLoop 迭代结束的时候释放的 **<br/>
-原因:<br/>
-    系统在每个 RunLoop 迭代中都加入了自动释放池的 Push 和 Pop</p>
+<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
+自旋锁的问题:<br/>
+    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
+    2. 递归调用有可能引起死锁<br/>
+    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
 
-<h2 id="toc_1">AutoreleasePool原理</h2>
+<p><strong>互斥锁</strong><br/>
+互斥锁属于 sleep-waiting 类型的锁.</p>
 
-<p><img src="media/15795063924352/15795107102374.jpg" alt="" style="width:702px;"/></p>
+<blockquote>
+<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
+</blockquote>
 
-<p><img src="media/15795063924352/15795070852300.jpg" alt="" style="width:536px;"/></p>
+<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
+自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
+
+<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
+互斥锁适用:</p>
 
 <ul>
-<li>AutoreleasePool并没有单独的结构,而是由若干个 AutoreleasePoolPage 以双向链表的形式结合而成(分别对应图中的 parent 和 child 指针)</li>
-<li>AutoreleasePool是按线程一一对应的(结构中的 thread 指向当前线程)</li>
-<li>AutoreleasePoolPage 每个对象会开辟 4096 个字节内存(一页虚拟内存的大小)除了上面的实例变量所占的空间,剩下的空间都用来存储 Autorelease对象</li>
-<li>上面的 id *next 指针作为游标指向栈顶最新 add 进来的 Autorelease对象的下一个位置</li>
-<li>一个 AutoreleasePoolPage 的空间被沾满时,会创建一个新的 AutoreleasePoolPage 对象,连接链表,后来的 Autorelease对象在新的 page 加入</li>
+<li>临界区有 IO 操作</li>
+<li>临界区代码复制或者循环量大</li>
+<li>临界区竞争非常激烈</li>
+<li>单核处理器</li>
 </ul>
 
-<p>所以若当前线程中只有一个 AutoreleasePoolPage 对象,并记录了很多 Autorelease对象地址时,内存:<br/>
-<img src="media/15795063924352/15795075970216.jpg" alt="" style="width:520px;"/><br/>
-图中的情况，这一页再加入一个autorelease对象就要满了（也就是next指针马上指向栈顶），这时就要执行上面说的操作，建立下一页page对象，与这一页链表连接完成后，新page的next指针被初始化在栈底（begin的位置），然后继续向栈顶添加新对象。</p>
+<p>自旋锁适用:<br/>
+临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
 
-<p><mark><strong>向一个对象发送- autorelease消息，就是将这个对象加入到当前AutoreleasePoolPage的栈顶next指针指向的位置</strong></mark><br/>
-这一步只是把 Autorelease对象加入到了自动释放池,还并没有释放</p>
+<blockquote>
+<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
+优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
+</blockquote>
 
-<h3 id="toc_2">真正释放时刻</h3>
+<p><strong>os_unfair_lock</strong></p>
 
-<p>每当进行一次<mark><strong>objc_autoreleasePoolPush</strong></mark>调用时，runtime向当前的AutoreleasePoolPage中add进一个哨兵对象，值为0（也就是个nil），那么这一个page就变成了下面的样子：<br/>
-<img src="media/15795063924352/15795082558655.jpg" alt="" style="width:754px;"/><br/>
-<mark>objc_autoreleasePoolPush</mark>的返回值正是这个哨兵对象的地址，被<mark>objc_autoreleasePoolPop</mark>(哨兵对象)作为入参，于是：</p>
+<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
 
-<ol>
-<li> 根据传入的哨兵对象地址找到哨兵对象所处的page</li>
-<li>在当前page中，将晚于哨兵对象插入的所有autorelease对象都发送一次- release消息，并向回移动next指针到正确位置</li>
-<li>补充2：从最新加入的对象一直向前清理，可以向前跨越若干个page，直到哨兵所在的page<br/>
-刚才的objc_autoreleasePoolPop执行后，
-<img src="media/15795063924352/15795086281414.jpg" alt="" style="width:758px;"/>
-最终变成了下面的样子:
-<img src="media/15795063924352/15795084636880.jpg" alt="" style="width:725px;"/></li>
-</ol>
+<p><strong>pthread_mutex</strong><br/>
+mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
 
-<p><strong>嵌套的AutoreleasePool</strong><br/>
-知道了上面的原理，嵌套的AutoreleasePool就非常简单了，pop的时候总会释放到上次push的位置为止，多层的pool就是多个哨兵对象而已，就像剥洋葱一样，每次一层，互不影响。 </p>
+<p><strong>NSLock</strong><br/>
+NSLock是对 mutex 的普通锁的封装<br/>
+NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
+trylock 是尝试加锁,如果失败的话就返回 NO</p>
 
-<p><img src="media/15795063924352/15795095043776.jpg" alt="" style="width:767px;"/></p>
+<p><strong>信号量</strong><br/>
+    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
+    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
 
-<p><img src="media/15795063924352/15795109308256.jpg" alt="" style="width:700px;"/></p>
+<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
+dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
+dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
+用法:
+信号量常用于对资源进行加锁操作
+</code></pre>
 
-<p>注意点:<br/>
-NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添加到该pool里面的所有OC对象都执行一遍release（retainCount-=1），如果恰好此时retainCount&lt;=0 ，那么系统会自动调用<mark>dealloc</mark>方法废弃对象。</p>
+<pre class="line-numbers"><code class="language-text">//在init等函数初始化
+_lock = dispatch_semaphore_create(1); 
+dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
+//修改Array或字典等数据的信息
+dispatch_semaphore_signal(_lock);
+</code></pre>
+
+<p><strong>@synchronized</strong><br/>
+@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
+
+<pre class="line-numbers"><code class="language-text">// 写数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
+    }
+});
+// 读数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        id obj = [dict objectForKey:@&quot;trail&quot;];
+    }
+});
+</code></pre>
 
 <p>参考:<br/>
-<a href="https://www.jianshu.com/p/61d8131c6bf3">https://www.jianshu.com/p/61d8131c6bf3</a><br/>
-<a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/">https://blog.sunnyxx.com/2014/10/15/behind-autorelease/</a><br/>
-<a href="https://juejin.im/post/5d7765756fb9a06af82503b6">https://juejin.im/post/5d7765756fb9a06af82503b6</a></p>
+<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
+<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
+<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
 
                         
                       </div>
@@ -195,10 +231,10 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/20</span>
+                    <span class="date">2020/02/13</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
           				   
                     
 
@@ -282,6 +318,8 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
             <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
         
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
+        
+            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
          
         </p>
 
@@ -298,6 +336,24 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
 	      
 		      
 			      <li class="post">
+			        <a href="15846246156341.html">两数之和问题</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
 			      </li>
 		     
@@ -305,24 +361,6 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
 		      
 			      <li class="post">
 			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的 TODO</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841925821639.html">iOS 中的图片解码</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841870085283.html">网络七层模型与四层模型区别</a>
 			      </li>
 		     
 		  

@@ -90,6 +90,8 @@
             <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
         
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
+        
+            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
          
 
       </ul>
@@ -112,101 +114,194 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780315733102.html">
+                <a class="clearlink" href="15788827057157.html">
                 
-                  <h1>探寻 OC 对象的本质</h1>
+                  <h1>Runtime</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<blockquote>
-<p>面试题：一个 NSObject 对象占用多少内存？</p>
+                        	<p><img src="media/15788827057157/15788999942773.jpg" alt="" style="width:939px;"/><br/>
+Runtime 的特性主要是消息（方法）传递，如果消息（方法）在对象中找不到，就会进行消息转发。</p>
+
+<h2 id="toc_0">Runtime 介绍</h2>
+
+<blockquote>
+<p>Objective-C 拓展了 C语言，并且加入了面向对象特性和 SmallTalk 式的消息传递机制，而这个拓展的核心就是用 C 和编译语言写的Runtime库。Runtime是面向对象的基础。</p>
 </blockquote>
 
-<p>我们平时编写的代码都是 Objective-C 的代码，但是底层实现其实都是 C/C++的代码</p>
+<p><img src="media/15788827057157/15789003887697.jpg" alt="" style="width:684px;"/></p>
 
-<pre class="line-numbers"><code class="language-text">#import &lt;Foundation/Foundation.h&gt;
-#import &lt;malloc/malloc.h&gt;
-#import &lt;objc/runtime.h&gt;
+<h2 id="toc_1">Runtime 消息传递</h2>
 
-int main(int argc, const char * argv[]) {
-    @autoreleasepool {
-        NSObject *obj = [[NSObject alloc] init];
-        // 创建一个实例对象，实际上分配多少内存 - 16
-        NSLog(@&quot;%zd&quot;, malloc_size((__bridge const void *)obj));
-
-        // 创建一个实例对象，至少需要多少内存 - 8
-        NSLog(@&quot;%zd&quot;, class_getInstanceSize([NSObject class]));
-    }
-    return 0;
-}
-</code></pre>
+<p>一个对象的方法[obj foo]，编译器转成消息转发：<strong>objc_msgSend(obj, foo)</strong><br/>
+Runtime 执行的流程如下：</p>
 
 <ul>
-<li>系统分配了 16 个字节给 NSObject 对象（通过 malloc——size 函数获得）</li>
-<li><p>OC 源码显示分配给对象的内存为 16 个字节的整数倍，至少是 16 个字节</p>
-<p><img src="media/15780315733102/15780350303674.jpg" alt="" style="width:660px;"/></p></li>
+<li>首先通过 obj 的 isa 指针， 找到他的 Class</li>
+<li>在 class 的 methodlist（方法列表） 列表中找方法： foo</li>
+<li>如果 class 中没有找到 foo，就向上去父类的方法列表中继续查找；</li>
+<li>如果找到了就执行，去实现 IMP。</li>
 </ul>
 
-<blockquote>
-<p>OC的对象、类主要是基于C\C++的什么数据结构实现的呢？<br/>
-结构体<br/>
-OC 的对象是基于 C 的结构体实现的<br/>
-这个结构体只有一个成员：isa 指针，而指针在 64 位架构中占 8 个字节。<br/>
-那么这个结构体占多大的内存空间呢，我们发现这个结构体只有一个成员，isa指针，而指针在64位架构中占8个字节。也就是说一个NSObjec对象所占用的内存是8个字节。到这里我们已经可以基本解答第一个问题。但是我们发现NSObject对象中还有很多方法，那这些方法不占用内存空间吗？其实类的方法等也占用内存空间，但是这些方法所占用的存储空间并不在NSObject对象中。</p>
-</blockquote>
+<p><img src="media/15788827057157/15789011491768.jpg" alt="" style="width:687px;"/><br/>
+<img src="media/15788827057157/15789013576022.jpg" alt="" style="width:664px;"/></p>
 
-<h2 id="toc_0">实例对象 类（对象） 元类</h2>
-
-<p><img src="media/15780315733102/15780363563241.jpg" alt="" style="width:552px;"/></p>
-
-<blockquote>
 <ol>
-<li>instance的isa指向class</li>
-<li>class的isa指向meta-class</li>
-<li>meta-class的isa指向基类的meta-class，基类的isa指向自己</li>
-<li>class的superclass指向父类的class，如果没有父类，superclass指针为nil</li>
-<li>meta-class的superclass指向父类的meta-class，基类的meta-class的superclass指向基类的class</li>
-<li>instance调用对象方法的轨迹，isa找到class，方法不存在，就通过superclass找父类</li>
-<li>class调用类方法的轨迹，isa找meta-class，方法不存在，就通过superclass找父类</li>
+<li>系统首先找到消息的接收对象,然后通过对象的 isa 找到他的类 class.</li>
+<li>然后在他的类中查找 method_list,是否有 selector 方法</li>
+<li>没有找到则继续查找父类的 method_list.</li>
+<li>找到对应的 method,执行他的 IMP</li>
+<li>转发 IMP 的 return 值.</li>
 </ol>
-</blockquote>
 
-<h2 id="toc_1">为什么会存在元类？</h2>
+<p>下面讲一下消息传递中用到的概念:</p>
 
-<p>元类是一个类对象的类<br/>
-简而言之：<br/>
-当你向一个对象发送一条消息的时候，运行时会在对象的类的方法列表中查找这条消息是否存在。<br/>
-当你向一个类发送一条消息的时候，运行时会在类的元类的方法列表中查找这条消息是否存在。</p>
+<ul>
+<li>类对象(objc_class)</li>
+<li>实例对象(objc_object)</li>
+<li>元类(Meta Class)</li>
+<li>Method(objc_method)</li>
+<li>SEL(objc_selector)</li>
+<li>IMP</li>
+<li>类缓存(objc_cache)</li>
+<li>Category(objc_category)</li>
+</ul>
 
-<p>元类的存在是必需的，因为他存储了一个类的所有类方法。每个类的元类都是独一无二的，因为每个类都有一系列独特的类方法。<br/>
-什么是元类的类</p>
+<h3 id="toc_2">类对象(objc_class)</h3>
 
-<p>元类，和类一样，也是一个对象。这表示你能够对元类调用方法。自然的，这表示他必须也有一个类指针。</p>
+<p>在 OC 中类是有 Class 类型表示的,它实际上是一个指向 objc_class 的结构体指针<br/>
+<img src="media/15788827057157/15789018290104.jpg" alt="" style="width:295px;"/><br/>
+<img src="media/15788827057157/15789018799631.jpg" alt="" style="width:960px;"/><br/>
+struct objc_class结构体定义了很多变量，通过命名不难发现，<br/>
+结构体里保存了指向父类的指针、类的名字、版本、实例大小、实例变量列表、方法列表、缓存、遵守的协议列表等，<br/>
+一个类包含的信息也不就正是这些吗？没错，类对象就是一个结构体struct objc_class，这个结构体存放的数据称为元数据(metadata)，<br/>
+该结构体的第一个成员变量也是isa指针，这就说明了Class本身其实也是一个对象，因此我们称之为类对象，类对象在编译期产生用于创建实例对象，是单例。</p>
 
-<p>所有元类使用基类的元类（即继承链顶端的类的元类）作为他们的类，而所有类的基类都是 NSObject（大多数类是这样的），所以大多数元类使用 NSObject 的元类作为他的类。</p>
+<h3 id="toc_3">实例(objc_object)</h3>
 
-<p>根据规则所有元类使用基类的元类作为他们的类，那么基类的元类就是他自己的类（他们的isa指针指向了自己）。这表明NSObject的元类的指针指向的是他自己（他是一个他自己的实例）。</p>
+<p><img src="media/15788827057157/15789019974820.jpg" alt="" style="width:420px;"/></p>
 
-<h2 id="toc_2">继承类和元类</h2>
+<p>类对象中的元数据存储的都是如何创建一个实例相关的信息,那么类对象和类方法应该从哪里创建呢? 就是 isa 指针指向的结构体创建,类对象的 isa 指针指向的我们称为元类,元类中保存了创建类对象及类方法所需的所有信息,所以经典的那张图又来了:<br/>
+<img src="media/15788827057157/15789021597096.jpg" alt="" style="width:934px;"/></p>
 
-<p>同样的，类使用 super_class 指针指向他们的 superclass，元类也有 super_class 指针来指向 superclass。<br/>
-这里又有一个奇怪的地方，基类的元类设置的 superclass 是基类自己。<br/>
-这种继承结构导致的结果是所有结构中的实例、类以及元类都继承自结构中的基类。</p>
+<h3 id="toc_4">元类(Meta Class)</h3>
 
-<p>所有实例、类和元类都在 NSObject 的层级下，这表明所有 NSObject 的实例方法都能够被使用，同样的，对类以及元类来说，所有 NSObject 的类方法也是有效的。</p>
+<p>通过上图我们可以发现整个体系构成了一个自闭环, <strong>struct objc_object</strong> 的结构体实例, 它的 isa 指向类对象,类对象的 isa 指向元类,super_class 指针指向父类的类对象,而元类的 super_class 的指针指向了父类的元类,那元类的指针又指向了自己.<br/>
+元类是一个类对象的类,在上面我们提到所有的类自身也是一个对象,我们可以像这个对象发送消息(调用方法),为了调用类方法,这个类的 isa 指针必须指向一个包含这些类方法的一个 objc_class 结构体,这就引出了元类(meta-class)的概念.<br/>
+元类中保存了创建类对象以及类方法所需的所有信息。 任何NSObject继承体系下的meta-class都使用NSObject的meta-class作为自己的所属类，而<strong>基类的meta-class的isa指针是指向它自己</strong>。</p>
 
-<h2 id="toc_3">元类总结：</h2>
+<p><img src="media/15788827057157/15789044962794.jpg" alt="" style="width:881px;"/></p>
 
-<p>元类是一个类对象的类。每一个类有他自己独一无二的元类（因为每个类能够有自己独一无二的方法列表）。这就意味着类对象的类并不是和他们一样的类。</p>
+<ul>
+<li>SEL method_name    方法名</li>
+<li>char *method_types 方法类型</li>
+<li>IMP method_imp     方法实现</li>
+</ul>
 
-<p>元类能确保类对象有所有底层类的实例和类方法，中间加上所有自己的类方法。所有类继承自NSObject，这意味着NSObject所有的实例和协议方法为所有类（和元类）对象都定义了。</p>
+<p><img src="media/15788827057157/15789046998441.jpg" alt="" style="width:728px;"/></p>
 
-<p>所有元类使用基类的元类（NSObject 元类）来作为他们的类，包括只在运行时自定义的类的元类。</p>
+<p>objc_msgSend 函数第二个参数类型为 SEL.它是 selector 在 OC 中的表示类型(Swift 中是 Selector 类).selector 是方法选择器,可以理解为区分方法的 ID,而这个 ID 的数据结构是 SEL.<br/>
+<img src="media/15788827057157/15789049888500.jpg" alt="" style="width:972px;"/></p>
+
+<p><img src="media/15788827057157/15789050086371.jpg" alt="" style="width:988px;"/></p>
+
+<p><img src="media/15788827057157/15789060707679.jpg" alt="" style="width:978px;"/></p>
+
+<p><img src="media/15788827057157/15789062512658.jpg" alt="" style="width:547px;"/></p>
+
+<ul>
+<li>name:是指 class_name 而不是 category_name。</li>
+<li>cls:要扩展的类对象，编译期间是不会定义的，而是在Runtime阶段通过name对 应到对应的类对象。</li>
+<li>instanceMethods：category中所有给类添加的实例方法的列表。</li>
+<li>classMethods：category中所有添加的类方法的列表。</li>
+<li>protocols：category实现的所有协议的列表。</li>
+<li>instanceProperties：表示Category里所有的properties，这就是我们可以通过objc_setAssociatedObject和objc_getAssociatedObject增加实例变量的原因，不过这个和一般的实例变量是不一样的。</li>
+</ul>
+
+<p><img src="media/15788827057157/15789063762697.jpg" alt="" style="width:983px;"/></p>
+
+<h2 id="toc_5">Runtime 消息转发</h2>
+
+<p>消息转发的最后三次机会</p>
+
+<ul>
+<li>动态方法解析</li>
+<li>备用接受者</li>
+<li>完整消息转发</li>
+</ul>
+
+<p><img src="media/15788827057157/15789064378501.jpg" alt="" style="width:974px;"/></p>
+
+<h3 id="toc_6">动态方法解析</h3>
+
+<p><img src="media/15788827057157/15789066286973.jpg" alt="" style="width:964px;"/></p>
+
+<p>可以看到虽然没有实现foo:这个函数，但是我们通过class_addMethod动态添加fooMethod函数，并执行fooMethod这个函数的IMP。从打印结果看，成功实现了。<br/>
+如果resolve方法返回 NO ，运行时就会移到下一步：<strong>forwardingTargetForSelector</strong>。</p>
+
+<h3 id="toc_7">备用接受者</h3>
+
+<p>如果目标对象实现了<strong>-forwardingTargetForSelector:</strong>，Runtime 这时就会调用这个方法，给你把这个消息转发给其他对象的机会。</p>
+
+<p>实现一个备用接收者的例子如下：</p>
+
+<p><img src="media/15788827057157/15789068795712.jpg" alt="" style="width:667px;"/><br/>
+可以看到我们通过forwardingTargetForSelector把当前ViewController的方法转发给了Person去执行了。打印结果也证明我们成功实现了转发。</p>
+
+<h3 id="toc_8">完整消息转发</h3>
+
+<p>如果在上一步还不能处理未知消息，则唯一能做的就是启用完整的消息转发机制了。<br/>
+首先它会发送<strong>-methodSignatureForSelector:</strong>消息获得函数的参数和返回值类型。如果-<strong>methodSignatureForSelector:</strong>返回nil ，Runtime则会发出 <strong>-doesNotRecognizeSelector:</strong> 消息，程序这时也就挂掉了。如果返回了一个函数签名，Runtime就会创建一个<strong>NSInvocation</strong> 对象并发送 <strong>-forwardInvocation:</strong>消息给目标对象。</p>
+
+<p><img src="media/15788827057157/15789070035039.jpg" alt="" style="width:765px;"/><br/>
+<img src="media/15788827057157/15789070187925.jpg" alt="" style="width:774px;"/><br/>
+从打印结果来看，我们实现了完整的转发。通过签名，Runtime生成了一个对象anInvocation，发送给了forwardInvocation，我们在forwardInvocation方法里面让Person对象去执行了foo函数。签名参数v@:怎么解释呢，这里苹果文档Type Encodings有详细的解释。<br/>
+以上就是Runtime的三次转发流程。下面我们讲讲Runtime的实际应用。<br/>
+<img src="media/15788827057157/15789072653201.jpg" alt="" style="width:987px;"/></p>
+
+<h2 id="toc_9">Runtime 应用</h2>
+
+<ul>
+<li>AOP 面向切片编程(埋点方面用的比较多)
+<img src="media/15788827057157/15789071021461.jpg" alt="" style="width:702px;"/>
+<img src="media/15788827057157/15789071215521.jpg" alt="" style="width:811px;"/></li>
+</ul>
+
+<p>下面实现一个UIView的Category添加自定义属性defaultColor。<br/>
+<img src="media/15788827057157/15789080004602.jpg" alt="" style="width:839px;"/><br/>
+<img src="media/15788827057157/15789080309274.jpg" alt="" style="width:969px;"/></p>
+
+<p><img src="media/15788827057157/15789079081069.jpg" alt="" style="width:961px;"/><br/>
+<strong><em>注:weak 的关联内存管理策略是什么?</em></strong><br/>
+<a href="https://dayon.gitbooks.io/-ios/content/chapter8.html">https://dayon.gitbooks.io/-ios/content/chapter8.html</a></p>
+
+<h3 id="toc_10">方法添加</h3>
+
+<p><img src="media/15788827057157/15789083218769.jpg" alt="" style="width:943px;"/></p>
+
+<h3 id="toc_11">方法替换</h3>
+
+<p>下面实现一个替换ViewController的viewDidLoad方法的例子。<br/>
+<img src="media/15788827057157/15789085581682.jpg" alt="" style="width:1074px;"/><br/>
+swizzling应该只在+load中完成。 在 Objective-C 的运行时中，每个类有两个方法都会自动调用。+load 是在一个类被初始装载时调用，+initialize 是在应用第一次调用该类的类方法或实例方法前调用的。两个方法都是可选的，并且只有在方法被实现的情况下才会被调用。<br/>
+swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的状态，所以我们需要确保每个预防措施在运行时都是可用的。原子操作就是这样一个用于确保代码只会被执行一次的预防措施，就算是在不同的线程中也能确保代码只执行一次。Grand Central Dispatch 的 dispatch_once满足了所需要的需求，并且应该被当做使用swizzling 的初始化单例方法的标准。</p>
+
+<h3 id="toc_12">KVO实现</h3>
+
+<p><img src="media/15788827057157/15789086448973.jpg" alt="" style="width:924px;"/><br/>
+<img src="media/15788827057157/15789086852696.jpg" alt="" style="width:941px;"/><br/>
+<img src="media/15788827057157/15789087796562.jpg" alt="" style="width:950px;"/></p>
+
+<p>注:<br/>
+消息转发中&quot;v@:&quot;含义:<br/>
+<img src="media/15788827057157/15789066840487.jpg" alt="" style="width:712px;"/></p>
 
 <p>参考：<br/>
-<a href="https://juejin.im/post/5ac81c75518825556534c0af">https://juejin.im/post/5ac81c75518825556534c0af</a><br/>
-<a href="https://www.jianshu.com/p/79b06fabb459">https://www.jianshu.com/p/79b06fabb459</a></p>
+<a href="https://juejin.im/post/5ac0a6116fb9a028de44d717">https://juejin.im/post/5ac0a6116fb9a028de44d717</a><br/>
+<a href="https://bujige.net/blog/iOS-Runtime-01.html">https://bujige.net/blog/iOS-Runtime-01.html</a><br/>
+<a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100">https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100</a><br/>
+<a href="https://www.jianshu.com/p/ab966e8a82e2">https://www.jianshu.com/p/ab966e8a82e2</a></p>
 
                         
                       </div>
@@ -215,10 +310,10 @@ OC 的对象是基于 C 的结构体实现的<br/>
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
+                    <span class="date">2020/01/13</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -302,6 +397,8 @@ OC 的对象是基于 C 的结构体实现的<br/>
             <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
         
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
+        
+            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
          
         </p>
 
@@ -318,6 +415,24 @@ OC 的对象是基于 C 的结构体实现的<br/>
 	      
 		      
 			      <li class="post">
+			        <a href="15846246156341.html">两数之和问题</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
 			      </li>
 		     
@@ -325,24 +440,6 @@ OC 的对象是基于 C 的结构体实现的<br/>
 		      
 			      <li class="post">
 			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的 TODO</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841925821639.html">iOS 中的图片解码</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841870085283.html">网络七层模型与四层模型区别</a>
 			      </li>
 		     
 		  

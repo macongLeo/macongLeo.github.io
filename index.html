@@ -90,6 +90,8 @@
             <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
         
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
+        
+            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
          
 
       </ul>
@@ -112,89 +114,56 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15841931088622.html">
+                <a class="clearlink" href="15846246156341.html">
                 
-                  <h1>HTTPS 以及抓包工具抓取 HTTPS的原理</h1>
+                  <h1>两数之和问题</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">什么是 HTTPS?</h2>
+                        	<p>给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。</p>
 
-<p>HTTP:超文本传输协议,是属于 TCP/IP 分层中的应用层,位于传输层之上,当初为了快速处理大量事务,HTTP 在设计之初就比较简单,安全性奇差无比,明文传输.</p>
+<p>你可以假设每种输入只会对应一个答案。但是，你不能重复利用这个数组中同样的元素。</p>
 
-<blockquote>
-<p>HTTP 的报文直接丢给传输层,利用传输层的 TCP 协议 或者 UDP 协议进行数据传输,然后再利用网络层的 IP 协议和数据链路层来进行最终的数据包传输.</p>
-</blockquote>
+<p>示例:<br/>
+ 给定 nums = [2, 7, 11, 15], target = 9<br/>
+ 因为 nums[0] + nums[1] = 2 + 7 = 9<br/>
+ 所以返回 [0, 1]</p>
 
-<p>HTTP 数据传输不会做数据的加密,不会验证通讯双方的身份,也不会校验报文的完整性,这样会导致以下的问题:</p>
+<p>这个题目的在 OC 里的解法就是用字典,<br/>
+首先创建一个字典,value 为数组的 index,key 为数组元素,<br/>
+例如:数组[2,7,11,15];<br/>
+那么这个字典就是<br/>
+ @{@(0):@&quot;2&quot;,<br/>
+                                  @(1):@&quot;7&quot;,<br/>
+                                  @(2):@&quot;11&quot;,<br/>
+                                  @(3):@&quot;15&quot;,<br/>
+                                    }<br/>
+比如目标和为 9, 那么组合的话,第一个为 2,那么 &quot;9-2&quot; 作为 key,去字典里查找,看能否找到目标值,如果这个字典里有符合的 肯定能找到 value,反之就是没有            </p>
 
-<ol>
-<li>由于通信报文是明文传输,内容很容易就被窃听.</li>
-<li>由于不验证通信双方身份,,很容遭遇伪装,服务器也更容易遭受 Dos 攻击</li>
-<li>不验证报文完整性,可能会出现篡改报文信息的情况</li>
-</ol>
+<p>代码如下:</p>
 
-<p><img src="media/15841931088622/15842726169956.jpg" alt="" style="width:653px;"/></p>
-
-<p>由于 HTTP 的诸多弊端,现在通讯基本都要要求 HTTPS 通讯了.</p>
-
-<h4 id="toc_1">HTTP+加密+认证+完整性保护= HTTPS</h4>
-
-<p>HTTPS 中的 S 是指 SSL/TSL安全协议.<br/>
-简单说一下 SSL/TSL 协议:<br/>
-SSL:Secure Socket Layer,安全套接层<br/>
-TSL:Transport Layer Security 传输层安全<br/>
-SSL/TLS 解决了:</p>
-
-<ul>
-<li>机密性问题</li>
-<li>完整性问题</li>
-<li>认证问题<br/>
-有关于 SSL/TSL 的具体介绍,参考<a href="http://mouxuejie.com/blog/2017-03-16/https-ssl-tls-introduction/">这篇文章</a></li>
-</ul>
-
-<p>HTTPS 的分层结构图<br/>
-<img src="media/15841931088622/15842721166317.jpg" alt="" style="width:621px;"/></p>
-
-<ul>
-<li>对于报文的加密:有对称加密和非对称加密方式,HTTPS 采用的混合加密机制,在交换密钥环节,使用非对称加密,之后通信交换报文阶段则使用对称加密方式.</li>
-<li>对于验证通信双方的身份:使用 CA 证书来校验</li>
-<li>SSL 协议具有完整性的校验</li>
-</ul>
-
-<h4 id="toc_2">HTTPS 的大致流程:</h4>
-
-<ol>
-<li>客户端将自己支持的加密算法发送给服务器,请求服务器证书</li>
-<li>服务器选取一组加密算法,并将证书返回给客户端</li>
-<li>客户端校验证书合法性,生成随机对称密钥,用公钥加密后发送给服务器</li>
-<li>服务器用私钥解密出对称密钥,返回一个响应,HTTPS 连接建立完成</li>
-<li>随后双方通过这个对称密钥进行安全的数据通信</li>
-</ol>
-
-<p><img src="media/15841931088622/15842727910283.jpg" alt="" style="width:1268px;"/></p>
-
-<h4 id="toc_3">Charles 抓包原理 &amp; 中间人攻击</h4>
-
-<p>其实使用 HTTPS 的一般来说是比较安全的,但是为什么 Charles 能做到抓取 HTTPS 的呢?这就涉及到了中间人攻击,先来张图说明一下什么是中间人攻击<br/>
-<img src="media/15841931088622/15842730199211.jpg" alt="" style="width:1114px;"/><br/>
-<img src="media/15841931088622/15842732234540.jpg" alt="" style="width:1265px;"/></p>
-
-<p>Charles 之所以能抓取到 HTTPS 的,是因为我们信任了 Charles 的证书</p>
-
-<p><img src="media/15841931088622/15842732914888.jpg" alt="" style="width:1183px;"/></p>
-
-<p>简单总结就是:</p>
-
-<ol>
-<li>首先 Charles 假冒了客户端,拿到服务器的 CA 证书</li>
-<li>然后 Charles 假冒了服务器,给客户端发了一张自己制作的证书,客户端信任该证书</li>
-<li>Charles 再次假冒服务器,拿到客户端的对称密钥</li>
-<li>Charles 再次假冒客户端,将对称密钥发送给服务器,让服务器认为这次通信是没问题的,服务器发送成功响应</li>
-<li>最后Charles假冒服务器将成功响应发送给客户端</li>
-<li>最后客户端也Charles建立连接,Charles与服务器建立连接(中间人攻击)</li>
-</ol>
+<pre class="line-numbers"><code class="language-text">
+- (NSArray *)getTwoNumSum:(int)targetSum array:(NSArray *)arr {
+    NSMutableDictionary *tmpDic = [NSMutableDictionary dictionary];
+    NSMutableArray *tmpA = [NSMutableArray array];
+    for (int i = 0; i &lt; arr.count; i++) {
+        [tmpDic setValue:@(i) forKey:arr[i]];
+    }
+    
+    [arr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSString *keyString = [NSString stringWithFormat:@&quot;%d&quot;,targetSum - ((NSString *)obj).intValue];
+        NSNumber *lastIndex = tmpDic[keyString];
+        if (lastIndex &amp;&amp; idx &lt; lastIndex.integerValue) {
+            [tmpA addObject:@([lastIndex integerValue])];
+            [tmpA addObject:@(idx)];
+        }
+    }];
+    
+    return tmpA;
+    
+}
+</code></pre>
 
                         
                       </div>
@@ -203,10 +172,10 @@ SSL/TLS 解决了:</p>
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/14</span>
+                    <span class="date">2020/03/19</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html'>网络进阶</a></span>
+          					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
           				   
                     
 
@@ -290,6 +259,8 @@ SSL/TLS 解决了:</p>
             <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
         
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
+        
+            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
          
         </p>
 
@@ -306,6 +277,24 @@ SSL/TLS 解决了:</p>
 	      
 		      
 			      <li class="post">
+			        <a href="15846246156341.html">两数之和问题</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
 			      </li>
 		     
@@ -313,24 +302,6 @@ SSL/TLS 解决了:</p>
 		      
 			      <li class="post">
 			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的 TODO</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841925821639.html">iOS 中的图片解码</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841870085283.html">网络七层模型与四层模型区别</a>
 			      </li>
 		     
 		  

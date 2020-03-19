@@ -90,6 +90,8 @@
             <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
         
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
+        
+            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
          
 
       </ul>
@@ -112,144 +114,358 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15791552193020.html">
+                <a class="clearlink" href="15820198947096.html">
                 
-                  <h1>RunLoop 详解</h1>
+                  <h1>weak 的释放及原理</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ul>
-<li>RunLoop 概念</li>
-<li>RunLoop与线程的关系<br/>
-## RunLoop 概念<br/>
-一般来讲一个线程一次只能执行一个任务,执行完成后线程就会推出了,很明显,现在的 APP 都是不可能这种模式的,否则 APP 打开之后就死掉了,也就没有任何作用了.<br/>
-现在的这种模式其实是一种循环模式,保持一个线程始终存在,然后再处理各种操作(功能)等.<br/>
-现在 APP 的实现机制其实是需要线程能随时处理事件,但是并不退出,通常的代码逻辑是这样的:(伪代码)
-<img src="media/15791552193020/15794166325797.jpg" alt="" style="width:772px;"/>
-从代码可以看出是一种循环机制.<br/>
-这种模式通常被称为 EventLoop.iOS/OSX里的 runloop 就是这种模式.<br/>
-这种模式的关键点:
-<ul>
-<li>如何管理事件/消息</li>
-<li>如何让线程在没有消息处理的时候休眠,避免占用资源</li>
-<li>在有消息需要处理的时候立刻被唤醒(否则就是卡顿了)</li>
-</ul></li>
-</ul>
+                        	<p>1.被weak修饰的对象在被释放的时候会发生什么？是如何实现的？知道sideTable么？里面的结构可以画出来么<br/>
+在回答问题之前,我们先来了解一下 weak 的内部结构:</p>
 
-<p>所以 runloop 实际上就是一个对象,这个对象管理了需要其处理的事件和消息.并且提供了一个入口函数来执行上面的 EventLoop 逻辑.<br/>
-线程执行了这个函数之后,就会一直处于这个函数内部&quot;接受消息-&gt;等待-&gt;处理&quot;的循环中,知道这个循环结束,函数返回.<br/>
-OSX/iOS 中提供了两个这样对象:<strong>NSRunLoop,CFRunLoopRef</strong> .</p>
+<blockquote>
+<p>我们常说的 weak,其实是 runtime 维护的用于存储对象的所有 weak 指针的 hash 表,<mark>key 是对象的指针,value 是 weak 指针的地址(这个地址的值是所指对象的地址)数组</mark></p>
+</blockquote>
 
-<ul>
-<li>CFRunLoopRef 是在 CoreFoundation 框架内的,提供的纯 C 函数的 API,所有这些 API 都是线程安全的.</li>
-<li>NSRunLoop 是基于 CFRunLoopRef 的封装,提供了面向对象的 API,但是这些 API 不是线程安全的</li>
-</ul>
+<p>例如:</p>
 
-<h2 id="toc_0">RunLoop 与线程的关系</h2>
+<pre class="line-numbers"><code class="language-text">NSObject *b = [NSObject new];
+__weak id a = b;
+</code></pre>
 
-<p>先给结论:<br/>
-   1. RunLoop 和线程是一一对应的.<br/>
-   2. RunLoop 和线程的对应关系保存在一个全局的字典里<br/>
-   3. 线程刚创建的时候是没有 RunLoop 的,如果不主动获取就一直不会有!<br/>
-   4. RunLoop 的创建是发生在第一次获取时.<br/>
-   5. RunLoop 的销毁是发生在线程结束时<br/>
-   6. 你只能在一个线程内部获取其 RunLoop(主线程除外)<br/>
-   7. 苹果并不允许主动创建 RunLoop,只提供了两个获取的函数:CFRunLoopGetMain(),CFRunLoopGetCurrent().<br/>
-<img src="media/15791552193020/15794176750269.jpg" alt="" style="width:916px;"/></p>
+<p>这里的 b 就是 weak 表的 key,&amp;a(a的内存地址)就是 value;</p>
 
-<p>在 CoreFoundation 中关于 RunLoop 有 5 个类:</p>
-
-<ul>
-<li>CFRunLoopRef</li>
-<li>CFRunLoopModeRef</li>
-<li>CFRunLoopSourceRef</li>
-<li>CFRunLoopTimerRef</li>
-<li>CFRunLoopObserverRef<br/>
-其中的 CFRunLoopModeRef 并没有对外暴露,只是通过 CFRunLoopRef 的接口对外进行了封装
-<img src="media/15791552193020/15794179265453.jpg" alt="" style="width:724px;"/>
-一个 RunLoop 包含若干个 Mode，每个 Mode 又包含若干个 Source/Timer/Observer。每次调用 RunLoop 的主函数时，只能指定其中一个 Mode，这个Mode被称作 CurrentMode。
-<strong>如果需要切换 Mode，只能退出 Loop，再重新指定一个 Mode 进入。这样做主要是为了分隔开不同组的 Source/Timer/Observer，让其互不影响。</strong></li>
-</ul>
-
-<p><strong>CFRunLoopSourceRef</strong> 是事件产生的地方。Source有两个版本：Source0 和 Source1。</p>
+<p><strong>weak 的实现原理简单的概括就三步:</strong></p>
 
 <ol>
-<li>Source0 只包含了一个回调(函数指针)</li>
-<li><p>Source1 包含了一个回调(函数指针)和一个 mach_port</p>
-<p>Source0 并不能主动触发事件,使用的时候需要先调用CFRunLoopSourceSignal(source)，将这个 Source 标记为待处理,然后手动调用CFRunLoopWakeUp(runloop) 来唤醒 RunLoop，让其处理这个事件。<br/>
-Source1 能主动唤醒 RunLoop 的线程.通常用于内核和其他线程相互发送消息</p></li>
+<li>初始化时:runtime 会调用objc_initWeak 函数,初始化一个新的 weak 指针指向对象的地址</li>
+<li>添加引用时:objc_initWeak 函数会调用 objc_storeWeak()函数,objc_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
+<li>释放时:调用 clearDeallocating 函数.clearDeallocating函数首先根据对象地址获取所有 weak 指针地址的数组,然后遍历这个数组把其中的数据置为 nil,最后把这个 entry 从 weak 表中删除,最后清理对象的记录.</li>
 </ol>
 
-<p><strong>CFRunLoopTimerRef</strong> 是基于时间的触发器,它和 NSTimer 是toll-free bridged <sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup> 的,可以混用.其包含一个时间长度和一个回调(函数指针).当其加入 RunLoop 中时,RunLoop 会注册对应的时间点,当时间点到了,RunLoop 会被唤醒以执行那个回调.</p>
+<p>在 runtime 里,weak 修饰符变量是通过 objc_initWeak 函数来初始化的,在变量作用域结束的时候通过 objc_destroyWeak 函数来释放的.</p>
 
-<p><strong>CFRunLoopObserverRef</strong> 是观察者,每个 Observer 都包含了一个回调(函数指针),当 RunLoop 的状态发生变化时,观察者就能通过回调接受到这个变化.可以观察的时间点:<br/>
-<img src="media/15791552193020/15794192089256.jpg" alt="" style="width:995px;"/></p>
+<p>这两个函数长这样:</p>
 
-<p>上面的 Source/Timer/Observer 被统称为 mode item，一个 item 可以被同时加入多个 mode。但一个 item 被重复加入同一个 mode 时是不会有效果的。如果一个 mode 中一个 item 都没有，则 RunLoop 会直接退出，不进入循环。</p>
+<pre class="line-numbers"><code class="language-text">id objc_initWeak(id *location, id newObj)
+{
+    // 查看对象实例是否有效
+    // 无效对象直接导致指针释放
+    if (!newObj) {
+        *location = nil;
+        return nil;
+    }
+    // 这里传递了三个 bool 数值
+    // 使用 template 进行常量参数传递是为了优化性能
+    return storeWeak&lt;false/*old*/, true/*new*/, true/*crash*/&gt;
+        (location, (objc_object*)newObj);
+}
+</code></pre>
 
-<h2 id="toc_1">RunLoop 的 Mode</h2>
+<pre class="line-numbers"><code class="language-text">void objc_destroyWeak(id *location)
+{
+    (void)storeWeak&lt;true/*old*/, false/*new*/, false/*crash*/&gt;
+        (location, nil);
+}
+</code></pre>
 
-<p>CFRunLoopMode 和 CFRunLoop 的结构大致如下：<br/>
-<img src="media/15791552193020/15794203021817.jpg" alt="" style="width:1225px;"/><br/>
-这里有一个概念叫&quot;CommonModes&quot;:<br/>
-    一个 Mode 可以将自己标记为&quot;common&quot;属性(通过将其 ModeName 添加到 RunLoop 的&quot;commonModes&quot;中),每当 Runloop 的内容发生变化时,RunLoop 会自动将_commonModeItems 里的 Source/Obsever/Timer 同步到具有 Common 标记的所有 Mode 里<br/><br/>
-<img src="media/15791552193020/15794205749856.jpg" alt="" style="width:1527px;"/><br/>
-<img src="media/15791552193020/15794206571347.jpg" alt="" style="width:1537px;"/></p>
-
-<h2 id="toc_2">RunLoop 的内部逻辑</h2>
-
-<p>根据苹果在文档里的说明，RunLoop 内部的逻辑大致如下:<br/>
-<img src="media/15791552193020/15794207296297.jpg" alt="" style="width:1118px;"/></p>
-
-<p>内部代码整理:<br/>
-<img src="media/15791552193020/FireShot%20Capture%20023%20-%20%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3RunLoop%20-%20Garan%20no%20dou%20-%20blog.ibireme.com.png" alt="FireShot Capture 023 - 深入理解RunLoop - Garan no dou - blog.ibireme.co"/><br/>
-可以看到，实际上 RunLoop 就是这样一个函数，其内部是一个 do-while 循环。当你调用 CFRunLoopRun() 时，线程就会一直停留在这个循环里；直到超时或被手动停止，该函数才会返回。</p>
-
-<h2 id="toc_3">苹果用 Runloop 实现的功能</h2>
+<p>注意点:</p>
 
 <ol>
-<li>kCFRunLoopDefaultMode: App的默认 Mode，通常主线程是在这个 Mode 下运行的。</li>
-<li>UITrackingRunLoopMode: 界面跟踪 Mode，用于 ScrollView 追踪触摸滑动，保证界面滑动时不受其他 Mode 影响。</li>
-<li>UIInitializationRunLoopMode: 在刚启动 App 时第进入的第一个 Mode，启动完成后就不再使用。<br/>
-4: GSEventReceiveRunLoopMode: 接受系统事件的内部 Mode，通常用不到。<br/>
-5: kCFRunLoopCommonModes: 这是一个占位的 Mode，没有实际作用。</li>
+<li>objc_initWeak 函数有一个前提条件,就是 object 必须是一个没有被注册为 weak 对象的有效指针,而 value 则可以是 null,或者指向一个有效的对象</li>
+<li>添加引用时,object_initWeak 函数会调用 object_storeWeak()函数,object_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
 </ol>
 
-<h3 id="toc_4">AutoreleasePool</h3>
+<p>从上面两个代码能看出来他们都调用了 storeWeak 这个函数,但是传入的参数确有点不一样<br/>
+init 方法中,第一个参数为 weak 的修饰变量,第二个参数为引用计数对象,但是在 destoryWeak 函数,第一参数依旧为 weak 修饰变量,第二个为 nil.参数不同到底代表了什么?下面继续分析 storeWeak 这个函数:</p>
 
-<p>App 启动之后,苹果在主线程 RunLoop 里注册了两个 Observer,这两个观察者的回调都是_wrapRunLoopWithAutoreleasePoolHandler().</p>
+<pre class="line-numbers"><code class="language-text">// 更新一个弱引用变量
+// 如果 HaveOld 是 true, 变量是个有效值，需要被及时清理。变量可以为 nil。
+// 如果 HaveNew 是 true, 需要一个新的 value 来替换变量。变量可以为 nil
+// 如果crashifdeallocation 是 ture ，那么如果 newObj 是 deallocating，或者 newObj 的类不支持弱引用，则该进程就会停止。
+// 如果crashifdeallocation 是 false，那么 nil 会被存储。
+
+template &lt;bool HaveOld, bool HaveNew, bool CrashIfDeallocating&gt;
+static id storeWeak(id *location, objc_object *newObj)
+{
+    assert(HaveOld  ||  HaveNew);
+    if (!HaveNew) assert(newObj == nil);
+
+    Class previouslyInitializedClass = nil;
+    id oldObj;
+    
+    // 创建新旧散列表
+    SideTable *oldTable;
+    SideTable *newTable;
+
+    // Acquire locks for old and new values.
+    // 获得新值和旧值的锁存位置 (用地址作为唯一标示)
+    // Order by lock address to prevent lock ordering problems.
+    // 通过地址来建立索引标志，防止桶重复
+    // Retry if the old value changes underneath us.
+    // 下面指向的操作会改变旧值
+ retry:
+    if (HaveOld) {
+    // 如果 HaveOld 为 true ，更改指针，获得以 oldObj 为索引所存储的值地址
+        oldObj = *location;
+        oldTable = &amp;SideTables()[oldObj];
+    } else {
+        oldTable = nil;
+    }
+    if (HaveNew) {
+    // 获得以 newObj 为索引所存储的值对象
+        newTable = &amp;SideTables()[newObj];
+    } else {
+        newTable = nil;
+    }
+    
+// 对两个 table 进行加锁操作，防止多线程中竞争冲突
+    SideTable::lockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+
+//  location 应该与 oldObj 保持一致，如果不同，说明当前的 location 已经处理过 oldObj 可是又被其他线程所修改, 保证线程安全，这个判断用来避免线程冲突重处理问题
+    if (HaveOld  &amp;&amp;  *location != oldObj) {
+        SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+        goto retry;
+    }
+
+    // Prevent a deadlock between the weak reference machinery
+    // and the +initialize machinery by ensuring that no 
+    // weakly-referenced object has an un-+initialized isa.
+    // 防止弱引用之间发生死锁，并且通过 +initialize 初始化构造器保证所有弱引用的 isa 非空指向
+    if (HaveNew  &amp;&amp;  newObj) {
+        // 获得新对象的 isa 指针
+        Class cls = newObj-&gt;getIsa();
+        // 判断 isa 非空且已经初始化
+        if (cls != previouslyInitializedClass  &amp;&amp;  
+            !((objc_class *)cls)-&gt;isInitialized()) 
+        {
+            // 对两个表解锁
+            SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+            _class_initialize(_class_getNonMetaClass(cls, (id)newObj));
+
+            // If this class is finished with +initialize then we&#39;re good.
+            // If this class is still running +initialize on this thread 
+            // (i.e. +initialize called storeWeak on an instance of itself)
+            // then we may proceed but it will appear initializing and 
+            // not yet initialized to the check above.
+            // Instead set previouslyInitializedClass to recognize it on retry.
+            // 如果该类已经完成执行 +initialize 方法是最好的，如果该类 + initialize 在线程中，例如 +initialize 正在调用storeWeak 方法，那么则需要手动对其增加保护策略，并设置 previouslyInitializedClass 指针进行标记然后重新尝试
+            previouslyInitializedClass = cls;
+
+            goto retry;
+        }
+    }
+
+    // Clean up old value, if any. 清除旧值
+    if (HaveOld) {
+        weak_unregister_no_lock(&amp;oldTable-&gt;weak_table, oldObj, location);
+    }
+
+    // Assign new value, if any. 分配新值
+    if (HaveNew) {
+        newObj = (objc_object *)weak_register_no_lock(&amp;newTable-&gt;weak_table, 
+                                                      (id)newObj, location, 
+                                                      CrashIfDeallocating);
+        // weak_register_no_lock returns nil if weak store should be rejected
+        // 如果弱引用被释放则该方法返回 nil
+        // Set is-weakly-referenced bit in refcount table.
+        // 在引用计数表中设置弱引用标记位
+        if (newObj  &amp;&amp;  !newObj-&gt;isTaggedPointer()) {
+            newObj-&gt;setWeaklyReferenced_nolock();
+        }
+
+        // Do not set *location anywhere else. That would introduce a race.
+        *location = (id)newObj;
+    }
+    else {
+        // No new value. The storage is not changed.
+    }
+    
+    SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+
+    return (id)newObj;
+}
+</code></pre>
+
+<p>以上就是 storeWeak 函数的实现,他做了几件事:</p>
 
 <ul>
-<li>第一个 Observer 监视的事件是 Entry(即将进入 Loop)其回调回调用_objc_autoreleasePoolPush()创建自动释放池,优先级最高,保证创建自动释放池在所有回调之前</li>
-<li>第二个 Observer 监视了两个事件:
-<ol>
-<li>BeforeWaiting(准备进入休眠)时调用_objc_autoreleasePoolPop()和_objc_autoreleasePoolPush()释放旧的池并创建新的自动释放池;</li>
-<li>Exit(退出Loop)时调用_objc_autoreleasePoolPop()释放自动释放池,这个 Observer 的优先级最低,保证释放自动释放池发生在所有回调之后</li>
-</ol></li>
+<li>声明了新旧散列表指针,因为 weak 修饰的变量如果之前已经指向一个对象,然后其再次改变指向另一个对象,那么按理来说我们需要从 oldTable 删除 weak 变量的记录,也就是要释放该 weak 变量,然后再给 newTable 添加新记录(weak变量),这里的新旧散列表就是这个作用</li>
+<li>根据新旧变量地址获取响应的 SideTable</li>
+<li>对两个表进行加锁操作,防止多线程竞争冲突</li>
+<li>进行线程冲突重处理判断</li>
+<li>判断其 isa 指针是否为空,为空则需要初始化</li>
+<li>如果存在旧值,调用 weak_unregister_no_lock 函数清楚旧值</li>
+<li>调用weak_register_no_lock 函数分配新值</li>
+<li>解锁两个表,返回第二参数</li>
 </ul>
 
-<h3 id="toc_5">事件响应</h3>
+<p>tip:</p>
 
-<p>苹果注册了一个 Source1 (基于 mach port 的) 用来接收系统事件，其回调函数为 __IOHIDEventSystemClientQueueCallback()。</p>
+<blockquote>
+<p>你可以把objc_storeWeak(id *location, objc_object *newObj)理解为：objc_storeWeak(value, key)，并且当key变nil，将value置nil。<br/>
+结合最开始的例子我们可以理解为objc_storeWeak(&amp;a, b)<br/>
+在b非nil时，a和b指向同一个内存地址，在b变nil时，a变nil。此时向a发送消息不会崩溃：在Objective-C中向nil发送消息是安全的。<br/>
+而如果a是由 assign 修饰的，则： 在 b 非 nil 时，a 和 b 指向同一个内存地址，在 b 变 nil 时，a 还是指向该内存地址，变野指针。此时向 a 发送消息<mark>极易崩溃</mark>,不是一定会奔溃,涉及到 assgin 的释放问题下面再说。</p>
+</blockquote>
 
-<p>当一个硬件事件(触摸/锁屏/摇晃等)发生后，首先由 IOKit.framework 生成一个 IOHIDEvent 事件并由 SpringBoard 接收。这个过程的详细情况可以参考这里。SpringBoard 只接收按键(锁屏/静音等)，触摸，加速，接近传感器等几种 Event，随后用 mach port 转发给需要的App进程。随后苹果注册的那个 Source1 就会触发回调，并调用 _UIApplicationHandleEventQueue() 进行应用内部的分发。</p>
+<p>初始化弱引用对象流程图:<br/>
+<img src="media/15820198947096/15820219239893.jpg" alt="" style="width:546px;"/></p>
 
-<p>_UIApplicationHandleEventQueue() 会把 IOHIDEvent 处理并包装成 UIEvent 进行处理或分发，其中包括识别 UIGesture/处理屏幕旋转/发送给 UIWindow 等。通常事件比如 UIButton 点击、touchesBegin/Move/End/Cancel 事件都是在这个回调中完成的。</p>
+<p><strong>数据结构分析(* SideTables、RefcountMap、weak_table_t*)</strong><br/>
+<img src="media/15820198947096/15820337143051.jpg" alt="" style="width:601px;"/></p>
+
+<p><strong>SideTable</strong></p>
+
+<p>SideTable主要用于管理对象的引用计数和 weak 表为了管理所有对象的引用计数和 weak 指针,苹果创建了一个全局的 SideTables,是一个全局的 Hash 表,里面装的都是 SideTable结构体.他使用对象的内存地址当他的key.</p>
+
+<pre class="line-numbers"><code class="language-text">struct SideTable {
+// 保证原子操作的自旋锁
+    spinlock_t slock;
+    // 引用计数的 hash 表
+    RefcountMap refcnts;
+    // weak 引用全局 hash 表
+    weak_table_t weak_table;
+}
+</code></pre>
+
+<p><img src="media/15820198947096/15820337366643.jpg" alt="" style="width:469px;"/></p>
+
+<p>从声明中可以看出,SideTable内部包含了一个是防止多线程竞争的自旋锁(slock),第二个是协助对象的 isa 指针的 extra_rc 共同引用计数变量,这里主要看 weak_table_t 的结构和作用</p>
+
+<p><strong>1,一把自旋锁。spinlock_t  slock;</strong></p>
+
+<blockquote>
+<p>自旋锁比较适用于锁使用者保持锁时间比较短的情况。正是由于自旋锁使用者一般保持锁时间非常短，因此选择自旋而不是睡眠是非常必要的，自旋锁的效率远高于互斥锁。信号量和读写信号量适合于保持时间较长的情况，它们会导致调用者睡眠，因此只能在进程上下文使用，而自旋锁适合于保持时间非常短的情况，它可以在任何上下文使用。</p>
+</blockquote>
+
+<p><strong>2,引用计数器 RefcountMap  refcnts;</strong><br/>
+对象的具体引用计数数量是记录在这里的<br/>
+这里的RefcountMap其实是个 C++的 Map.<br/>
+<img src="media/15820198947096/15820340809229.jpg" alt="" style="width:571px;"/></p>
+
+<p><strong>weak_table_t</strong><br/>
+weak_table_t结构体存储了某个对象相关的所有弱引用信息</p>
+
+<pre class="line-numbers"><code class="language-text">/**
+ * The global weak references table. Stores object ids as keys,
+ * and weak_entry_t structs as their values.
+ */
+struct weak_table_t {
+    // 保存了所有指向指定对象的 weak 指针
+    weak_entry_t *weak_entries;
+    // 存储空间
+    size_t    num_entries;
+    // 参与判断引用计数辅助量
+    uintptr_t mask;
+    // hash key 最大偏移值
+    uintptr_t max_hash_displacement;
+};
+</code></pre>
+
+<p>使用 weak 指针指向的对象地址作为 key,用 weak_entry_t 类型结构体对象作为 value.其中的 weak_entries 成员,就是弱引用表入口;<br/>
+<strong>weak_entry_t</strong><br/>
+weak_entry_t负责维护和存储指向一个对象的所有弱引用 hash 表:</p>
+
+<pre class="line-numbers"><code class="language-text">typedef objc_object ** weak_referrer_t;
+struct weak_entry_t {
+    DisguisedPtrobjc_object&gt; referent;
+    union {
+        struct {
+            weak_referrer_t *referrers;
+            uintptr_t        out_of_line : 1;
+            uintptr_t        num_refs : PTR_MINUS_1;
+            uintptr_t        mask;
+            uintptr_t        max_hash_displacement;
+        };
+        struct {// out_of_line=0 is LSB of one of these (don&#39;t care which)
+            weak_referrer_t  inline_referrers[WEAK_INLINE_COUNT];
+        };
+    }
+}
+</code></pre>
+
+<ul>
+<li>referent:被值对象的地址,前面循环遍历查找的时候就是判断目标地址是否和他相等</li>
+<li>referrers:可变数组,里面保存着所指向这个对象的弱引用的地址,当这个对象被释放的时候.referrers里面的所有指针都会被置为 nil</li>
+<li>inline_referrers:只有 4 个元素的数组,默认情况下,用它来存储弱引用的指针,当大于 4 个的时候使用referrers来存储指针<br/>
+用一张图来表示就是:
+<img src="media/15820198947096/15820227824222.jpg" alt="" style="width:894px;"/></li>
+</ul>
+
+<p><strong>weak_unregister_no_lock</strong><br/>
+下面来看一下weak_unregister_no_lock是怎么清除旧值的</p>
+
+<pre class="line-numbers"><code class="language-text">void weak_unregister_no_lock(weak_table_t *weak_table, id referent_id, 
+                        id *referrer_id)
+{
+    objc_object *referent = (objc_object *)referent_id;
+    objc_object **referrer = (objc_object **)referrer_id;
+
+    weak_entry_t *entry;
+
+    if (!referent) return;
+
+    if ((entry = weak_entry_for_referent(weak_table, referent))) {
+        remove_referrer(entry, referrer);
+        bool empty = true;
+        if (entry-&gt;out_of_line  &amp;&amp;  entry-&gt;num_refs != 0) {
+            empty = false;
+        }
+        else {
+            for (size_t i = 0; i &lt; WEAK_INLINE_COUNT; i++) {
+                if (entry-&gt;inline_referrers[i]) {
+                    empty = false; 
+                    break;
+                }
+            }
+        }
+
+        if (empty) {
+            weak_entry_remove(weak_table, entry);
+        }
+    }
+
+    // Do not set *referrer = nil. objc_storeWeak() requires that the 
+    // value not change.
+}
+</code></pre>
+
+<p>该方法主要作用是将旧对象在 weak_table 中解除 weak 指针的对应绑定,根据函数名称,我们称他为解除注册操作<br/>
+这个函数的逻辑:首先是 weak_table_t 表,键和值.声明 weak_entry_t 变量,如果 key(referent)为空,直接返回,根据全局入口表和键获取对应的 weak_entry_t 对象entry.获取到 entry 后,将 entry 以及 weak_table 作为参数传入 remove_referrer 函数中,这个函数就是解除操作,然后判断 entry 是否为空,若果为空,从全局记录表中清除相应的 entry.</p>
+
+<p><strong>weak_entry_for_referent</strong></p>
+
+<pre class="line-numbers"><code class="language-text">static weak_entry_t *weak_entry_for_referent(weak_table_t *weak_table, objc_object *referent)
+{
+    assert(referent);
+
+    weak_entry_t *weak_entries = weak_table-&gt;weak_entries;
+
+    if (!weak_entries) return nil;
+
+    size_t index = hash_pointer(referent) &amp; weak_table-&gt;mask;
+    size_t hash_displacement = 0;
+    while (weak_table-&gt;weak_entries[index].referent != referent) {
+        index = (index+1) &amp; weak_table-&gt;mask;
+        hash_displacement++;
+        if (hash_displacement &gt; weak_table-&gt;max_hash_displacement) {
+            return nil;
+        }
+    }
+
+    return &amp;weak_table-&gt;weak_entries[index];
+}
+</code></pre>
+
+<p>这个函数的逻辑就是先获取全局 weak 表入口,然后将引用计数的地址进行 hash 化后与 weak_table-&gt;mask 做与操作,作为下标,在全局 weak 表中查找,若找到,返回 entry,若没有,返回 nil</p>
 
 <p>参考:<br/>
-<a href="https://blog.ibireme.com/2015/05/18/runloop/">https://blog.ibireme.com/2015/05/18/runloop/</a></p>
-
-<div class="footnotes">
-<hr/>
-<ol>
-
-<li id="fn1">
-<p>Toll-free bridging,简称为TFB，是一种允许某些ObjC类与其对应的CoreFoundation类之间可以互换使用的机制。比如 NSString与CFString是桥接(bridged)的, 这意味着可以将任意NSString当做CFString使用，也可以将任意的CFString当做NSString使用&nbsp;<a href="#fnref1" rev="footnote">&#8617;</a></p>
-</li>
-
-</ol>
-</div>
+<a href="https://www.jianshu.com/p/10c0f49f4755">https://www.jianshu.com/p/10c0f49f4755</a><br/>
+<a href="https://www.jianshu.com/p/ef6d9bf8fe59">https://www.jianshu.com/p/ef6d9bf8fe59</a><br/>
+<a href="https://www.jianshu.com/p/8577286af88e">https://www.jianshu.com/p/8577286af88e</a><br/>
+<a href="https://juejin.im/entry/58a178060ce463005644ee4a">https://juejin.im/entry/58a178060ce463005644ee4a</a></p>
 
                         
                       </div>
@@ -258,10 +474,10 @@ Source1 能主动唤醒 RunLoop 的线程.通常用于内核和其他线程相�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/16</span>
+                    <span class="date">2020/02/18</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -345,6 +561,8 @@ Source1 能主动唤醒 RunLoop 的线程.通常用于内核和其他线程相�
             <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
         
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
+        
+            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
          
         </p>
 
@@ -361,6 +579,24 @@ Source1 能主动唤醒 RunLoop 的线程.通常用于内核和其他线程相�
 	      
 		      
 			      <li class="post">
+			        <a href="15846246156341.html">两数之和问题</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
 			      </li>
 		     
@@ -368,24 +604,6 @@ Source1 能主动唤醒 RunLoop 的线程.通常用于内核和其他线程相�
 		      
 			      <li class="post">
 			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的 TODO</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841925821639.html">iOS 中的图片解码</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841870085283.html">网络七层模型与四层模型区别</a>
 			      </li>
 		     
 		  
