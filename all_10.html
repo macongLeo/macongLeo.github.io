@@ -114,438 +114,190 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15833975374504.html">
+                <a class="clearlink" href="15841783263270.html">
                 
-                  <h1>Runtime 底层1- isa&Class</h1>
+                  <h1>TCP协议与UDP协议的区别</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0"><strong>一,Runtime 是什么?</strong></h2>
+                        	<h2 id="toc_0">TCP</h2>
 
-<p>Runtime 看字面意思就是运行时,是一套底层的 C语言 API,Objective-C 之所以具有动态性,就是因为 Runtime 的存在,否则 OC根本不能算动态性语言,Runtime 是 iOS 系统的核心之一.我们在编码的过程中,可以给任何一个对象发送消息,在编译阶段只是确定了要向接受者发送这条消息,而接受者将要如何响应和处理这条消息,就由运行时来决定了.<br/>
-C语言中在编译期,函数的调用就会决定调用哪个函数(OC 中叫方法)<br/>
-而 OC 方法属于动态调用过程,在编译期并不能真正调用哪个函数,只有在真正运行的时候才会根据函数的名称来找到对象的函数来调用.<br/>
-OC 是一个动态语言,意味着他不仅仅需要一个编译器,也需要一个运行时系统来动态创建类和对象,进行消息传递和转发.<br/>
-OC 在三种层面上与 Runtime 系统进行交互:<br/>
-<img src="media/15833975374504/15833981399452.jpg" alt="" style="width:837px;"/></p>
+<p><strong>TCP(Transmission Control Protocol 传输控制协议)</strong></p>
+
+<p>UDP协议和TCP协议都是<strong>传输层协议</strong>。</p>
+
+<p>TCP提供的是面向连接，可靠的字节流服务。即客户和服务器交换数据前，必须现在双方之间建立一个TCP连接，之后才能传输数据。并且提供<strong>超时重发，丢弃重复数据，检验数据，流量控制</strong>等功能，保证数据能从一端传到另一端。<br/>
+TCP 是面向连接的协议,也就是说在收发数据前<strong>必须要和对方建立可靠的连接</strong>.<br/>
+TCP 连接需要经过三次握手才能建立</p>
+
+<p><strong>3 次握手</strong></p>
+
+<p><img src="media/15841783263270/15841833218390.jpg" alt="" style="width:530px;"/></p>
+
+<p>TCP 三次握手过程:</p>
 
 <ol>
-<li>通过 OC 源代码</li>
-<li>通过 Foundation 框架的 NSObject 类定义的方法</li>
-<li>通过对 Runtime 库函数的直接调用</li>
+<li>主机 A 通过向主机 B 发送一个含有<strong>同步序列号的标志位的数据段</strong>给主机 B,向 B 请求建立连接,同时通过这个数据主机 A 向主机 B 说明两件事:1,我想要和你通信;2,你可以用哪个序列号作为起始数据段来回应我</li>
+<li>主机 B 收到 A 的请求后,用一个带有确认应答(ACK)和同步序列号(SYN)标志位的数据段响应主机 A.同时也告诉 A 两件事:1,我已经收到你 的请求了,你可以传输数据了;你要用哪个序列号作为起始数据段来回应我</li>
+<li>主机 A 收到这个数据段后,再发送一个确认应答,确认已收到 B 的数据段:我已收到回复,我现在要开始传输实际数据了<br/>
+这样 3 次握手就完成,主机 A 和 B 之间就可以传输数据了</li>
 </ol>
 
-<p><strong>通过 OC 源代码</strong></p>
-
-<blockquote>
-<p>一般情况下开发者只需要编写 OC代码,Runtime 系统会自动的在幕后把我们编写的 OC 源代码在编译阶段转换成运行时代码,在运行时确定对应的数据结构和调用的具体哪个方法.</p>
-</blockquote>
-
-<p><strong>通过 Foundation 框架的 NSObject 类定义的方法</strong></p>
-
-<blockquote>
-<p>在 OC 的世界中,除了 NSProxy 类以外,所有的类都是 NSObject 的子类.在 Foundation 框架下定义了 NSObject 和 NSProxy 两个基类.这两个基类都遵循了NSObject 协议,在 NSObject 协议中,有以下 5 个方法,是可以从 Runtime 中获取信息,让对象自我检查.</p>
-
-<pre class="line-numbers"><code class="language-text">- (Class)class OBJC_SWIFT_UNAVAILABLE(&quot;use &#39;anObject.dynamicType&#39; instead&quot;);
-- (BOOL)isKindOfClass:(Class)aClass;
-- (BOOL)isMemberOfClass:(Class)aClass;
-- (BOOL)conformsToProtocol:(Protocol *)aProtocol;
-- (BOOL)respondsToSelector:(SEL)aSelector;
-</code></pre>
-
-<p>-class方法返回对象的类；<br/>
--isKindOfClass: 和 -isMemberOfClass: 方法检查对象是否存在于指定的类的继承体系中；<br/>
--respondsToSelector: 检查对象能否响应指定的消息；<br/>
--conformsToProtocol:检查对象是否实现了指定协议类的方法；</p>
-
-<p>在 NSObject 的类中还定义了一个方法:</p>
-
-<pre class="line-numbers"><code class="language-text">- (IMP)methodForSelector:(SEL)aSelector;
-</code></pre>
-
-<p>这个方法会返回指定方法实现的地址 IMP.</p>
-</blockquote>
-
-<p><strong>通过对 Runtime 库函数的直接调用</strong></p>
-
-<blockquote>
-<p>关于库函数可以在Objective-C Runtime Reference中查看 Runtime 函数的详细文档。<br/>
-    当我们导入了objc/Runtime.h和objc/message.h两个头文件之后，我们查找到了Runtime的函数之后，代码打完，发现没有代码提示了，那些函数里面的参数和描述都没有了。对于熟悉Runtime的开发者来说，这并没有什么难的，因为参数早已铭记于胸。但是对于新手来说，这是相当不友好的。而且，如果是从iOS6开始开发的同学，依稀可能能感受到，关于Runtime的具体实现的官方文档越来越少了？可能还怀疑是不是错觉。其实从Xcode5开始，苹果就不建议我们手动调用Runtime的API，也同样希望我们不要知道具体底层实现。所以IDE上面默认代了一个参数，禁止了Runtime的代码提示，源码和文档方面也删除了一些解释。</p>
-
-<p>具体设置如下:<br/>
-<img src="media/15833975374504/15834020842465.jpg" alt="" style="width:1154px;"/><br/>
-如果发现导入了两个库文件之后，仍然没有代码提示，就需要把这里的设置改成NO，即可。</p>
-</blockquote>
-
-<h2 id="toc_1">二 NSObject 起源</h2>
-
-<p>上面我们可以看出,Runtime 都和 NSObject 有关,所以我们先来研究一下 NSObject .<br/>
-NSObject 的定义:</p>
-
-<pre class="line-numbers"><code class="language-text">typedef struct objc_class *Class;
-
-@interface NSObject &lt;NSObject&gt; {
-    Class isa  OBJC_ISA_AVAILABILITY;
-}
-</code></pre>
-
-<p>在 Objc2.0 之前,Objc_class 的源码如下:</p>
-
-<pre class="line-numbers"><code class="language-text">struct objc_class {
-    Class isa  OBJC_ISA_AVAILABILITY;
-    
-#if !__OBJC2__
-    Class super_class                                        OBJC2_UNAVAILABLE;
-    const char *name                                         OBJC2_UNAVAILABLE;
-    long version                                             OBJC2_UNAVAILABLE;
-    long info                                                OBJC2_UNAVAILABLE;
-    long instance_size                                       OBJC2_UNAVAILABLE;
-    struct objc_ivar_list *ivars                             OBJC2_UNAVAILABLE;
-    struct objc_method_list **methodLists                    OBJC2_UNAVAILABLE;
-    struct objc_cache *cache                                 OBJC2_UNAVAILABLE;
-    struct objc_protocol_list *protocols                     OBJC2_UNAVAILABLE;
-#endif
-    
-} OBJC2_UNAVAILABLE;
-</code></pre>
-
-<p>在这里我们可以看到,在一个类中有超类的指针,类名,版本信息</p>
+<p>3 次握手的特点:</p>
 
 <ul>
-<li>objc_ivar_list *ivars:    objc_ivar_list 成员变量的指针</li>
-<li>objc_method_list **methodLists:    指向 objc_method_list 指针的指针;</li>
-<li>*methodLists :     指向方法列表的指针(这里如果动态修改 methodLists的值来添加成员方法,这也是 Category 实现的原理.)</li>
+<li>没有应用层的数据</li>
+<li>SYN 这个标志位只有在 TCP 建立连接时才会被置1</li>
+<li>握手完成之后,SYN 标志位被置 0</li>
 </ul>
 
-<p>2006 年苹果发布了 Objc2.0 之后,objc_class 的定义就变成了下面的样子了:</p>
-
-<pre class="line-numbers"><code class="language-text">typedef struct objc_class *Class;
-typedef struct objc_object *id;
-
-@interface Object { 
-    Class isa; 
-}
-
-@interface NSObject &lt;NSObject&gt; {
-    Class isa  OBJC_ISA_AVAILABILITY;
-}
-
-struct objc_object {
-private:
-    isa_t isa;
-}
-
-struct objc_class : objc_object {
-    // Class ISA;
-    Class superclass;
-    cache_t cache;             // formerly cache pointer and vtable
-    class_data_bits_t bits;    // class_rw_t * plus custom rr/alloc flags
-}
-
-union isa_t 
-{
-    isa_t() { }
-    isa_t(uintptr_t value) : bits(value) { }
-    Class cls;
-    uintptr_t bits;
-}
-</code></pre>
-
-<p>把源码转换成类图,就是下图的样子:<br/>
-<img src="media/15833975374504/15834030497124.jpg" alt="" style="width:841px;"/></p>
-
-<p>从上述源码中,我们可以看到 OC 对象都是C语言的结构体实现的,在 objc2.0中,所有对象都会包含一个 isa_t 类型的结构体</p>
-
-<ul>
-<li>objc_object: 被源码 typedef 成了 id 类型,这也就是我们平时用到的 id 类型,这个结构体中只包含了一个 isa_t 类型的结构体</li>
-<li>objc_class:   继承与 objc_object,所以 objc_class 中也会包含 isa_t 类型的结构体 isa.(因此我们也能得出一个结论:OC 中类也是一个对象),除了 isa 还包含了其他 3 个成员变量一个是父类的指针(superclass),一个是方法缓存(cathe),最后一个是这个类的实例方法链表(class_data_bits_t)</li>
-</ul>
-
-<p>当一个对象的实例方法被调用的时候,会通过 isa 找到相应的类 class,然后在类的 class_data_bits_t 中查找方法,class_data_bits_t 是指向了类对象的数据区域,在该数据区域内查找响应方法的对应实现.<br/>
-但是当我们调用类方法的时候,类对象的 isa 里面是什么?这里为了和实例对象查找方法的机制一致,引入了元类(meta-class)的概念.<br/>
-在引入了元类之后,类对象和实例对象查找方法的机制就完全统一了.</p>
-
-<p><strong>对象的实例方法调用时，通过对象的 isa 在类中获取方法的实现。<br/>
-类对象的类方法调用时，通过类的 isa 在元类中获取方法的实现。</strong></p>
-
-<p>元类之所以重要,是因为他存储着一个类所有的类方法.每个类都会有一个单独的 meta-class.<br/>
-接下来那张经典图又来了:<br/>
-<img src="media/15833975374504/15834058396646.jpg" alt="" style="width:620px;"/></p>
-
-<ul>
-<li>Root class (class)其实就是NSObject，NSObject是没有超类的，所以Root class(class)的superclass指向nil。</li>
-<li>每个Class都有一个isa指针指向唯一的Meta class</li>
-<li>Root class(meta)的superclass指向Root class(class)，也就是NSObject，形成一个回路。</li>
-<li>每个Meta class的isa指针都指向Root class (meta)。</li>
-</ul>
-
-<h3 id="toc_2">1, isa_t 结构体的具体实现</h3>
-
-<p>接下来我们就该研究研究isa的具体实现了。objc_object里面的isa是isa_t类型。通过查看源码，我们可以知道isa_t是一个union联合体。</p>
-
-<blockquote>
-<p>结构体和共用体的区别在于：结构体的各个成员会占用不同的内存，互相之间没有影响；而共用体    的所有成员占用同一段内存，修改一个成员会影响其余所有成员。</p>
-
-<p>结构体占用的内存大于等于所有成员占用的内存的总和（成员之间可能会存在缝隙），共用体占用的内存等于最长的成员占用的内存。共用体使用了内存覆盖技术，同一时刻只能保存一个成员的值，如果对新的成员赋值，就会把原来成员的值覆盖掉。</p>
-</blockquote>
-
-<pre class="line-numbers"><code class="language-text">struct objc_object {
-private:
-    isa_t isa;
-public:
-    // initIsa() should be used to init the isa of new objects only.
-    // If this object already has an isa, use changeIsa() for correctness.
-    // initInstanceIsa(): objects with no custom RR/AWZ
-    void initIsa(Class cls /*indexed=false*/);
-    void initInstanceIsa(Class cls, bool hasCxxDtor);
-private:
-    void initIsa(Class newCls, bool indexed, bool hasCxxDtor);
-
-</code></pre>
-
-<p>接下来我们从 initIsa 方法研究</p>
-
-<pre class="line-numbers"><code class="language-text">inline void
-objc_object::initInstanceIsa(Class cls, bool hasCxxDtor)
-{
-    initIsa(cls, true, hasCxxDtor);
-}
-
-inline void
-objc_object::initIsa(Class cls, bool indexed, bool hasCxxDtor)
-{
-    if (!indexed) {
-        isa.cls = cls;
-    } else {
-        isa.bits = ISA_MAGIC_VALUE;
-        isa.has_cxx_dtor = hasCxxDtor;
-        isa.shiftcls = (uintptr_t)cls &gt;&gt; 3;
-    }
-}
-</code></pre>
-
-<p>initIsa 第二个参数传入了一个 true,所以 initIsa 就会执行 else 里面的语句</p>
-
-<pre class="line-numbers"><code class="language-text">
-# if __arm64__
-#   define ISA_MASK        0x0000000ffffffff8ULL
-#   define ISA_MAGIC_MASK  0x000003f000000001ULL
-#   define ISA_MAGIC_VALUE 0x000001a000000001ULL
-    struct {
-        uintptr_t indexed           : 1;
-        uintptr_t has_assoc         : 1;
-        uintptr_t has_cxx_dtor      : 1;
-        uintptr_t shiftcls          : 33; // MACH_VM_MAX_ADDRESS 0x1000000000
-        uintptr_t magic             : 6;
-        uintptr_t weakly_referenced : 1;
-        uintptr_t deallocating      : 1;
-        uintptr_t has_sidetable_rc  : 1;
-        uintptr_t extra_rc          : 19;
-#       define RC_ONE   (1ULL&lt;&lt;45)
-#       define RC_HALF  (1ULL&lt;&lt;18)
-    };
-
-# elif __x86_64__
-#   define ISA_MASK        0x00007ffffffffff8ULL
-#   define ISA_MAGIC_MASK  0x001f800000000001ULL
-#   define ISA_MAGIC_VALUE 0x001d800000000001ULL
-    struct {
-        uintptr_t indexed           : 1;
-        uintptr_t has_assoc         : 1;
-        uintptr_t has_cxx_dtor      : 1;
-        uintptr_t shiftcls          : 44; // MACH_VM_MAX_ADDRESS 0x7fffffe00000
-        uintptr_t magic             : 6;
-        uintptr_t weakly_referenced : 1;
-        uintptr_t deallocating      : 1;
-        uintptr_t has_sidetable_rc  : 1;
-        uintptr_t extra_rc          : 8;
-#       define RC_ONE   (1ULL&lt;&lt;56)
-#       define RC_HALF  (1ULL&lt;&lt;7)
-    };
-
-</code></pre>
-
-<p><img src="media/15833975374504/15834775093507.jpg" alt="" style="width:834px;"/><br/>
-<img src="media/15833975374504/15834775197834.jpg" alt="" style="width:829px;"/><br/>
-关于参数的说明:</p>
-
-<ul>
-<li>index,代表是否开启 isa 指针优化.index= 1,代表开启优化</li>
-</ul>
-
-<blockquote>
-<p>为了节省内存和提高执行效率,苹果提出了 TaggedPointer 概念,对于 64 位处理器,引入TaggedPointer之后,相关逻辑能较少一半的内存占用,以及 3 倍的访问速度提升,100 倍的创建销毁速度提升.</p>
-</blockquote>
-
-<ul>
-<li><p>has_assoc:<br/>
-是否含有关联引用,没有关联引用的可以更快速的释放内存</p></li>
-<li><p>has_cxx_dtor:<br/>
-表示改对象是否含有 C++或者 OC 的析构器</p></li>
-<li><p>shiftcls:<br/>
-类的指针,arm64 架构中有 33 位可以存储类的指针</p></li>
-</ul>
-
-<blockquote>
-<p>源码中 isa.shiftcls = (uintptr_t)cls &gt;&gt; 3<br/>
-   将当前地址右移三位的主要原因是用于将 class 指针中无用的后三位清除减小内存的消耗,因为类  的指针要按照字节(8bit)对齐内存,其指针后三位都是没有意义的 0</p>
-</blockquote>
-
-<ul>
-<li><p>magic<br/>
-判断对象是否初始化完成,在 arm64 中 0x16 是调试器判断当前对象是真的对象还是没有初始化的空间</p></li>
-<li><p>weakly_referenced:<br/>
-对象被指向或者曾经指向一个 ARC 的弱变量,没有弱引用的对象可以更快速的释放</p></li>
-<li><p>deallocating<br/>
-对象是否正在释放内存</p></li>
-<li><p>has_sidetable_rc<br/>
-判断该对象的引用计数是否过大,如果大则需要散列表来进行存储</p></li>
-<li><p>extra_rc<br/>
-存放该对象的引用计数值减一后的结果.对象的引用计数超过 1,会存在这个里面,如果引用计数为 10,extra_rc的值就为 9</p></li>
-</ul>
-
-<p>ISA_MAGIC_MASK 和 ISA_MASK 分别通过掩码的方式获取 MAGIC 值和 isa 类指针</p>
-
-<h3 id="toc_3">2, 下面来看看 cathe_t 的具体实现</h3>
-
-<p>源码:</p>
-
-<pre class="line-numbers"><code class="language-text">struct cache_t {
-    struct bucket_t *_buckets;
-    mask_t _mask;
-    mask_t _occupied;
-}
-
-typedef unsigned int uint32_t;
-typedef uint32_t mask_t;  // x86_64 &amp; arm64 asm are less efficient with 16-bits
-
-typedef unsigned long  uintptr_t;
-typedef uintptr_t cache_key_t;
-
-struct bucket_t {
-private:
-    cache_key_t _key;
-    IMP _imp;
-}
-</code></pre>
-
-<p><img src="media/15833975374504/15834792321946.jpg" alt="" style="width:783px;"/></p>
-
-<p>从源码里,我们可以看到,cache_t 中存储了一个 bucke_t 的结构体,以及两个 unsgined int 的变量</p>
-
-<ul>
-<li><p>mask:<br/>
-分配用来缓存 buckt 的总数</p></li>
-<li><p>occupied:<br/>
-表示目前实际占用的缓存 bucket 的个数</p></li>
-<li><p>bucket_t:<br/>
-这个结构体中存储了一个 unsigned long 和一个 IMP.IMP 是一个函数指针,指向了一个方法的具体实现</p>
-<p>cache_t 中的 bucket_t *_buckets 其实就是一个散列表,用来存储 Method 的链表</p></li>
-</ul>
-
-<p>cache 的主要作用是为了优化方法的调用性能,当对象 recever调用方法 message 时,首先根据对象 receiver的 isa 指针查找到他对应的类,然后在类的 methodLists 中搜索方法,如果没有找到就使用 super_class 指针到父类中的 methodLists 查找,一旦找到就调用方法,如果没有找到,就进行消息转发或者忽略,但是这样查找的效率太低,每次调用方法都查一遍表,效率很低,因此用 Cache 来缓存调用的方法,每次调用方法先去缓存中查找,提高效率.如果没有找到在去 methodLists 中查找.</p>
-
-<h3 id="toc_4">3, class_data_bits_t的具体实现</h3>
-
-<pre class="line-numbers"><code class="language-text">struct class_data_bits_t {
-
-    // Values are the FAST_ flags above.
-    uintptr_t bits;
-}
-
-struct class_rw_t {
-    uint32_t flags;
-    uint32_t version;
-
-    const class_ro_t *ro;
-
-    method_array_t methods;
-    property_array_t properties;
-    protocol_array_t protocols;
-
-    Class firstSubclass;
-    Class nextSiblingClass;
-
-    char *demangledName;
-}
-
-struct class_ro_t {
-    uint32_t flags;
-    uint32_t instanceStart;
-    uint32_t instanceSize;
-#ifdef __LP64__
-    uint32_t reserved;
-#endif
-
-    const uint8_t * ivarLayout;
-    
-    const char * name;
-    method_list_t * baseMethodList;
-    protocol_list_t * baseProtocols;
-    const ivar_list_t * ivars;
-
-    const uint8_t * weakIvarLayout;
-    property_list_t *baseProperties;
-
-    method_list_t *baseMethods() const {
-        return baseMethodList;
-    }
-};
-
-</code></pre>
-
-<p><img src="media/15833975374504/15834800056491.jpg" alt="" style="width:845px;"/></p>
-
-<p>在 objc_class 结构体中的注释写到 class_data_bits_t 相当于 class_rw_t 指针加上 rr/alloc 的标志<br/>
-它为我们提供了便捷方法返回其中的 class_rw_t *指针:</p>
-
-<pre class="line-numbers"><code class="language-text">class_rw_t *data() {
-    return bits.data();
-}
-</code></pre>
-
-<p>Objc 的类的属性,方法,以及遵循的协议在 objc2.0 的版本之后都是放在 class_rw_t 中,class_ro_t 是一个指向常量的指针,存储来编译器决定了的属性,方法和遵循协议.<br/>
-rw-readwrite,ro-readonly 在编译期类的结构体中的 class_data_bits_t *data 指向的是一个 class_ro_t *指针:<br/>
-<img src="media/15833975374504/15834805118036.jpg" alt="" style="width:704px;"/></p>
-
-<p>在运行时调用 realizeClass 方法,会做已下 3 件事情:</p>
+<p><strong>4 次挥手</strong><br/>
+TCP 建立连接要进行 3 次握手,断开连接要进行 4 次挥手</p>
 
 <ol>
-<li>从 class_data_bits_t 调用 data 方法,将结果从 class_rw_t 强制转换为 class_ro_t 指针</li>
-<li>初始化一个 class_rw_t 结构体</li>
-<li>设置结构体 ro 的值以及 flag</li>
+<li>当主机 A 完成数据传输后,将控制位 FIN 置 1,提出停止 TCP 连接的请求</li>
+<li>主机 B 收到 FIN 后对其作出相应,确认这一方向上的 TCP 连接将关闭,将 ACK 置 1</li>
+<li>由主机 B 再提出反方向的关闭请求,将 FIN 置 1</li>
+<li>主机 A 对 B 的请求确认,将 ACK 置 1,双方向的关闭结束.</li>
 </ol>
 
-<p>最后调用 methodizeClass 方法,把类里面的属性,协议,方法都加载进来</p>
+<h2 id="toc_1"><strong>TCP 的可靠传输</strong></h2>
 
-<p>方法 method 的定义:</p>
+<p>TIME_WAIT状态<br/>
+TCP协议规定,主动关闭连接的一方要处于TIME_ WAIT状态,<strong>等待两个MSL(最大报文生存周期)</strong>的时间后才能回到CLOSED状态。<br/>
+TIME_WAIT持续存在2MSL的话，就能保证在两个传输方向上的尚未被接收或迟到的报文段都已经消失(否则服务器立刻重启, 可能会收到来自上一个进程的迟到的数据, 但是这种数据很可能是错误的)。<br/>
+同时也是在理论上保证最后一个报文可靠到达(假设最后⼀一个ACK丢失, 那么服务器会再重发一个 FIN.。这时虽然客户端的进程不在了, 但是TCP连接还在, 仍然可以重发LAST_ACK)。</p>
 
-<pre class="line-numbers"><code class="language-text">struct method_t {
-    SEL name;
-    const char *types;
-    IMP imp;
+<ol>
+<li><strong>确认应答机制&amp;&amp;序列号</strong>
+TCP将每个字节的数据都进行了编号，即为序列号。<br/>
+每一个ACK都带有对应的确认序列号，意思是告诉发送者，我已经收到了哪些数据;；下一次你从哪里开始发。</li>
+<li><p><strong>超时重传&amp;&amp;序列号</strong><br/>
+主机A发送数据给B之后, 可能因为网络拥堵等原因, 数据无法到达主机B; 如果主机A在一个特定时间间隔内没有收到B发来的确认应答, 就会进行重发;<br/>
+主机A未收到B发来的确认应答，也可能是因为ACK丢失了，因此主机B会收到很多重复数据.。那么TCP协议需要能够识别出那些包是重复的包,，并且把重复的丢弃掉.，这时候我们可以利用序列号, 就可以很容易做到去重的效果。</p></li>
+<li><p><strong>拥塞控制</strong><br/>
+每次发送数据包的时候, 将拥塞窗口和接收端主机反馈的窗口大小做比较, 取较小的值作为实际发送的窗口。<br/>
+拥塞控制, 归根结底是TCP协议想尽可能快的把数据传输给对方, 但是又要避免给网络造成太大压力的折中方案。</p></li>
+</ol>
 
-    struct SortBySELAddress :
-        public std::binary_function&lt;const method_t&amp;,
-                                    const method_t&amp;, bool&gt;
-    {
-        bool operator() (const method_t&amp; lhs,
-                         const method_t&amp; rhs)
-        { return lhs.name &lt; rhs.name; }
-    };
-};
-</code></pre>
+<p>提高传输效率：滑动窗口、流量控制、延迟应答、捎带应答<br/>
+<strong>滑动窗口机制</strong>:</p>
 
-<p>里面包含 3 个成员变量<br/>
-SEL 是方法的名字name<br/>
-types 是 Type Encoding 类型编码<br/>
-IMP 是一个函数指针,指向的函数的具体实现,在 Runtime 中消息传递和转发的目的就是为了找到 IMP,并执行函数</p>
+<ol>
+<li>窗口大小指的是无需等待确认应答而可以继续发送数据的最大值.</li>
+<li>发送窗口内字段的时候, 不需要等待任何ACK, 直接发送;</li>
+<li>收到第一个ACK后, 滑动窗口向后移动, 继续发送下一个窗口字段的数据; 依次类推;</li>
+<li>操作系统内核为了维护这个滑动窗口, 需要开辟发送缓冲区来记录当前还有哪些数据没有应答; 只有确认应答过的数据, 才能从缓冲区删掉;</li>
+<li>窗口越大, 则网络的吞吐率就越高</li>
+</ol>
 
-<p>整个运行时过程可以描述为:<br/>
-<img src="media/15833975374504/15834809074943.jpg" alt="" style="width:901px;"/></p>
+<p><strong>流量控制</strong><br/>
+接收端处理数据的速度是有限的. 如果发送端发的太快, 导致接收端的缓冲区被打满, 这个时候如果发送端继续发送, 就会造成丢包, 继而引起丢包重传等等一系列连锁反应。</p>
 
-<p>参考:<a href="https://halfrost.com/objc_runtime_isa_class/">https://halfrost.com/objc_runtime_isa_class/</a></p>
+<ol>
+<li>接收端将自己可以接收的缓冲区大小放入TCP首部中的 &quot;窗口大小&quot; 字段, 通过ACK端通知发送端; </li>
+<li>窗口大小字段越大, 说明网络的吞吐量越⾼高; </li>
+<li>接收端一旦发现自己的缓冲区快满了, 就会将窗口大小设置成一个更小的值通知给发送端; </li>
+<li>发送端接受到这个窗口之后, 就会减慢自己的发送速度; </li>
+<li>如果接收端缓冲区满了, 就会将窗口置为0; 这时发送⽅方不再发送数据, 但是需要定期发送一个窗口</li>
+</ol>
+
+<p><strong>延迟应答</strong><br/>
+如果接收数据的主机立刻返回ACK应答, 这时候返回的窗口可能比较小.<br/>
+窗口越大, 网络吞吐量就越大, 传输效率就越高. 我们的目标是在保证网络不拥塞的情况下尽量提高传输效率;</p>
+
+<p><strong>捎带应答</strong><br/>
+在延迟应答的基础上, 我们发现, 很多情况下, 客户端服务器在应用层也是 “一发一收” 的.<br/>
+意味着客户端给服务器说了 “How are you”, 服务器也会给客户端回一个 “Fine, thank you”; 那么这个时候ACK就可以搭顺风车, 和服务器回应的 “Fine, thank you” 一起回给客户端。</p>
+
+<p><strong>面向字节流：</strong></p>
+
+<p>创建一个TCP的socket, 同时在内核中创建一个发送缓冲区和一个接收缓冲区；<br/>
+另一方面, TCP的一个连接, 既有发送缓冲区, 也有接收缓冲区, 那么对于这一个连接, 既可以读数据, 也可以写数据. 这个概念叫做 全双工 。</p>
+
+<p>调用write时, 数据会先写入发送缓冲区中;<br/>
+如果发送的字节数太长, 会被拆分成多个TCP的数据包发出; 如果发送的字节数太短, 就会先在缓冲区里等待, 等到缓冲区长度差不多了, 或者其他合适的时机发送出去;<br/>
+接收数据的时候, 数据也是从网卡驱动程序到达内核的接收缓冲区;<br/>
+然后应用程序可以调用read从接收缓冲区拿数据;</p>
+
+<p><strong>TCP粘包问题</strong></p>
+
+<p>首先要明确, 粘包问题中的 “包” , 是指的应用层的数据包；<br/>
+在TCP的协议头中, 没有如同UDP一样的 “报文长度” 这样的字段, 但是有一个序号这样的字段；<br/>
+站在传输层的角度, TCP是一个一个报文过来的，按照序号排好序放在缓冲区中；<br/>
+站在应用层的角度, 看到的只是一串连续的字节数据. 那么应用程序看到了这么一连串的字节数据, 就不知道从哪个部分开始到哪个部分是一个完整的应用层数据包。</p>
+
+<p><strong>那么如何避免粘包问题呢?</strong><br/>
+归根结底就是一句话, 明确两个包之间的边界.</p>
+
+<p>1.对于定长的包, 保证每次都按固定大小读取即可;<br/>
+2.对于变长的包, 可以在报头的位置, 约定一个包总长度的字段, 从而就知道了包的结束位置;<br/>
+3.对于变长的包, 还可以在包和包之间使用明确的分隔符。<br/>
+4.TLV格式的数据传输</p>
+
+<p>TCP异常情况</p>
+
+<p>进程终止: 进程终止会释放文件描述符, 仍然可以发送FIN. 和正常关闭没有什么区别.<br/>
+机器重启: 和进程终止的情况相同<br/>
+机器掉电/网线断开: 接收端认为连接还在, 一旦接收端有写入操作, 接收端发现连接已经不在了, 就会进行 reset. 即使没有写入操作, TCP自己也内置了一个保活定时器, 会定期询问对方方是否还在. 如果对方不在, 也会把连接释放</p>
+
+<h2 id="toc_2"><strong>UDP   (User Data Protocol)用户数据报协议</strong></h2>
+
+<p>UDP（User Data Protocol，用户数据报协议）是一个简单的面向数据报的运输层协议。它不提供可靠性，只是把应用程序传给IP层的数据报发送出去，但是不能保证它们能到达目的地。由于UDP在传输数据报前不用再客户和服务器之间建立一个连接，且没有超时重发等机制，所以<strong>传输速度很快</strong>。</p>
+
+<ol>
+<li>UDP 是一个非连接的协议,传输数据之前源端和终端不建立连接,当他想传送时就简单的去抓取来自应用程序的数据,并尽可能快的把他扔到网络上,在发送端,UDP 传输数据的速度仅受 APP 生成数据的速度,计算机的能力和网络的带宽限制;在接收端,UDP 把每个消息段放在队列中,APP 每次从队列中读取一个消息段.</li>
+<li>由于传输数据不建立连接,因此也不需要维护连接状态,包括收发状态,因此一个服务机可同时向多个客户机传输相同的消息</li>
+<li>UDP 信息包的标题很短,只有 8 个字节,相对于 TCP20 个字节信息包的额外开销很小</li>
+<li>吞吐量不受拥挤控制算法的调节,只受 APP 生成数据的速度,传输带宽,源端和终端主机性能的限制</li>
+<li>UDP 使用尽最大努力交付,即不保证可靠交付,因此主机不需要维持复杂的链接状态表</li>
+<li>UDP 是面向报文的,发送方的 UDP 对 APP 交付下来的报文,在添加首部后就向下交付给 IP 层.既不拆分也不合并,而是保留这些报文的边界,因此 APP 需要选择合适的报文大小</li>
+</ol>
+
+<h3 id="toc_3">报头不同</h3>
+
+<p><img src="media/15841783263270/15841827824692.jpg" alt="" style="width:585px;"/><br/>
+<strong>UDP数据报最大长度64K（包含UDP首部），如果数据长度超过64K就需要在应用层手动分包，UDP无法保证包序，需要在应用层进行编号。</strong></p>
+
+<p>特点:<br/>
+    1. <strong>无连接</strong>:知道对端的 IP 和端口号就直接进行传输, 不需要建立连接。<br/>
+    2. <strong>不可靠</strong>：没有确认机制, 没有重传机制; 如果因为网络故障该段无法发到对方, UDP协议层也不会给应用层返回任何错误信息。<br/>
+    3. <strong>面向数据报</strong>：不能够灵活的控制读写数据的次数和数量，应用层交给UDP多长的报文, UDP原样发送, 既不会拆分, 也不会合并。<br/>
+    4. 数据收不够灵活，但是能够明确区分两个数据包，<strong>避免粘包</strong>问题</p>
+
+<p><strong>TCP</strong><br/>
+<img src="media/15841783263270/15841831540994.jpg" alt="" style="width:547px;"/></p>
+
+<blockquote>
+<p>源/目的端口号: 表示数据是从哪个进程来, 到哪个进程去;<br/>
+32位序号/32位确认号: 不一定从0开始（作用：保证确认应答；保证数据按序到达；去重）<br/>
+4位TCP报头长度: 表示该TCP头部有多少个32位bit(有多少个4字节); 所以TCP报头最大长度是15 * 4 = 60 字节<br/>
+6位标志位:<br/>
+    1. URG: 紧急指针是否有效<br/>
+    2. ACK: 确认号是否有效<br/>
+    3. PSH: 提示接收端应用程序立刻从TCP缓冲区把数据读走<br/>
+    4. RST: 对方要求重新建立连接; 我们把携带RST标识的称为复位报文段<br/>
+    5. SYN: 请求建立连接; 我们把携带SYN标识的称为同步报文段<br/>
+    6. FIN: 通知对方, 本端要关闭了, 我们称携带FIN标识的为结束报文段<br/>
+16位窗口大小: 接收缓冲区剩余的空间大小 <br/>
+16位校验和: 发送端填充, CRC校验. 接收端校验不通过, 则认为数据有问题. 此处的检验和不光包含TCP 首部, 也包含TCP数据部分. <br/>
+16位紧急指针: 标识哪部分数据是紧急数据; </p>
+</blockquote>
+
+<p>小结TCP与UDP的区别：</p>
+
+<ol>
+<li>基于连接与无连接； </li>
+<li>对系统资源的要求（TCP较多，UDP少）； </li>
+<li>UDP程序结构较简单； </li>
+<li>流模式与数据报模式 ；</li>
+<li>TCP保证数据正确性，UDP可能丢包，TCP保证数据顺序，UDP不保证。</li>
+</ol>
+
+<p>参考:<br/>
+<a href="https://blog.csdn.net/qq_18425655/article/details/51955674">https://blog.csdn.net/qq_18425655/article/details/51955674</a><br/>
+<a href="https://blog.csdn.net/sifanchao/article/details/82285018?depth_1-utm_source=distribute.pc_relevant.none-task&amp;utm_source=distribute.pc_relevant.none-task">https://blog.csdn.net/sifanchao/article/details/82285018?depth_1-utm_source=distribute.pc_relevant.none-task&amp;utm_source=distribute.pc_relevant.none-task</a></p>
 
                         
                       </div>
@@ -554,10 +306,10 @@ IMP 是一个函数指针,指向的函数的具体实现,在 Runtime 中消息�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/05</span>
+                    <span class="date">2020/03/14</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          					    <span class="posted-in"><a href='%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html'>网络进阶</a></span>
           				   
                     
 
@@ -659,6 +411,18 @@ IMP 是一个函数指针,指向的函数的具体实现,在 Runtime 中消息�
 	      
 		      
 			      <li class="post">
+			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15846246156341.html">两数之和问题</a>
 			      </li>
 		     
@@ -672,18 +436,6 @@ IMP 是一个函数指针,指向的函数的具体实现,在 Runtime 中消息�
 		      
 			      <li class="post">
 			        <a href="15844949626994.html">Block 进阶 (一)</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
 			      </li>
 		     
 		  

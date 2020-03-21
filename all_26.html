@@ -114,115 +114,181 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15815876783958.html">
+                <a class="clearlink" href="15820364056941.html">
                 
-                  <h1>iOS 中的锁</h1>
+                  <h1>关联对象 AssociatedObject 完全解析</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ul>
-<li>自旋锁(OSSpinLock)</li>
-<li>互斥锁</li>
-<li>pthread_mutex</li>
-<li>信号量(dispatch_semaphore)</li>
-<li>NSLock</li>
-<li>递归锁(NSRecursiveLock)</li>
-<li>条件锁(NSConditionLock)</li>
-<li>@synchronized</li>
-</ul>
-
-<p><strong>自旋锁(OSSpinLock)</strong></p>
+                        	<p>相关面试题:</p>
 
 <blockquote>
-<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
+<p>关联对象有什么应用，系统如何管理关联对象？其被释放的时候需要手动将所有的关联对象的指针置空么？</p>
 </blockquote>
 
-<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
-自旋锁的问题:<br/>
-    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
-    2. 递归调用有可能引起死锁<br/>
-    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
+<p>先回答问题:</p>
 
-<p><strong>互斥锁</strong><br/>
-互斥锁属于 sleep-waiting 类型的锁.</p>
+<ol>
+<li>关联对象的作用是可以为分类<mark>增加实例变量和存取发法</mark>(分类不能直接添加)</li>
+<li>系统使用AssociationsManager管理关联对象</li>
+</ol>
 
-<blockquote>
-<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
-</blockquote>
+<p><strong>在分类中,因为类的实例变量布局已经固定</strong>,使用@property 已经无法向固定的布局中添加新的实例变量(这样做可能会覆盖之类的实例变量),所以我们需要使用关联对象以及两个方法来模拟构成属性的三个要素.</p>
 
-<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
-自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
+<p>在分类中@property 并不会自动生成实例变量以及存取方法,所以需要使用关联对象为已经存在的类添加属性,例如:</p>
 
-<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
-互斥锁适用:</p>
+<pre class="line-numbers"><code class="language-text">#import &quot;DKObject+Category.h&quot;
+#import &lt;objc/runtime.h&gt;
+
+@implementation DKObject (Category)
+
+- (NSString *)categoryProperty {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+- (void)setCategoryProperty:(NSString *)categoryProperty {
+    objc_setAssociatedObject(self, @selector(categoryProperty), categoryProperty, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+@end
+</code></pre>
+
+<p>我们使用了 <mark>objc_getAssociateedObjcet</mark>以及 <mark>objc_serAssociatedObject</mark> 来模拟属性的存取方法,使用关联对象来模拟实例变量</p>
+
+<p>这里有两个需要解释的问题:</p>
+
+<ol>
+<li>为什么向方法中传入@selector(catagoryProperty)?</li>
+<li>OBJC_ASSOCIATION_RETAIN_NONATOMIC是干什么的</li>
+</ol>
+
+<p>关于第一个,我们先看这两个方法的原型;</p>
+
+<pre class="line-numbers"><code class="language-text">id objc_getAssociatedObject(id object, const void *key);
+void objc_setAssociatedObject(id object, const void *key, id value, objc_AssociationPolicy policy);
+</code></pre>
+
+<p>@selector(categoryProperty)其实也就是参数中的 key,其实可以使用静态指针 stati void * 类型的参数来代替,不过这里强烈建议使用@selector(categoryProperty)作为key 传入.因为这种方法省略了生命参数的代码,并且能很好的保证 key 的唯一性.<br/>
+关于OBJC_ASSOCIATION_RETAIN_NONATOMIC,其实就是内存管理语句.<br/>
+<img src="media/15820364056941/15820966989089.jpg" alt="" style="width:519px;"/><br/>
+注意:关联对象的内存管理策略中没有对应的 weak.如果确实需要使用 weak 应该怎么处理呢?<br/>
+最简单的方法是使用 block 包起来,例如:</p>
+
+<pre class="line-numbers"><code class="language-text">-(void)setWeakvalue:(NSObject *)weakvalue {
+    __weak typeof(weakvalue) weakObj = weakvalue;
+    typeof(weakvalue) (^block)() = ^(){
+        return weakObj;
+    };
+    objc_setAssociatedObject(self, weakValueKey, block, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+-(NSObject *)weakvalue {
+    id (^block)() = objc_getAssociatedObject(self, weakValueKey);
+    return block();
+}
+</code></pre>
+
+<p>首先我们在 setter 方法里面使用了一个weak 的局部变量 weakObj 来存储值,并在 block 中将其捕获并返回,由于 weakObj 是弱引用,所以不会修改对象的引用计数,当对象释放时,由于 weakObj 的 weak 属性,它在释放后也会指向 nil,所以在 getter 返回的时候也就是 nil,也就是模拟了 weak 释放后自动置为 nil.</p>
+
+<p><strong>objc_setAssociatedObject</strong></p>
+
+<pre class="line-numbers"><code class="language-text">void _object_set_associative_reference(id object, void *key, id value, uintptr_t policy) {
+    // 关联对象使用 ObjcAssociation 这个c++对象来存储。
+      // 设置新对象，那么有可能有老的对象会被废弃。那么新建一个ObjcAssociation对象，之后用来存储老的对象
+    ObjcAssociation old_association(0, nil);
+
+      // acquireValue函数： 设置新的对象的retainCount，也就是对他进行手动内存管理
+    id new_value = value ? acquireValue(value, policy) : nil;
+    {
+        AssociationsManager manager;
+        AssociationsHashMap &amp;associations(manager.associations());
+        disguised_ptr_t disguised_object = DISGUISE(object);
+
+          // 如果确实是要设置新关联对象的时候
+        if (new_value) {
+            // break any existing association.
+            AssociationsHashMap::iterator i = associations.find(disguised_object);
+
+              // 这个对象之前设置过关联对象，也就是说该对象的关联对象数量大于1
+            if (i != associations.end()) {
+                // secondary table exists
+                ObjectAssociationMap *refs = i-&gt;second;
+                ObjectAssociationMap::iterator j = refs-&gt;find(key);
+                 // 寻找全局的关联对象表，如果存在老对象的话
+                if (j != refs-&gt;end()) {
+                      // 存储老对象到之前新建的ObjcAssociation对象中
+                    old_association = j-&gt;second;
+                      // 设置新的关联对象
+                    j-&gt;second = ObjcAssociation(policy, new_value);
+                }
+                  // 不存在老对象，直接设置新关联对象
+                  else {
+                    (*refs)[key] = ObjcAssociation(policy, new_value);
+                }
+            }
+              // 这个对象之前没有设置过任何的关联对象
+              else {
+                // create the new association (first time).
+                ObjectAssociationMap *refs = new ObjectAssociationMap;
+                associations[disguised_object] = refs;
+                (*refs)[key] = ObjcAssociation(policy, new_value);
+                 // 将对象的isa的has_assoc字段设置成true
+                object-&gt;setHasAssociatedObjects();
+            }
+        } 
+          // 要将关联对象设成 nil，也就是取消该关联对象。先存老对象，再在全局表中删除该关联对象
+          else {
+            // setting the association to nil breaks the association.
+            AssociationsHashMap::iterator i = associations.find(disguised_object);
+            if (i !=  associations.end()) {
+                ObjectAssociationMap *refs = i-&gt;second;
+                ObjectAssociationMap::iterator j = refs-&gt;find(key);
+                if (j != refs-&gt;end()) {
+                    old_association = j-&gt;second;
+                    refs-&gt;erase(j);
+                }
+            }
+        }
+    }
+    // 释放老对象，retainCount相关，内存管理相关
+    if (old_association.hasValue()) ReleaseValue()(old_association);
+}
+</code></pre>
+
+<p>可以看到设置新的关联对象其实很简单：</p>
 
 <ul>
-<li>临界区有 IO 操作</li>
-<li>临界区代码复制或者循环量大</li>
-<li>临界区竞争非常激烈</li>
-<li>单核处理器</li>
+<li>现在全局关联对象表中寻找这个 key</li>
+<li>先存原来关联对象</li>
+<li>再设置新的关联对象</li>
+<li>释放原有的关联对象</li>
 </ul>
 
-<p>自旋锁适用:<br/>
-临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
+<p><strong>关联对象的实现</strong><br/>
+关联对象使用的是全局的表来存储所有关联对象,如图:<br/>
+<img src="media/15820364056941/15820977012071.jpg" alt="" style="width:643px;"/><br/>
+<strong>关联对象是和对象一一对应的,而不是和类一一对应的</strong></p>
 
-<blockquote>
-<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
-优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
-</blockquote>
+<ol>
+<li>所有的关联对象都由一个<strong>AssociationsManager</strong>对象来管理,这个对象里有一个<strong>AssociationsHashMap</strong>.</li>
+<li><strong>AssociationsHashMap</strong>由许多 key-value 构成.key 是对象的地址,value 是一个<strong>ObjectAssociationMap</strong>,也就是所谓的关联对象</li>
+<li><strong>ObjectAssociationMap</strong>就是关联对象,每个关联对象里面包含多个 key-value 对,key 是属性名,value 是<strong>ObjcAssociation</strong>,也就是相当于属性对应的实例变量.</li>
+<li><strong>ObjcAssociation</strong>相当于实例变量,这个结构体有两个成员,_policy 属性的内存管理语句,_value 属性的值</li>
+</ol>
 
-<p><strong>os_unfair_lock</strong></p>
+<p>总结:</p>
 
-<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
-
-<p><strong>pthread_mutex</strong><br/>
-mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
-
-<p><strong>NSLock</strong><br/>
-NSLock是对 mutex 的普通锁的封装<br/>
-NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
-trylock 是尝试加锁,如果失败的话就返回 NO</p>
-
-<p><strong>信号量</strong><br/>
-    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
-    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
-
-<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
-dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
-dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
-用法:
-信号量常用于对资源进行加锁操作
-</code></pre>
-
-<pre class="line-numbers"><code class="language-text">//在init等函数初始化
-_lock = dispatch_semaphore_create(1); 
-dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
-//修改Array或字典等数据的信息
-dispatch_semaphore_signal(_lock);
-</code></pre>
-
-<p><strong>@synchronized</strong><br/>
-@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
-
-<pre class="line-numbers"><code class="language-text">// 写数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
-    }
-});
-// 读数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        id obj = [dict objectForKey:@&quot;trail&quot;];
-    }
-});
-</code></pre>
+<ol>
+<li>category 可以给现有类添加属性,方法,协议,但是不能添加实例变量</li>
+<li>添加属性对应的实例变量需要使用关联对象来实现</li>
+<li>category 里面的方法不会覆盖掉原有同名方法,只是会提前检索到,所以感觉是被覆盖掉了</li>
+<li>对于系统自带的类,在 runtime 时才会加载 category,但是自定义的分类在编译期就已经全部加载了,就像不存在分类,但是存在一个大大的自定义类一样.</li>
+</ol>
 
 <p>参考:<br/>
-<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
-<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
-<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
+<a href="https://draveness.me/ao">https://draveness.me/ao</a><br/>
+<a href="http://vanney9.com/2017/07/14/association-object-and-retain-count/">http://vanney9.com/2017/07/14/association-object-and-retain-count/</a><br/>
+<a href="http://vanney9.com/2017/06/07/objective-c-runtime-category/">http://vanney9.com/2017/06/07/objective-c-runtime-category/</a><br/>
+<a href="https://www.jianshu.com/p/1b0a1f9ecf39">https://www.jianshu.com/p/1b0a1f9ecf39</a></p>
 
                         
                       </div>
@@ -231,10 +297,10 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/13</span>
+                    <span class="date">2020/02/18</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -336,6 +402,18 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 	      
 		      
 			      <li class="post">
+			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15846246156341.html">两数之和问题</a>
 			      </li>
 		     
@@ -349,18 +427,6 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 		      
 			      <li class="post">
 			        <a href="15844949626994.html">Block 进阶 (一)</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
 			      </li>
 		     
 		  

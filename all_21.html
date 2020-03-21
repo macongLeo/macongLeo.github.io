@@ -114,142 +114,58 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15824490308760.html">
+                <a class="clearlink" href="15833788745389.html">
                 
-                  <h1>对象从创建到销毁过程的探究</h1>
+                  <h1>UITextView 行间距调整</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><strong>NSObject</strong><br/>
-先看下NSObject的内存结构<br/>
-<img src="media/15824490308760/15824492522698.jpg" alt="" style="width:590px;"/></p>
+                        	<p>在我们创建 UITextView 的时候,有可能默认的行间距并不合适,调整行间距也比较简单,方法也比较多,今天介绍一直比较常见的,简单的方法:<br/>
+<strong>textView.typingAttributes</strong> 属性设置<br/>
+关于 <strong>textView.typingAttributes</strong>的官方文档介绍就是:<br/>
+用于用户输入的新文本的属性,<br/>
+该字典包含用于输入文本的属性键值对,当文本视图的选择发生变化时,字典的内容自动被清除</p>
 
-<p>实例对象的 isa 指针指向 class(类对象),根据 runtime源码我们可以看到 objc_class 是继承自 objc_object 的,本质上,类是一个对象,所以我们才会常说<strong>&quot;类对象&quot;</strong><br/>
-<strong>objc_object 有一个唯一的私有变量-isa_t 类型的 isa</strong></p>
+<pre class="line-numbers"><code class="language-text">UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(20, 10, 100, 200)];
 
-<p>objc_class 的定义还包括了:</p>
+textView.delegate = self;
 
-<ul>
-<li>Class superclass -指向父类</li>
-<li>cathe_t cathe 方法缓存</li>
-<li>class_data_bits_t bits -存储类方法,属性,协议等数据</li>
-</ul>
+[self.view addSubview:textView];
 
-<p><strong>isa_t isa</strong><br/>
-isa又包括哪些东西?</p>
+NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
 
-<pre class="line-numbers"><code class="language-text">union isa_t 
-{
-    isa_t() { }
-    isa_t(uintptr_t value) : bits(value) { }
+paragraphStyle.lineSpacing = 20;// 字体的行间距
 
-    Class cls;
-    uintptr_t bits;
-
-# if __arm64__
-#   define ISA_MASK        0x0000000ffffffff8ULL
-#   define ISA_MAGIC_MASK  0x000003f000000001ULL
-#   define ISA_MAGIC_VALUE 0x000001a000000001ULL
-    struct {
-        uintptr_t nonpointer        : 1;
-        uintptr_t has_assoc         : 1;//对象含有或者曾经含有关联引用，没有关联引用的可以更快地释放内存
-        uintptr_t has_cxx_dtor      : 1;//析构器方法,如果没有析构器就会快速释放内存
-        uintptr_t shiftcls          : 33; // MACH_VM_MAX_ADDRESS 0x1000000000
-        uintptr_t magic             : 6;//用于调试器判断当前对象是真的对象还是没有初始化的空间
-        uintptr_t weakly_referenced : 1;//对象被指向或者曾经指向一个 ARC 的弱变量，没有弱引用的对象可以更快释放
-        uintptr_t deallocating      : 1;//对象正在释放内存
-        uintptr_t has_sidetable_rc  : 1;//对象的引用计数太大了，存不下
-        uintptr_t extra_rc          : 19;//对象的引用计数超过 1，会存在这个这个里面
-#       define RC_ONE   (1ULL&lt;&lt;45)
-#       define RC_HALF  (1ULL&lt;&lt;18)
-    };
-
-# elif __x86_64__
-#   define ISA_MASK        0x00007ffffffffff8ULL
-#   define ISA_MAGIC_MASK  0x001f800000000001ULL
-#   define ISA_MAGIC_VALUE 0x001d800000000001ULL
-    struct {
-        uintptr_t nonpointer        : 1;
-        uintptr_t has_assoc         : 1;
-        uintptr_t has_cxx_dtor      : 1;
-        uintptr_t shiftcls          : 44; // MACH_VM_MAX_ADDRESS 0x7fffffe00000
-        uintptr_t magic             : 6;
-        uintptr_t weakly_referenced : 1;
-        uintptr_t deallocating      : 1;
-        uintptr_t has_sidetable_rc  : 1;
-        uintptr_t extra_rc          : 8;
-#       define RC_ONE   (1ULL&lt;&lt;56)
-#       define RC_HALF  (1ULL&lt;&lt;7)
-    };
-
-# else
-#   error unknown architecture for packed isa
-# endif
-
-// SUPPORT_PACKED_ISA
-#endif
-
-
-#if SUPPORT_INDEXED_ISA
-
-# if  __ARM_ARCH_7K__ &gt;= 2
-
-#   define ISA_INDEX_IS_NPI      1
-#   define ISA_INDEX_MASK        0x0001FFFC
-#   define ISA_INDEX_SHIFT       2
-#   define ISA_INDEX_BITS        15
-#   define ISA_INDEX_COUNT       (1 &lt;&lt; ISA_INDEX_BITS)
-#   define ISA_INDEX_MAGIC_MASK  0x001E0001
-#   define ISA_INDEX_MAGIC_VALUE 0x001C0001
-    struct {
-        uintptr_t nonpointer        : 1;
-        uintptr_t has_assoc         : 1;
-        uintptr_t indexcls          : 15;
-        uintptr_t magic             : 4;
-        uintptr_t has_cxx_dtor      : 1;
-        uintptr_t weakly_referenced : 1;
-        uintptr_t deallocating      : 1;
-        uintptr_t has_sidetable_rc  : 1;
-        uintptr_t extra_rc          : 7;
-#       define RC_ONE   (1ULL&lt;&lt;25)
-#       define RC_HALF  (1ULL&lt;&lt;6)
-    };
-
-# else
-#   error unknown architecture for indexed isa
-# endif
-
-// SUPPORT_INDEXED_ISA
-#endif
-
-};
+NSDictionary *attributes = @{
+                             NSFontAttributeName:[UIFont systemFontOfSize:17],
+                             NSParagraphStyleAttributeName:paragraphStyle
+                             };
+textView.typingAttributes = attributes;
 </code></pre>
 
-<p><img src="media/15824490308760/15825274310751.jpg" alt="" style="width:646px;"/></p>
+<p><img src="media/15833788745389/15833792273218.jpg" alt="" style="width:602px;"/><br/>
+但是这样设置会有一个问题 就是光标会变大<br/>
+<img src="media/15833788745389/15833792578456.jpg" alt="" style="width:311px;"/><br/>
+ 解决光标变大的问题 目前只有自定义 TextView ,<br/>
+ UITextView遵循了UITextInput协议，其中有返回光标frame的方法</p>
 
-<p><img src="media/15824490308760/15825274646479.jpg" alt="" style="width:655px;"/></p>
+<ul>
+<li>(CGRect)caretRectForPosition:(UITextPosition *)position，所以我们可以使用自定义的TextView，重写返回光标frame的方法避免光标扩大问题。</li>
+</ul>
 
-<p><strong>alloc</strong><br/>
-alloc流程简化图<br/>
-<img src="media/15824490308760/15825282816904.jpg" alt="" style="width:655px;"/><br/>
-alloc 方法包含了非常多的流程和判断,这里做了简化,当我们写一个[Class alloc]的时候,会调用 objc_alloc(Class cls)方法,进而执行 callAlloc方法,最终执行_class_createInstanceFromZone方法:<br/>
-<img src="media/15824490308760/15825284978214.jpg" alt="" style="width:595px;"/><br/>
-<img src="media/15824490308760/15825287722180.jpg" alt="" style="width:668px;"/></p>
+<pre class="line-numbers"><code class="language-text">- (CGRect)caretRectForPosition:(UITextPosition *)position {
+    CGRect originalRect = [super caretRectForPosition:position];
+    originalRect.size.height = self.font.lineHeight + 1;
+    originalRect.size.width = 1.5;
 
-<p><strong>malloc</strong></p>
+    return originalRect;
+}
+</code></pre>
 
-<p>在 iOS 进程地址空间的各个区域中,最灵活的就是堆区,它为进程动态分配内存.<br/>
-从苹果公开的malloc源码上来看，malloc的原理大致如下：</p>
+<p><img src="media/15833788745389/15833794042367.jpg" alt="" style="width:704px;"/></p>
 
-<p>malloc内存分配基于malloc zone，并将内存分配按大小分为nano、tiny、small、large几种类型，申请时按需进行最适分配<br/>
-malloc在首次调用时，初始化default zone，在64位情况下，会初始化default zone为nano zone，同时初始化一个scalable zone作为helper zone，nano zone负责nano大小的分配，scalable zone则负责tiny、small和large内存的分配<br/>
-每次malloc时，根据传入的size参数，优先交给nano zone做分配处理，如果大小不在nano范围，则转交给helper zone处理。<br/>
-<img src="media/15824490308760/15825291171434.jpg" alt="" style="width:711px;"/></p>
-
-<p>参考:<br/>
-<a href="https://juejin.im/entry/58a178060ce463005644ee4a">https://juejin.im/entry/58a178060ce463005644ee4a</a><br/>
-<a href="https://yq.aliyun.com/articles/3065">https://yq.aliyun.com/articles/3065</a></p>
+<p>参考：<a href="https://www.jianshu.com/p/085ee268b43a">https://www.jianshu.com/p/085ee268b43a</a></p>
 
                         
                       </div>
@@ -258,10 +174,10 @@ malloc在首次调用时，初始化default zone，在64位情况下，会初始
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/23</span>
+                    <span class="date">2020/03/05</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html'>iOS 开发技巧整理</a></span>
           				   
                     
 
@@ -363,6 +279,18 @@ malloc在首次调用时，初始化default zone，在64位情况下，会初始
 	      
 		      
 			      <li class="post">
+			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15846246156341.html">两数之和问题</a>
 			      </li>
 		     
@@ -376,18 +304,6 @@ malloc在首次调用时，初始化default zone，在64位情况下，会初始
 		      
 			      <li class="post">
 			        <a href="15844949626994.html">Block 进阶 (一)</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
 			      </li>
 		     
 		  

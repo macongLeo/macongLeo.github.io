@@ -114,14 +114,81 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15833972720459.html">
+                <a class="clearlink" href="15834860456410.html">
                 
-                  <h1>设计模式-组件化</h1>
+                  <h1>Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	
+                        	<p>isMemberOfClass和isKindOfClass一直以来都是想当然的使用,有时候得不到想要的结果,最后决定探究一下,彻底搞清楚,闲话不多说,先看下源码;</p>
+
+<h2 id="toc_0">isMemberOfClass</h2>
+
+<pre class="line-numbers"><code class="language-text">+ (BOOL)isMemberOfClass:(Class)cls {
+    return object_getClass((id)self) == cls;
+}
+- (BOOL)isMemberOfClass:(Class)cls {
+    return [self class] == cls;
+}
+</code></pre>
+
+<p>isMemberOfClass有两个方法,一个是实例方法,一个是类方法,他俩的区别是:</p>
+
+<ul>
+<li>实例方法- (BOOL)isMemberOfClass:(Class)cls: 根据实例对象取得类对象,再去判断</li>
+<li>类方法 + (BOOL)isMemberOfClass:(Class)cls:根据对象取得元类对象,再去判断</li>
+</ul>
+
+<p>其实简单的说是根据传入的类的 isa,来判断,因为实例对象的 isa 是实例的类对象,类对象的 isa 指向的是类的元类,Meta Class</p>
+
+<p>验证:<br/>
+创建两个类,Person 类继承自 NSObject<br/>
+Student 类继承自 Person<br/>
+<img src="media/15834860456410/15834866616638.jpg" alt="" style="width:259px;"/><br/>
+<img src="media/15834860456410/15834866735409.jpg" alt="" style="width:232px;"/></p>
+
+<p>先看代码,思考一下打印结果是什么<br/>
+<img src="media/15834860456410/15834890909476.jpg" alt="" style="width:554px;"/><br/>
+res1 : [Person class] Person 类的元类 是不是和[NSObject class]类一致? 肯定是不一致 所以返回 NO<br/>
+res2: [Person class] Person 类的元类 是不是和[Person class]类一致? 元类和类肯定也是不一致 所以返回 NO</p>
+
+<p>实例对象;<br/>
+<img src="media/15834860456410/15834894446040.jpg" alt="" style="width:524px;"/><br/>
+第一行,Person new 出来一个实例,该实例的 isa 指向类 Person, 而 Person 很明显不是 NSObject类,所以为 0;<br/>
+第二行,Person new 出来一个实例,该实例的 isa 指向类 Person, 判断 Person 类是不是 Person,答案是肯定的,所以为 1;</p>
+
+<p><img src="media/15834860456410/15834896748734.jpg" alt="" style="width:765px;"/></p>
+
+<p><strong>object_getClass(cls)</strong> 这个方法返回是传入类的元类 </p>
+
+<h2 id="toc_1">isKindOfClass</h2>
+
+<ul>
+<li>调用者是传入的类的实例对象，或者调用者是传入类的继承者链中的类的实例对象，则返回YES</li>
+<li>判断调用者是否是传入对象的子类，别弄反了</li>
+<li>去父类递归查找判断</li>
+</ul>
+
+<pre class="line-numbers"><code class="language-text">+ (BOOL)isKindOfClass:(Class)cls {
+    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls-&gt;super_class) {
+        if(tcls == cls) return YES;
+    }
+    return NO;
+}
+-（BOOL)isKindOfClass:(Class)cls {
+    for(Class tcls = [self class]; tcls; tcls = tcls-&gt;super_class) {
+        if(tcls == cls) return YES;
+    }
+    return NO;
+}
+</code></pre>
+
+<p><img src="media/15834860456410/15834900954033.jpg" alt="" style="width:783px;"/></p>
+
+<p>参考:<br/>
+<a href="https://www.lagou.com/lgeduarticle/14758.html">https://www.lagou.com/lgeduarticle/14758.html</a></p>
+
                         
                       </div>
                   </div>
@@ -129,10 +196,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/05</span>
+                    <span class="date">2020/03/06</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html'>设计模式(架构)</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -234,6 +301,18 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15846246156341.html">两数之和问题</a>
 			      </li>
 		     
@@ -247,18 +326,6 @@
 		      
 			      <li class="post">
 			        <a href="15844949626994.html">Block 进阶 (一)</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
 			      </li>
 		     
 		  

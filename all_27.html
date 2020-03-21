@@ -114,81 +114,358 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15795063924352.html">
+                <a class="clearlink" href="15820198947096.html">
                 
-                  <h1>AutoReleasePool 自动释放池</h1>
+                  <h1>weak 的释放及原理</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ul>
-<li>App启动后，苹果在主线程 RunLoop 里注册了两个 Observer，其回调都是 _wrapRunLoopWithAutoreleasePoolHandler()。</li>
-<li>第一个 Observer 监视的事件是 Entry(即将进入Loop)，其回调内会调用 _objc_autoreleasePoolPush() 创建自动释放池。其 order 是-2147483647，优先级最高，保证创建释放池发生在其他所有回调之前。</li>
-<li>第二个 Observer 监视了两个事件： BeforeWaiting(准备进入休眠) 时调用_objc_autoreleasePoolPop() 和 _objc_autoreleasePoolPush() 释放旧的池并创建新池；Exit(即将退出Loop) 时调用 _objc_autoreleasePoolPop() 来释放自动释放池。这个 Observer 的 order 是 2147483647，优先级最低，保证其释放池子发生在其他所有回调之后。</li>
-<li>在主线程执行的代码，通常是写在诸如事件回调、Timer回调内的。这些回调会被 RunLoop 创建好的 AutoreleasePool 环绕着，所以不会出现内存泄漏，开发者也不必显示创建 Pool 了。</li>
-</ul>
+                        	<p>1.被weak修饰的对象在被释放的时候会发生什么？是如何实现的？知道sideTable么？里面的结构可以画出来么<br/>
+在回答问题之前,我们先来了解一下 weak 的内部结构:</p>
 
-<p>也就是说<mark>AutoreleasePool创建是在一个RunLoop事件开始之前(push)，AutoreleasePool释放是在一个RunLoop事件即将结束之前(pop)。</mark><br/>
-AutoreleasePool里的Autorelease对象的加入是在RunLoop事件中，AutoreleasePool里的Autorelease对象的释放是在AutoreleasePool释放时。</p>
+<blockquote>
+<p>我们常说的 weak,其实是 runtime 维护的用于存储对象的所有 weak 指针的 hash 表,<mark>key 是对象的指针,value 是 weak 指针的地址(这个地址的值是所指对象的地址)数组</mark></p>
+</blockquote>
 
-<h2 id="toc_0">Autorelease对象什么时候释放？</h2>
+<p>例如:</p>
 
-<p>在没有手动添加 AutoreleasePool的情况下,<br/>
-**Autorelease对象是在当前的 RunLoop 迭代结束的时候释放的 **<br/>
-原因:<br/>
-    系统在每个 RunLoop 迭代中都加入了自动释放池的 Push 和 Pop</p>
+<pre class="line-numbers"><code class="language-text">NSObject *b = [NSObject new];
+__weak id a = b;
+</code></pre>
 
-<h2 id="toc_1">AutoreleasePool原理</h2>
+<p>这里的 b 就是 weak 表的 key,&amp;a(a的内存地址)就是 value;</p>
 
-<p><img src="media/15795063924352/15795107102374.jpg" alt="" style="width:702px;"/></p>
-
-<p><img src="media/15795063924352/15795070852300.jpg" alt="" style="width:536px;"/></p>
-
-<ul>
-<li>AutoreleasePool并没有单独的结构,而是由若干个 AutoreleasePoolPage 以双向链表的形式结合而成(分别对应图中的 parent 和 child 指针)</li>
-<li>AutoreleasePool是按线程一一对应的(结构中的 thread 指向当前线程)</li>
-<li>AutoreleasePoolPage 每个对象会开辟 4096 个字节内存(一页虚拟内存的大小)除了上面的实例变量所占的空间,剩下的空间都用来存储 Autorelease对象</li>
-<li>上面的 id *next 指针作为游标指向栈顶最新 add 进来的 Autorelease对象的下一个位置</li>
-<li>一个 AutoreleasePoolPage 的空间被沾满时,会创建一个新的 AutoreleasePoolPage 对象,连接链表,后来的 Autorelease对象在新的 page 加入</li>
-</ul>
-
-<p>所以若当前线程中只有一个 AutoreleasePoolPage 对象,并记录了很多 Autorelease对象地址时,内存:<br/>
-<img src="media/15795063924352/15795075970216.jpg" alt="" style="width:520px;"/><br/>
-图中的情况，这一页再加入一个autorelease对象就要满了（也就是next指针马上指向栈顶），这时就要执行上面说的操作，建立下一页page对象，与这一页链表连接完成后，新page的next指针被初始化在栈底（begin的位置），然后继续向栈顶添加新对象。</p>
-
-<p><mark><strong>向一个对象发送- autorelease消息，就是将这个对象加入到当前AutoreleasePoolPage的栈顶next指针指向的位置</strong></mark><br/>
-这一步只是把 Autorelease对象加入到了自动释放池,还并没有释放</p>
-
-<h3 id="toc_2">真正释放时刻</h3>
-
-<p>每当进行一次<mark><strong>objc_autoreleasePoolPush</strong></mark>调用时，runtime向当前的AutoreleasePoolPage中add进一个哨兵对象，值为0（也就是个nil），那么这一个page就变成了下面的样子：<br/>
-<img src="media/15795063924352/15795082558655.jpg" alt="" style="width:754px;"/><br/>
-<mark>objc_autoreleasePoolPush</mark>的返回值正是这个哨兵对象的地址，被<mark>objc_autoreleasePoolPop</mark>(哨兵对象)作为入参，于是：</p>
+<p><strong>weak 的实现原理简单的概括就三步:</strong></p>
 
 <ol>
-<li> 根据传入的哨兵对象地址找到哨兵对象所处的page</li>
-<li>在当前page中，将晚于哨兵对象插入的所有autorelease对象都发送一次- release消息，并向回移动next指针到正确位置</li>
-<li>补充2：从最新加入的对象一直向前清理，可以向前跨越若干个page，直到哨兵所在的page<br/>
-刚才的objc_autoreleasePoolPop执行后，
-<img src="media/15795063924352/15795086281414.jpg" alt="" style="width:758px;"/>
-最终变成了下面的样子:
-<img src="media/15795063924352/15795084636880.jpg" alt="" style="width:725px;"/></li>
+<li>初始化时:runtime 会调用objc_initWeak 函数,初始化一个新的 weak 指针指向对象的地址</li>
+<li>添加引用时:objc_initWeak 函数会调用 objc_storeWeak()函数,objc_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
+<li>释放时:调用 clearDeallocating 函数.clearDeallocating函数首先根据对象地址获取所有 weak 指针地址的数组,然后遍历这个数组把其中的数据置为 nil,最后把这个 entry 从 weak 表中删除,最后清理对象的记录.</li>
 </ol>
 
-<p><strong>嵌套的AutoreleasePool</strong><br/>
-知道了上面的原理，嵌套的AutoreleasePool就非常简单了，pop的时候总会释放到上次push的位置为止，多层的pool就是多个哨兵对象而已，就像剥洋葱一样，每次一层，互不影响。 </p>
+<p>在 runtime 里,weak 修饰符变量是通过 objc_initWeak 函数来初始化的,在变量作用域结束的时候通过 objc_destroyWeak 函数来释放的.</p>
 
-<p><img src="media/15795063924352/15795095043776.jpg" alt="" style="width:767px;"/></p>
+<p>这两个函数长这样:</p>
 
-<p><img src="media/15795063924352/15795109308256.jpg" alt="" style="width:700px;"/></p>
+<pre class="line-numbers"><code class="language-text">id objc_initWeak(id *location, id newObj)
+{
+    // 查看对象实例是否有效
+    // 无效对象直接导致指针释放
+    if (!newObj) {
+        *location = nil;
+        return nil;
+    }
+    // 这里传递了三个 bool 数值
+    // 使用 template 进行常量参数传递是为了优化性能
+    return storeWeak&lt;false/*old*/, true/*new*/, true/*crash*/&gt;
+        (location, (objc_object*)newObj);
+}
+</code></pre>
 
-<p>注意点:<br/>
-NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添加到该pool里面的所有OC对象都执行一遍release（retainCount-=1），如果恰好此时retainCount&lt;=0 ，那么系统会自动调用<mark>dealloc</mark>方法废弃对象。</p>
+<pre class="line-numbers"><code class="language-text">void objc_destroyWeak(id *location)
+{
+    (void)storeWeak&lt;true/*old*/, false/*new*/, false/*crash*/&gt;
+        (location, nil);
+}
+</code></pre>
+
+<p>注意点:</p>
+
+<ol>
+<li>objc_initWeak 函数有一个前提条件,就是 object 必须是一个没有被注册为 weak 对象的有效指针,而 value 则可以是 null,或者指向一个有效的对象</li>
+<li>添加引用时,object_initWeak 函数会调用 object_storeWeak()函数,object_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
+</ol>
+
+<p>从上面两个代码能看出来他们都调用了 storeWeak 这个函数,但是传入的参数确有点不一样<br/>
+init 方法中,第一个参数为 weak 的修饰变量,第二个参数为引用计数对象,但是在 destoryWeak 函数,第一参数依旧为 weak 修饰变量,第二个为 nil.参数不同到底代表了什么?下面继续分析 storeWeak 这个函数:</p>
+
+<pre class="line-numbers"><code class="language-text">// 更新一个弱引用变量
+// 如果 HaveOld 是 true, 变量是个有效值，需要被及时清理。变量可以为 nil。
+// 如果 HaveNew 是 true, 需要一个新的 value 来替换变量。变量可以为 nil
+// 如果crashifdeallocation 是 ture ，那么如果 newObj 是 deallocating，或者 newObj 的类不支持弱引用，则该进程就会停止。
+// 如果crashifdeallocation 是 false，那么 nil 会被存储。
+
+template &lt;bool HaveOld, bool HaveNew, bool CrashIfDeallocating&gt;
+static id storeWeak(id *location, objc_object *newObj)
+{
+    assert(HaveOld  ||  HaveNew);
+    if (!HaveNew) assert(newObj == nil);
+
+    Class previouslyInitializedClass = nil;
+    id oldObj;
+    
+    // 创建新旧散列表
+    SideTable *oldTable;
+    SideTable *newTable;
+
+    // Acquire locks for old and new values.
+    // 获得新值和旧值的锁存位置 (用地址作为唯一标示)
+    // Order by lock address to prevent lock ordering problems.
+    // 通过地址来建立索引标志，防止桶重复
+    // Retry if the old value changes underneath us.
+    // 下面指向的操作会改变旧值
+ retry:
+    if (HaveOld) {
+    // 如果 HaveOld 为 true ，更改指针，获得以 oldObj 为索引所存储的值地址
+        oldObj = *location;
+        oldTable = &amp;SideTables()[oldObj];
+    } else {
+        oldTable = nil;
+    }
+    if (HaveNew) {
+    // 获得以 newObj 为索引所存储的值对象
+        newTable = &amp;SideTables()[newObj];
+    } else {
+        newTable = nil;
+    }
+    
+// 对两个 table 进行加锁操作，防止多线程中竞争冲突
+    SideTable::lockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+
+//  location 应该与 oldObj 保持一致，如果不同，说明当前的 location 已经处理过 oldObj 可是又被其他线程所修改, 保证线程安全，这个判断用来避免线程冲突重处理问题
+    if (HaveOld  &amp;&amp;  *location != oldObj) {
+        SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+        goto retry;
+    }
+
+    // Prevent a deadlock between the weak reference machinery
+    // and the +initialize machinery by ensuring that no 
+    // weakly-referenced object has an un-+initialized isa.
+    // 防止弱引用之间发生死锁，并且通过 +initialize 初始化构造器保证所有弱引用的 isa 非空指向
+    if (HaveNew  &amp;&amp;  newObj) {
+        // 获得新对象的 isa 指针
+        Class cls = newObj-&gt;getIsa();
+        // 判断 isa 非空且已经初始化
+        if (cls != previouslyInitializedClass  &amp;&amp;  
+            !((objc_class *)cls)-&gt;isInitialized()) 
+        {
+            // 对两个表解锁
+            SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+            _class_initialize(_class_getNonMetaClass(cls, (id)newObj));
+
+            // If this class is finished with +initialize then we&#39;re good.
+            // If this class is still running +initialize on this thread 
+            // (i.e. +initialize called storeWeak on an instance of itself)
+            // then we may proceed but it will appear initializing and 
+            // not yet initialized to the check above.
+            // Instead set previouslyInitializedClass to recognize it on retry.
+            // 如果该类已经完成执行 +initialize 方法是最好的，如果该类 + initialize 在线程中，例如 +initialize 正在调用storeWeak 方法，那么则需要手动对其增加保护策略，并设置 previouslyInitializedClass 指针进行标记然后重新尝试
+            previouslyInitializedClass = cls;
+
+            goto retry;
+        }
+    }
+
+    // Clean up old value, if any. 清除旧值
+    if (HaveOld) {
+        weak_unregister_no_lock(&amp;oldTable-&gt;weak_table, oldObj, location);
+    }
+
+    // Assign new value, if any. 分配新值
+    if (HaveNew) {
+        newObj = (objc_object *)weak_register_no_lock(&amp;newTable-&gt;weak_table, 
+                                                      (id)newObj, location, 
+                                                      CrashIfDeallocating);
+        // weak_register_no_lock returns nil if weak store should be rejected
+        // 如果弱引用被释放则该方法返回 nil
+        // Set is-weakly-referenced bit in refcount table.
+        // 在引用计数表中设置弱引用标记位
+        if (newObj  &amp;&amp;  !newObj-&gt;isTaggedPointer()) {
+            newObj-&gt;setWeaklyReferenced_nolock();
+        }
+
+        // Do not set *location anywhere else. That would introduce a race.
+        *location = (id)newObj;
+    }
+    else {
+        // No new value. The storage is not changed.
+    }
+    
+    SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
+
+    return (id)newObj;
+}
+</code></pre>
+
+<p>以上就是 storeWeak 函数的实现,他做了几件事:</p>
+
+<ul>
+<li>声明了新旧散列表指针,因为 weak 修饰的变量如果之前已经指向一个对象,然后其再次改变指向另一个对象,那么按理来说我们需要从 oldTable 删除 weak 变量的记录,也就是要释放该 weak 变量,然后再给 newTable 添加新记录(weak变量),这里的新旧散列表就是这个作用</li>
+<li>根据新旧变量地址获取响应的 SideTable</li>
+<li>对两个表进行加锁操作,防止多线程竞争冲突</li>
+<li>进行线程冲突重处理判断</li>
+<li>判断其 isa 指针是否为空,为空则需要初始化</li>
+<li>如果存在旧值,调用 weak_unregister_no_lock 函数清楚旧值</li>
+<li>调用weak_register_no_lock 函数分配新值</li>
+<li>解锁两个表,返回第二参数</li>
+</ul>
+
+<p>tip:</p>
+
+<blockquote>
+<p>你可以把objc_storeWeak(id *location, objc_object *newObj)理解为：objc_storeWeak(value, key)，并且当key变nil，将value置nil。<br/>
+结合最开始的例子我们可以理解为objc_storeWeak(&amp;a, b)<br/>
+在b非nil时，a和b指向同一个内存地址，在b变nil时，a变nil。此时向a发送消息不会崩溃：在Objective-C中向nil发送消息是安全的。<br/>
+而如果a是由 assign 修饰的，则： 在 b 非 nil 时，a 和 b 指向同一个内存地址，在 b 变 nil 时，a 还是指向该内存地址，变野指针。此时向 a 发送消息<mark>极易崩溃</mark>,不是一定会奔溃,涉及到 assgin 的释放问题下面再说。</p>
+</blockquote>
+
+<p>初始化弱引用对象流程图:<br/>
+<img src="media/15820198947096/15820219239893.jpg" alt="" style="width:546px;"/></p>
+
+<p><strong>数据结构分析(* SideTables、RefcountMap、weak_table_t*)</strong><br/>
+<img src="media/15820198947096/15820337143051.jpg" alt="" style="width:601px;"/></p>
+
+<p><strong>SideTable</strong></p>
+
+<p>SideTable主要用于管理对象的引用计数和 weak 表为了管理所有对象的引用计数和 weak 指针,苹果创建了一个全局的 SideTables,是一个全局的 Hash 表,里面装的都是 SideTable结构体.他使用对象的内存地址当他的key.</p>
+
+<pre class="line-numbers"><code class="language-text">struct SideTable {
+// 保证原子操作的自旋锁
+    spinlock_t slock;
+    // 引用计数的 hash 表
+    RefcountMap refcnts;
+    // weak 引用全局 hash 表
+    weak_table_t weak_table;
+}
+</code></pre>
+
+<p><img src="media/15820198947096/15820337366643.jpg" alt="" style="width:469px;"/></p>
+
+<p>从声明中可以看出,SideTable内部包含了一个是防止多线程竞争的自旋锁(slock),第二个是协助对象的 isa 指针的 extra_rc 共同引用计数变量,这里主要看 weak_table_t 的结构和作用</p>
+
+<p><strong>1,一把自旋锁。spinlock_t  slock;</strong></p>
+
+<blockquote>
+<p>自旋锁比较适用于锁使用者保持锁时间比较短的情况。正是由于自旋锁使用者一般保持锁时间非常短，因此选择自旋而不是睡眠是非常必要的，自旋锁的效率远高于互斥锁。信号量和读写信号量适合于保持时间较长的情况，它们会导致调用者睡眠，因此只能在进程上下文使用，而自旋锁适合于保持时间非常短的情况，它可以在任何上下文使用。</p>
+</blockquote>
+
+<p><strong>2,引用计数器 RefcountMap  refcnts;</strong><br/>
+对象的具体引用计数数量是记录在这里的<br/>
+这里的RefcountMap其实是个 C++的 Map.<br/>
+<img src="media/15820198947096/15820340809229.jpg" alt="" style="width:571px;"/></p>
+
+<p><strong>weak_table_t</strong><br/>
+weak_table_t结构体存储了某个对象相关的所有弱引用信息</p>
+
+<pre class="line-numbers"><code class="language-text">/**
+ * The global weak references table. Stores object ids as keys,
+ * and weak_entry_t structs as their values.
+ */
+struct weak_table_t {
+    // 保存了所有指向指定对象的 weak 指针
+    weak_entry_t *weak_entries;
+    // 存储空间
+    size_t    num_entries;
+    // 参与判断引用计数辅助量
+    uintptr_t mask;
+    // hash key 最大偏移值
+    uintptr_t max_hash_displacement;
+};
+</code></pre>
+
+<p>使用 weak 指针指向的对象地址作为 key,用 weak_entry_t 类型结构体对象作为 value.其中的 weak_entries 成员,就是弱引用表入口;<br/>
+<strong>weak_entry_t</strong><br/>
+weak_entry_t负责维护和存储指向一个对象的所有弱引用 hash 表:</p>
+
+<pre class="line-numbers"><code class="language-text">typedef objc_object ** weak_referrer_t;
+struct weak_entry_t {
+    DisguisedPtrobjc_object&gt; referent;
+    union {
+        struct {
+            weak_referrer_t *referrers;
+            uintptr_t        out_of_line : 1;
+            uintptr_t        num_refs : PTR_MINUS_1;
+            uintptr_t        mask;
+            uintptr_t        max_hash_displacement;
+        };
+        struct {// out_of_line=0 is LSB of one of these (don&#39;t care which)
+            weak_referrer_t  inline_referrers[WEAK_INLINE_COUNT];
+        };
+    }
+}
+</code></pre>
+
+<ul>
+<li>referent:被值对象的地址,前面循环遍历查找的时候就是判断目标地址是否和他相等</li>
+<li>referrers:可变数组,里面保存着所指向这个对象的弱引用的地址,当这个对象被释放的时候.referrers里面的所有指针都会被置为 nil</li>
+<li>inline_referrers:只有 4 个元素的数组,默认情况下,用它来存储弱引用的指针,当大于 4 个的时候使用referrers来存储指针<br/>
+用一张图来表示就是:
+<img src="media/15820198947096/15820227824222.jpg" alt="" style="width:894px;"/></li>
+</ul>
+
+<p><strong>weak_unregister_no_lock</strong><br/>
+下面来看一下weak_unregister_no_lock是怎么清除旧值的</p>
+
+<pre class="line-numbers"><code class="language-text">void weak_unregister_no_lock(weak_table_t *weak_table, id referent_id, 
+                        id *referrer_id)
+{
+    objc_object *referent = (objc_object *)referent_id;
+    objc_object **referrer = (objc_object **)referrer_id;
+
+    weak_entry_t *entry;
+
+    if (!referent) return;
+
+    if ((entry = weak_entry_for_referent(weak_table, referent))) {
+        remove_referrer(entry, referrer);
+        bool empty = true;
+        if (entry-&gt;out_of_line  &amp;&amp;  entry-&gt;num_refs != 0) {
+            empty = false;
+        }
+        else {
+            for (size_t i = 0; i &lt; WEAK_INLINE_COUNT; i++) {
+                if (entry-&gt;inline_referrers[i]) {
+                    empty = false; 
+                    break;
+                }
+            }
+        }
+
+        if (empty) {
+            weak_entry_remove(weak_table, entry);
+        }
+    }
+
+    // Do not set *referrer = nil. objc_storeWeak() requires that the 
+    // value not change.
+}
+</code></pre>
+
+<p>该方法主要作用是将旧对象在 weak_table 中解除 weak 指针的对应绑定,根据函数名称,我们称他为解除注册操作<br/>
+这个函数的逻辑:首先是 weak_table_t 表,键和值.声明 weak_entry_t 变量,如果 key(referent)为空,直接返回,根据全局入口表和键获取对应的 weak_entry_t 对象entry.获取到 entry 后,将 entry 以及 weak_table 作为参数传入 remove_referrer 函数中,这个函数就是解除操作,然后判断 entry 是否为空,若果为空,从全局记录表中清除相应的 entry.</p>
+
+<p><strong>weak_entry_for_referent</strong></p>
+
+<pre class="line-numbers"><code class="language-text">static weak_entry_t *weak_entry_for_referent(weak_table_t *weak_table, objc_object *referent)
+{
+    assert(referent);
+
+    weak_entry_t *weak_entries = weak_table-&gt;weak_entries;
+
+    if (!weak_entries) return nil;
+
+    size_t index = hash_pointer(referent) &amp; weak_table-&gt;mask;
+    size_t hash_displacement = 0;
+    while (weak_table-&gt;weak_entries[index].referent != referent) {
+        index = (index+1) &amp; weak_table-&gt;mask;
+        hash_displacement++;
+        if (hash_displacement &gt; weak_table-&gt;max_hash_displacement) {
+            return nil;
+        }
+    }
+
+    return &amp;weak_table-&gt;weak_entries[index];
+}
+</code></pre>
+
+<p>这个函数的逻辑就是先获取全局 weak 表入口,然后将引用计数的地址进行 hash 化后与 weak_table-&gt;mask 做与操作,作为下标,在全局 weak 表中查找,若找到,返回 entry,若没有,返回 nil</p>
 
 <p>参考:<br/>
-<a href="https://www.jianshu.com/p/61d8131c6bf3">https://www.jianshu.com/p/61d8131c6bf3</a><br/>
-<a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/">https://blog.sunnyxx.com/2014/10/15/behind-autorelease/</a><br/>
-<a href="https://juejin.im/post/5d7765756fb9a06af82503b6">https://juejin.im/post/5d7765756fb9a06af82503b6</a></p>
+<a href="https://www.jianshu.com/p/10c0f49f4755">https://www.jianshu.com/p/10c0f49f4755</a><br/>
+<a href="https://www.jianshu.com/p/ef6d9bf8fe59">https://www.jianshu.com/p/ef6d9bf8fe59</a><br/>
+<a href="https://www.jianshu.com/p/8577286af88e">https://www.jianshu.com/p/8577286af88e</a><br/>
+<a href="https://juejin.im/entry/58a178060ce463005644ee4a">https://juejin.im/entry/58a178060ce463005644ee4a</a></p>
 
                         
                       </div>
@@ -197,10 +474,10 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/20</span>
+                    <span class="date">2020/02/18</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -302,6 +579,18 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
 	      
 		      
 			      <li class="post">
+			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15846246156341.html">两数之和问题</a>
 			      </li>
 		     
@@ -315,18 +604,6 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
 		      
 			      <li class="post">
 			        <a href="15844949626994.html">Block 进阶 (一)</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841931088622.html">HTTPS 以及抓包工具抓取 HTTPS的原理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15841930756133.html">layoutIfNeeded和setNeedsLayout的区别</a>
 			      </li>
 		     
 		  
