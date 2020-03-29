@@ -92,6 +92,8 @@
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
         
             <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
+        
+            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
          
 
       </ul>
@@ -114,80 +116,44 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15834860456410.html">
+                <a class="clearlink" href="15848634915010.html">
                 
-                  <h1>Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</h1>
+                  <h1>Block 对于变量的截获</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>isMemberOfClass和isKindOfClass一直以来都是想当然的使用,有时候得不到想要的结果,最后决定探究一下,彻底搞清楚,闲话不多说,先看下源码;</p>
+                        	<ol>
+<li>对于基本数据类型的截获,是值截获,仅仅截获值,在截获的时候值是多少就是多少,后续更改,不会影响 Block 内部的变化</li>
+<li>对于<mark>局部静态变量,是截获的该静态变量的指针</mark>,也是就是说这个静态变量变化的话,Block 截获的值也会跟着变化</li>
+<li><mark>对于对象类型的局部变量,连同所有权修饰符一同截获</mark>(这也从一个侧面说明了__weak 的原理,因为截获对象类型的时候,连同所有权修饰符一同截获了,weak 修饰的话,就打破了强引用环,解决了循环引用)</li>
+<li>全局变量,全局静态变量,是不会截获的.</li>
+</ol>
 
-<h2 id="toc_0">isMemberOfClass</h2>
+<p>我们先定义一个比较简单的 Block</p>
 
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isMemberOfClass:(Class)cls {
-    return object_getClass((id)self) == cls;
+<pre class="line-numbers"><code class="language-text">- (void)testMethod {
+    int mutiNum = 6;
+    int (^Block)(int) = ^int(int num) {
+        return num * mutiNum;
+    };
+    Block(2);
 }
-- (BOOL)isMemberOfClass:(Class)cls {
-    return [self class] == cls;
-}
+
 </code></pre>
 
-<p>isMemberOfClass有两个方法,一个是实例方法,一个是类方法,他俩的区别是:</p>
+<p><img src="media/15848634915010/15848690037809.jpg" alt="" style="width:740px;"/><br/>
+在终端中 输入命令: clang -rewrite-objc MCBlock.m <br/>
+可以查看我们自定义的这个 MCBlock.m 的文件编译之后的源码.终端执行完成之后,在原文件夹会生成一个.cpp 的文件<br/>
+<img src="media/15848634915010/15848691080865.jpg" alt="" style="width:489px;"/><br/>
+打开这个 cpp 的源码文件</p>
 
-<ul>
-<li>实例方法- (BOOL)isMemberOfClass:(Class)cls: 根据实例对象取得类对象,再去判断</li>
-<li>类方法 + (BOOL)isMemberOfClass:(Class)cls:根据对象取得元类对象,再去判断</li>
-</ul>
+<p>找到我们定义这个 testMethod 方法<br/>
+<img src="media/15848634915010/15848691727627.jpg" alt="" style="width:907px;"/><br/>
+从这个源码我们可以看到,mutiNum = 6,是直接被捕获到了</p>
 
-<p>其实简单的说是根据传入的类的 isa,来判断,因为实例对象的 isa 是实例的类对象,类对象的 isa 指向的是类的元类,Meta Class</p>
-
-<p>验证:<br/>
-创建两个类,Person 类继承自 NSObject<br/>
-Student 类继承自 Person<br/>
-<img src="media/15834860456410/15834866616638.jpg" alt="" style="width:259px;"/><br/>
-<img src="media/15834860456410/15834866735409.jpg" alt="" style="width:232px;"/></p>
-
-<p>先看代码,思考一下打印结果是什么<br/>
-<img src="media/15834860456410/15834890909476.jpg" alt="" style="width:554px;"/><br/>
-res1 : [Person class] Person 类的元类 是不是和[NSObject class]类一致? 肯定是不一致 所以返回 NO<br/>
-res2: [Person class] Person 类的元类 是不是和[Person class]类一致? 元类和类肯定也是不一致 所以返回 NO</p>
-
-<p>实例对象;<br/>
-<img src="media/15834860456410/15834894446040.jpg" alt="" style="width:524px;"/><br/>
-第一行,Person new 出来一个实例,该实例的 isa 指向类 Person, 而 Person 很明显不是 NSObject类,所以为 0;<br/>
-第二行,Person new 出来一个实例,该实例的 isa 指向类 Person, 判断 Person 类是不是 Person,答案是肯定的,所以为 1;</p>
-
-<p><img src="media/15834860456410/15834896748734.jpg" alt="" style="width:765px;"/></p>
-
-<p><strong>object_getClass(cls)</strong> 这个方法返回是传入类的元类 </p>
-
-<h2 id="toc_1">isKindOfClass</h2>
-
-<ul>
-<li>调用者是传入的类的实例对象，或者调用者是传入类的继承者链中的类的实例对象，则返回YES</li>
-<li>判断调用者是否是传入对象的子类，别弄反了</li>
-<li>去父类递归查找判断</li>
-</ul>
-
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isKindOfClass:(Class)cls {
-    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
--（BOOL)isKindOfClass:(Class)cls {
-    for(Class tcls = [self class]; tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
-</code></pre>
-
-<p><img src="media/15834860456410/15834900954033.jpg" alt="" style="width:783px;"/></p>
-
-<p>参考:<br/>
-<a href="https://www.lagou.com/lgeduarticle/14758.html">https://www.lagou.com/lgeduarticle/14758.html</a></p>
+<p>我们可以看到里面有一个__block_impl 的参数.找到这个参数的定义<br/>
+<img src="media/15848634915010/15848696004996.jpg" alt="" style="width:467px;"/></p>
 
                         
                       </div>
@@ -196,10 +162,10 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/06</span>
+                    <span class="date">2020/03/22</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          					    <span class="posted-in"><a href='Block%20%E7%9B%B8%E5%85%B3.html'>Block 相关</a></span>
           				   
                     
 
@@ -285,6 +251,8 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
         
             <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
+        
+            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
          
         </p>
 
@@ -301,31 +269,31 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
 	      
 		      
 			      <li class="post">
-			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			        <a href="15853864599373.html">iOS 网络总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15846246156341.html">两数之和问题</a>
+			        <a href="15851198875953.html">Runtime 学习总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			        <a href="15852331403843.html">iOS 高手课</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

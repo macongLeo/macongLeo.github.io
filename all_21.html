@@ -92,6 +92,8 @@
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
         
             <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
+        
+            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
          
 
       </ul>
@@ -114,58 +116,80 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15833788745389.html">
+                <a class="clearlink" href="15834860456410.html">
                 
-                  <h1>UITextView 行间距调整</h1>
+                  <h1>Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>在我们创建 UITextView 的时候,有可能默认的行间距并不合适,调整行间距也比较简单,方法也比较多,今天介绍一直比较常见的,简单的方法:<br/>
-<strong>textView.typingAttributes</strong> 属性设置<br/>
-关于 <strong>textView.typingAttributes</strong>的官方文档介绍就是:<br/>
-用于用户输入的新文本的属性,<br/>
-该字典包含用于输入文本的属性键值对,当文本视图的选择发生变化时,字典的内容自动被清除</p>
+                        	<p>isMemberOfClass和isKindOfClass一直以来都是想当然的使用,有时候得不到想要的结果,最后决定探究一下,彻底搞清楚,闲话不多说,先看下源码;</p>
 
-<pre class="line-numbers"><code class="language-text">UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(20, 10, 100, 200)];
+<h2 id="toc_0">isMemberOfClass</h2>
 
-textView.delegate = self;
-
-[self.view addSubview:textView];
-
-NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
-
-paragraphStyle.lineSpacing = 20;// 字体的行间距
-
-NSDictionary *attributes = @{
-                             NSFontAttributeName:[UIFont systemFontOfSize:17],
-                             NSParagraphStyleAttributeName:paragraphStyle
-                             };
-textView.typingAttributes = attributes;
-</code></pre>
-
-<p><img src="media/15833788745389/15833792273218.jpg" alt="" style="width:602px;"/><br/>
-但是这样设置会有一个问题 就是光标会变大<br/>
-<img src="media/15833788745389/15833792578456.jpg" alt="" style="width:311px;"/><br/>
- 解决光标变大的问题 目前只有自定义 TextView ,<br/>
- UITextView遵循了UITextInput协议，其中有返回光标frame的方法</p>
-
-<ul>
-<li>(CGRect)caretRectForPosition:(UITextPosition *)position，所以我们可以使用自定义的TextView，重写返回光标frame的方法避免光标扩大问题。</li>
-</ul>
-
-<pre class="line-numbers"><code class="language-text">- (CGRect)caretRectForPosition:(UITextPosition *)position {
-    CGRect originalRect = [super caretRectForPosition:position];
-    originalRect.size.height = self.font.lineHeight + 1;
-    originalRect.size.width = 1.5;
-
-    return originalRect;
+<pre class="line-numbers"><code class="language-text">+ (BOOL)isMemberOfClass:(Class)cls {
+    return object_getClass((id)self) == cls;
+}
+- (BOOL)isMemberOfClass:(Class)cls {
+    return [self class] == cls;
 }
 </code></pre>
 
-<p><img src="media/15833788745389/15833794042367.jpg" alt="" style="width:704px;"/></p>
+<p>isMemberOfClass有两个方法,一个是实例方法,一个是类方法,他俩的区别是:</p>
 
-<p>参考：<a href="https://www.jianshu.com/p/085ee268b43a">https://www.jianshu.com/p/085ee268b43a</a></p>
+<ul>
+<li>实例方法- (BOOL)isMemberOfClass:(Class)cls: 根据实例对象取得类对象,再去判断</li>
+<li>类方法 + (BOOL)isMemberOfClass:(Class)cls:根据对象取得元类对象,再去判断</li>
+</ul>
+
+<p>其实简单的说是根据传入的类的 isa,来判断,因为实例对象的 isa 是实例的类对象,类对象的 isa 指向的是类的元类,Meta Class</p>
+
+<p>验证:<br/>
+创建两个类,Person 类继承自 NSObject<br/>
+Student 类继承自 Person<br/>
+<img src="media/15834860456410/15834866616638.jpg" alt="" style="width:259px;"/><br/>
+<img src="media/15834860456410/15834866735409.jpg" alt="" style="width:232px;"/></p>
+
+<p>先看代码,思考一下打印结果是什么<br/>
+<img src="media/15834860456410/15834890909476.jpg" alt="" style="width:554px;"/><br/>
+res1 : [Person class] Person 类的元类 是不是和[NSObject class]类一致? 肯定是不一致 所以返回 NO<br/>
+res2: [Person class] Person 类的元类 是不是和[Person class]类一致? 元类和类肯定也是不一致 所以返回 NO</p>
+
+<p>实例对象;<br/>
+<img src="media/15834860456410/15834894446040.jpg" alt="" style="width:524px;"/><br/>
+第一行,Person new 出来一个实例,该实例的 isa 指向类 Person, 而 Person 很明显不是 NSObject类,所以为 0;<br/>
+第二行,Person new 出来一个实例,该实例的 isa 指向类 Person, 判断 Person 类是不是 Person,答案是肯定的,所以为 1;</p>
+
+<p><img src="media/15834860456410/15834896748734.jpg" alt="" style="width:765px;"/></p>
+
+<p><strong>object_getClass(cls)</strong> 这个方法返回是传入类的元类 </p>
+
+<h2 id="toc_1">isKindOfClass</h2>
+
+<ul>
+<li>调用者是传入的类的实例对象，或者调用者是传入类的继承者链中的类的实例对象，则返回YES</li>
+<li>判断调用者是否是传入对象的子类，别弄反了</li>
+<li>去父类递归查找判断</li>
+</ul>
+
+<pre class="line-numbers"><code class="language-text">+ (BOOL)isKindOfClass:(Class)cls {
+    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls-&gt;super_class) {
+        if(tcls == cls) return YES;
+    }
+    return NO;
+}
+-（BOOL)isKindOfClass:(Class)cls {
+    for(Class tcls = [self class]; tcls; tcls = tcls-&gt;super_class) {
+        if(tcls == cls) return YES;
+    }
+    return NO;
+}
+</code></pre>
+
+<p><img src="media/15834860456410/15834900954033.jpg" alt="" style="width:783px;"/></p>
+
+<p>参考:<br/>
+<a href="https://www.lagou.com/lgeduarticle/14758.html">https://www.lagou.com/lgeduarticle/14758.html</a></p>
 
                         
                       </div>
@@ -174,10 +198,10 @@ textView.typingAttributes = attributes;
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/05</span>
+                    <span class="date">2020/03/06</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html'>iOS 开发技巧整理</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -263,6 +287,8 @@ textView.typingAttributes = attributes;
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
         
             <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
+        
+            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
          
         </p>
 
@@ -279,31 +305,31 @@ textView.typingAttributes = attributes;
 	      
 		      
 			      <li class="post">
-			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			        <a href="15853864599373.html">iOS 网络总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15846246156341.html">两数之和问题</a>
+			        <a href="15851198875953.html">Runtime 学习总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			        <a href="15852331403843.html">iOS 高手课</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

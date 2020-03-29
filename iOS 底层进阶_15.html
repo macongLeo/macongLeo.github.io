@@ -1,0 +1,731 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+    
+  iOS 底层进阶 - 路漫漫其修远兮
+  
+  </title>
+  
+  
+  <link href="atom.xml" rel="alternate" title="路漫漫其修远兮" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/foundation.min.css" />
+    <link rel="stylesheet" href="asset/css/docs.css" />
+    <script src="asset/js/vendor/modernizr.js"></script>
+    <script src="asset/js/vendor/jquery.js"></script>
+ 
+<script type="text/javascript">
+  function before_search(){
+    var searchVal = 'site: ' + document.getElementById('search_input').value;
+    document.getElementById('search_q').value = searchVal;
+    return true;
+  }
+</script>
+  </head>
+  <body class="antialiased hide-extras">
+    
+    <div class="marketing off-canvas-wrap" data-offcanvas>
+      <div class="inner-wrap">
+
+
+<nav class="top-bar docs-bar hide-for-small" data-topbar>
+
+
+  <section class="top-bar-section">
+  <div class="row">
+      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
+        <ul id="main-menu" class="left">
+        
+        <li id=""><a target="self" href="index.html">Home</a></li>
+        
+        <li id=""><a target="_self" href="archives.html">Archives</a></li>
+        
+        </ul>
+
+        <ul class="right" id="search-wrap">
+          <li>
+<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
+    <input type="hidden" id="search_q" name="q" value="" />
+    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
+</form>
+</li>
+          </ul>
+      </div></div>
+  </div>
+  </section>
+
+</nav>
+
+        <nav class="tab-bar show-for-small">
+  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
+    <span> &nbsp; 路漫漫其修远兮</span>
+  </a>
+</nav>
+
+<aside class="left-off-canvas-menu">
+      <ul class="off-canvas-list">
+        
+        <li><a target="self" href="index.html">Home</a></li>
+        
+        <li><a target="_self" href="archives.html">Archives</a></li>
+        
+
+    <li><label>Categories</label></li>
+
+        
+            <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
+        
+            <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
+        
+            <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
+        
+            <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
+        
+            <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a></li>
+        
+            <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a></li>
+        
+            <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
+        
+            <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
+        
+            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
+        
+            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
+         
+
+      </ul>
+    </aside>
+
+<a class="exit-off-canvas" href="#"></a>
+
+
+        <section id="main-content" role="main" class="scroll-container">
+        
+       
+
+ <script type="text/javascript">
+	$(function(){
+		$('#menu_item_index').addClass('is_active');
+	});
+</script>
+<div class="row">
+	<div class="large-8 medium-8 columns">
+		<div class="markdown-body home-categories">
+		
+			<div class="article">
+                <a class="clearlink" href="15788827057157.html">
+                
+                  <h1>Runtime</h1>
+                  <div class="a-content">
+                      
+                      <div class="a-content-text">
+                        
+                        	<p><img src="media/15788827057157/15788999942773.jpg" alt="" style="width:939px;"/><br/>
+Runtime 的特性主要是消息（方法）传递，如果消息（方法）在对象中找不到，就会进行消息转发。</p>
+
+<h2 id="toc_0">Runtime 介绍</h2>
+
+<blockquote>
+<p>Objective-C 拓展了 C语言，并且加入了面向对象特性和 SmallTalk 式的消息传递机制，而这个拓展的核心就是用 C 和编译语言写的Runtime库。Runtime是面向对象的基础。</p>
+</blockquote>
+
+<p><img src="media/15788827057157/15789003887697.jpg" alt="" style="width:684px;"/></p>
+
+<h2 id="toc_1">Runtime 消息传递</h2>
+
+<p>一个对象的方法[obj foo]，编译器转成消息转发：<strong>objc_msgSend(obj, foo)</strong><br/>
+Runtime 执行的流程如下：</p>
+
+<ul>
+<li>首先通过 obj 的 isa 指针， 找到他的 Class</li>
+<li>在 class 的 methodlist（方法列表） 列表中找方法： foo</li>
+<li>如果 class 中没有找到 foo，就向上去父类的方法列表中继续查找；</li>
+<li>如果找到了就执行，去实现 IMP。</li>
+</ul>
+
+<p><img src="media/15788827057157/15789011491768.jpg" alt="" style="width:687px;"/><br/>
+<img src="media/15788827057157/15789013576022.jpg" alt="" style="width:664px;"/></p>
+
+<ol>
+<li>系统首先找到消息的接收对象,然后通过对象的 isa 找到他的类 class.</li>
+<li>然后在他的类中查找 method_list,是否有 selector 方法</li>
+<li>没有找到则继续查找父类的 method_list.</li>
+<li>找到对应的 method,执行他的 IMP</li>
+<li>转发 IMP 的 return 值.</li>
+</ol>
+
+<p>下面讲一下消息传递中用到的概念:</p>
+
+<ul>
+<li>类对象(objc_class)</li>
+<li>实例对象(objc_object)</li>
+<li>元类(Meta Class)</li>
+<li>Method(objc_method)</li>
+<li>SEL(objc_selector)</li>
+<li>IMP</li>
+<li>类缓存(objc_cache)</li>
+<li>Category(objc_category)</li>
+</ul>
+
+<h3 id="toc_2">类对象(objc_class)</h3>
+
+<p>在 OC 中类是有 Class 类型表示的,它实际上是一个指向 objc_class 的结构体指针<br/>
+<img src="media/15788827057157/15789018290104.jpg" alt="" style="width:295px;"/><br/>
+<img src="media/15788827057157/15789018799631.jpg" alt="" style="width:960px;"/><br/>
+struct objc_class结构体定义了很多变量，通过命名不难发现，<br/>
+结构体里保存了指向父类的指针、类的名字、版本、实例大小、实例变量列表、方法列表、缓存、遵守的协议列表等，<br/>
+一个类包含的信息也不就正是这些吗？没错，类对象就是一个结构体struct objc_class，这个结构体存放的数据称为元数据(metadata)，<br/>
+该结构体的第一个成员变量也是isa指针，这就说明了Class本身其实也是一个对象，因此我们称之为类对象，类对象在编译期产生用于创建实例对象，是单例。</p>
+
+<h3 id="toc_3">实例(objc_object)</h3>
+
+<p><img src="media/15788827057157/15789019974820.jpg" alt="" style="width:420px;"/></p>
+
+<p>类对象中的元数据存储的都是如何创建一个实例相关的信息,那么类对象和类方法应该从哪里创建呢? 就是 isa 指针指向的结构体创建,类对象的 isa 指针指向的我们称为元类,元类中保存了创建类对象及类方法所需的所有信息,所以经典的那张图又来了:<br/>
+<img src="media/15788827057157/15789021597096.jpg" alt="" style="width:934px;"/></p>
+
+<h3 id="toc_4">元类(Meta Class)</h3>
+
+<p>通过上图我们可以发现整个体系构成了一个自闭环, <strong>struct objc_object</strong> 的结构体实例, 它的 isa 指向类对象,类对象的 isa 指向元类,super_class 指针指向父类的类对象,而元类的 super_class 的指针指向了父类的元类,那元类的指针又指向了自己.<br/>
+元类是一个类对象的类,在上面我们提到所有的类自身也是一个对象,我们可以像这个对象发送消息(调用方法),为了调用类方法,这个类的 isa 指针必须指向一个包含这些类方法的一个 objc_class 结构体,这就引出了元类(meta-class)的概念.<br/>
+元类中保存了创建类对象以及类方法所需的所有信息。 任何NSObject继承体系下的meta-class都使用NSObject的meta-class作为自己的所属类，而<strong>基类的meta-class的isa指针是指向它自己</strong>。</p>
+
+<p><img src="media/15788827057157/15789044962794.jpg" alt="" style="width:881px;"/></p>
+
+<ul>
+<li>SEL method_name    方法名</li>
+<li>char *method_types 方法类型</li>
+<li>IMP method_imp     方法实现</li>
+</ul>
+
+<p><img src="media/15788827057157/15789046998441.jpg" alt="" style="width:728px;"/></p>
+
+<p>objc_msgSend 函数第二个参数类型为 SEL.它是 selector 在 OC 中的表示类型(Swift 中是 Selector 类).selector 是方法选择器,可以理解为区分方法的 ID,而这个 ID 的数据结构是 SEL.<br/>
+<img src="media/15788827057157/15789049888500.jpg" alt="" style="width:972px;"/></p>
+
+<p><img src="media/15788827057157/15789050086371.jpg" alt="" style="width:988px;"/></p>
+
+<p><img src="media/15788827057157/15789060707679.jpg" alt="" style="width:978px;"/></p>
+
+<p><img src="media/15788827057157/15789062512658.jpg" alt="" style="width:547px;"/></p>
+
+<ul>
+<li>name:是指 class_name 而不是 category_name。</li>
+<li>cls:要扩展的类对象，编译期间是不会定义的，而是在Runtime阶段通过name对 应到对应的类对象。</li>
+<li>instanceMethods：category中所有给类添加的实例方法的列表。</li>
+<li>classMethods：category中所有添加的类方法的列表。</li>
+<li>protocols：category实现的所有协议的列表。</li>
+<li>instanceProperties：表示Category里所有的properties，这就是我们可以通过objc_setAssociatedObject和objc_getAssociatedObject增加实例变量的原因，不过这个和一般的实例变量是不一样的。</li>
+</ul>
+
+<p><img src="media/15788827057157/15789063762697.jpg" alt="" style="width:983px;"/></p>
+
+<h2 id="toc_5">Runtime 消息转发</h2>
+
+<p>消息转发的最后三次机会</p>
+
+<ul>
+<li>动态方法解析</li>
+<li>备用接受者</li>
+<li>完整消息转发</li>
+</ul>
+
+<p><img src="media/15788827057157/15789064378501.jpg" alt="" style="width:974px;"/></p>
+
+<h3 id="toc_6">动态方法解析</h3>
+
+<p><img src="media/15788827057157/15789066286973.jpg" alt="" style="width:964px;"/></p>
+
+<p>可以看到虽然没有实现foo:这个函数，但是我们通过class_addMethod动态添加fooMethod函数，并执行fooMethod这个函数的IMP。从打印结果看，成功实现了。<br/>
+如果resolve方法返回 NO ，运行时就会移到下一步：<strong>forwardingTargetForSelector</strong>。</p>
+
+<h3 id="toc_7">备用接受者</h3>
+
+<p>如果目标对象实现了<strong>-forwardingTargetForSelector:</strong>，Runtime 这时就会调用这个方法，给你把这个消息转发给其他对象的机会。</p>
+
+<p>实现一个备用接收者的例子如下：</p>
+
+<p><img src="media/15788827057157/15789068795712.jpg" alt="" style="width:667px;"/><br/>
+可以看到我们通过forwardingTargetForSelector把当前ViewController的方法转发给了Person去执行了。打印结果也证明我们成功实现了转发。</p>
+
+<h3 id="toc_8">完整消息转发</h3>
+
+<p>如果在上一步还不能处理未知消息，则唯一能做的就是启用完整的消息转发机制了。<br/>
+首先它会发送<strong>-methodSignatureForSelector:</strong>消息获得函数的参数和返回值类型。如果-<strong>methodSignatureForSelector:</strong>返回nil ，Runtime则会发出 <strong>-doesNotRecognizeSelector:</strong> 消息，程序这时也就挂掉了。如果返回了一个函数签名，Runtime就会创建一个<strong>NSInvocation</strong> 对象并发送 <strong>-forwardInvocation:</strong>消息给目标对象。</p>
+
+<p><img src="media/15788827057157/15789070035039.jpg" alt="" style="width:765px;"/><br/>
+<img src="media/15788827057157/15789070187925.jpg" alt="" style="width:774px;"/><br/>
+从打印结果来看，我们实现了完整的转发。通过签名，Runtime生成了一个对象anInvocation，发送给了forwardInvocation，我们在forwardInvocation方法里面让Person对象去执行了foo函数。签名参数v@:怎么解释呢，这里苹果文档Type Encodings有详细的解释。<br/>
+以上就是Runtime的三次转发流程。下面我们讲讲Runtime的实际应用。<br/>
+<img src="media/15788827057157/15789072653201.jpg" alt="" style="width:987px;"/></p>
+
+<h2 id="toc_9">Runtime 应用</h2>
+
+<ul>
+<li>AOP 面向切片编程(埋点方面用的比较多)
+<img src="media/15788827057157/15789071021461.jpg" alt="" style="width:702px;"/>
+<img src="media/15788827057157/15789071215521.jpg" alt="" style="width:811px;"/></li>
+</ul>
+
+<p>下面实现一个UIView的Category添加自定义属性defaultColor。<br/>
+<img src="media/15788827057157/15789080004602.jpg" alt="" style="width:839px;"/><br/>
+<img src="media/15788827057157/15789080309274.jpg" alt="" style="width:969px;"/></p>
+
+<p><img src="media/15788827057157/15789079081069.jpg" alt="" style="width:961px;"/><br/>
+<strong><em>注:weak 的关联内存管理策略是什么?</em></strong><br/>
+<a href="https://dayon.gitbooks.io/-ios/content/chapter8.html">https://dayon.gitbooks.io/-ios/content/chapter8.html</a></p>
+
+<h3 id="toc_10">方法添加</h3>
+
+<p><img src="media/15788827057157/15789083218769.jpg" alt="" style="width:943px;"/></p>
+
+<h3 id="toc_11">方法替换</h3>
+
+<p>下面实现一个替换ViewController的viewDidLoad方法的例子。<br/>
+<img src="media/15788827057157/15789085581682.jpg" alt="" style="width:1074px;"/><br/>
+swizzling应该只在+load中完成。 在 Objective-C 的运行时中，每个类有两个方法都会自动调用。+load 是在一个类被初始装载时调用，+initialize 是在应用第一次调用该类的类方法或实例方法前调用的。两个方法都是可选的，并且只有在方法被实现的情况下才会被调用。<br/>
+swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的状态，所以我们需要确保每个预防措施在运行时都是可用的。原子操作就是这样一个用于确保代码只会被执行一次的预防措施，就算是在不同的线程中也能确保代码只执行一次。Grand Central Dispatch 的 dispatch_once满足了所需要的需求，并且应该被当做使用swizzling 的初始化单例方法的标准。</p>
+
+<h3 id="toc_12">KVO实现</h3>
+
+<p><img src="media/15788827057157/15789086448973.jpg" alt="" style="width:924px;"/><br/>
+<img src="media/15788827057157/15789086852696.jpg" alt="" style="width:941px;"/><br/>
+<img src="media/15788827057157/15789087796562.jpg" alt="" style="width:950px;"/></p>
+
+<p>注:<br/>
+消息转发中&quot;v@:&quot;含义:<br/>
+<img src="media/15788827057157/15789066840487.jpg" alt="" style="width:712px;"/></p>
+
+<p>参考：<br/>
+<a href="https://juejin.im/post/5ac0a6116fb9a028de44d717">https://juejin.im/post/5ac0a6116fb9a028de44d717</a><br/>
+<a href="https://bujige.net/blog/iOS-Runtime-01.html">https://bujige.net/blog/iOS-Runtime-01.html</a><br/>
+<a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100">https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100</a><br/>
+<a href="https://www.jianshu.com/p/ab966e8a82e2">https://www.jianshu.com/p/ab966e8a82e2</a></p>
+
+                        
+                      </div>
+                  </div>
+                </a>
+                <div class="read-more clearfix">
+                  <div class="more-left left">
+                  
+                    <span class="date">2020/01/13</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          				   
+                    
+
+                  </div>
+                  <div class="more-right right">
+                  <span class="comments">
+                      
+
+                       
+                  </span>
+                  </div>
+                </div>
+              </div><!-- article -->
+        
+              
+
+
+			<div class="row">
+			  <div class="large-6 columns">
+			  <p class="text-left" style="padding-top:25px;">
+			   <a href="iOS 底层进阶_14.html">&laquo; Prev Page</a>  
+			  </p>
+			  </div>
+			  <div class="large-6 columns">
+			<p class="text-right" style="padding-top:25px;">
+			 <a href="iOS 底层进阶_16.html">&raquo; Next Page</a> 
+			</p>
+			  </div>
+			</div>
+		</div>
+	</div><!-- large 8 -->
+
+ <div class="large-4 medium-4 columns">
+  <div class="hide-for-small">
+    <div id="sidebar" class="sidebar">
+          <div id="site-info" class="site-info">
+            
+                <div class="site-a-logo"><img src="img/icon.jpg" /></div>
+            
+                <h1>路漫漫其修远兮</h1>
+                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="social">
+
+
+
+
+
+
+
+<a target="_blank" class="weibo" href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" title="weibo">Weibo</a>
+
+<a target="_blank" class="github" target="_blank" href="https://github.com/macongLeo/macongLeo.github.io.git" title="GitHub">GitHub</a>
+
+  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
+                
+              	 </div>
+          	</div>
+
+             
+
+              <div id="site-categories" class="side-item ">
+                <div class="side-header">
+                  <h2>Categories</h2>
+                </div>
+                <div class="side-content">
+
+      	<p class="cat-list">
+        
+            <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
+        
+            <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
+        
+            <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
+        
+            <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
+        
+            <a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html"><strong>网络进阶</strong></a>
+        
+            <a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html"><strong>性能优化</strong></a>
+        
+            <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
+        
+            <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
+        
+            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
+        
+            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
+         
+        </p>
+
+
+                </div>
+              </div>
+
+              <div id="site-categories" class="side-item">
+                <div class="side-header">
+                  <h2>Recent Posts</h2>
+                </div>
+                <div class="side-content">
+                <ul class="posts-list">
+	      
+		      
+			      <li class="post">
+			        <a href="15853864599373.html">iOS 网络总结</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15851198875953.html">Runtime 学习总结</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852331403843.html">iOS 高手课</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
+			      </li>
+		     
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		   
+		  		</ul>
+                </div>
+              </div>
+        </div><!-- sidebar -->
+      </div><!-- hide for small -->
+</div><!-- large 4 -->
+
+</div><!-- row -->
+
+ <div class="page-bottom clearfix">
+  <div class="row">
+   <p class="copyright">Copyright &copy; 2015
+Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
+  </div>
+</div>
+
+        </section>
+      </div>
+    </div>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+figure{margin: 0;padding: 0;}
+figcaption{text-align:center;}
+
+/* PrismJS 1.14.0
+ http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
+/**
+ * prism.js default theme for JavaScript, CSS and HTML
+ * Based on dabblet (http://dabblet.com)
+ * @author Lea Verou
+ */
+
+code[class*="language-"],
+pre[class*="language-"] {
+    color: black;
+    background: none;
+    text-shadow: 0 1px white;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+    
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+    
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
+}
+
+pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
+code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
+    text-shadow: none;
+    background:#b3d4fc;
+}
+
+pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
+code[class*="language-"]::selection, code[class*="language-"] ::selection {
+    text-shadow: none;
+    background: #b3d4fc;
+}
+
+@media print {
+    code[class*="language-"],
+    pre[class*="language-"] {
+        text-shadow: none;
+    }
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+    padding: 1em;
+    margin: .5em 0;
+    overflow: auto;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+    background: #F7F7F7;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+    padding: .1em;
+    border-radius: .3em;
+    white-space: normal;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: slategray;
+}
+
+.token.punctuation {
+    color: #999;
+}
+
+.namespace {
+    opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: #905;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: #690;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #9a6e3a;
+    background: hsla(0, 0%, 100%, .5);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: #07a;
+}
+
+.token.function,
+.token.class-name {
+    color: #DD4A68;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+    color: #e90;
+}
+
+.token.important,
+.token.bold {
+    font-weight: bold;
+}
+.token.italic {
+    font-style: italic;
+}
+
+.token.entity {
+    cursor: help;
+}
+
+
+pre[class*="language-"].line-numbers {
+    position: relative;
+    padding-left: 3.8em;
+    counter-reset: linenumber;
+}
+
+pre[class*="language-"].line-numbers > code {
+    position: relative;
+    white-space: inherit;
+}
+
+.line-numbers .line-numbers-rows {
+    position: absolute;
+    pointer-events: none;
+    top: 0;
+    font-size: 100%;
+    left: -3.8em;
+    width: 3em; /* works for line-numbers below 1000 lines */
+    letter-spacing: -1px;
+    border-right: 1px solid #999;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+}
+
+    .line-numbers-rows > span {
+        pointer-events: none;
+        display: block;
+        counter-increment: linenumber;
+    }
+
+        .line-numbers-rows > span:before {
+            content: counter(linenumber);
+            color: #999;
+            display: block;
+            padding-right: 0.8em;
+            text-align: right;
+        }
+
+</style>
+
+  
+    
+
+    <script src="asset/js/foundation.min.js"></script>
+    <script>
+      $(document).foundation();
+      function fixSidebarHeight(){
+        var w1 = $('.markdown-body').height();
+          var w2 = $('#sidebar').height();
+          if (w1 > w2) { $('#sidebar').height(w1); };
+      }
+      $(function(){
+        fixSidebarHeight();
+      })
+      $(window).load(function(){
+          fixSidebarHeight();
+      });
+     
+    </script>
+
+
+
+  </body>
+</html>

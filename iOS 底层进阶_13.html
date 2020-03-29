@@ -1,0 +1,652 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+    
+  iOS 底层进阶 - 路漫漫其修远兮
+  
+  </title>
+  
+  
+  <link href="atom.xml" rel="alternate" title="路漫漫其修远兮" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/foundation.min.css" />
+    <link rel="stylesheet" href="asset/css/docs.css" />
+    <script src="asset/js/vendor/modernizr.js"></script>
+    <script src="asset/js/vendor/jquery.js"></script>
+ 
+<script type="text/javascript">
+  function before_search(){
+    var searchVal = 'site: ' + document.getElementById('search_input').value;
+    document.getElementById('search_q').value = searchVal;
+    return true;
+  }
+</script>
+  </head>
+  <body class="antialiased hide-extras">
+    
+    <div class="marketing off-canvas-wrap" data-offcanvas>
+      <div class="inner-wrap">
+
+
+<nav class="top-bar docs-bar hide-for-small" data-topbar>
+
+
+  <section class="top-bar-section">
+  <div class="row">
+      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
+        <ul id="main-menu" class="left">
+        
+        <li id=""><a target="self" href="index.html">Home</a></li>
+        
+        <li id=""><a target="_self" href="archives.html">Archives</a></li>
+        
+        </ul>
+
+        <ul class="right" id="search-wrap">
+          <li>
+<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
+    <input type="hidden" id="search_q" name="q" value="" />
+    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
+</form>
+</li>
+          </ul>
+      </div></div>
+  </div>
+  </section>
+
+</nav>
+
+        <nav class="tab-bar show-for-small">
+  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
+    <span> &nbsp; 路漫漫其修远兮</span>
+  </a>
+</nav>
+
+<aside class="left-off-canvas-menu">
+      <ul class="off-canvas-list">
+        
+        <li><a target="self" href="index.html">Home</a></li>
+        
+        <li><a target="_self" href="archives.html">Archives</a></li>
+        
+
+    <li><label>Categories</label></li>
+
+        
+            <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
+        
+            <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
+        
+            <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
+        
+            <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
+        
+            <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a></li>
+        
+            <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a></li>
+        
+            <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
+        
+            <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
+        
+            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
+        
+            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
+         
+
+      </ul>
+    </aside>
+
+<a class="exit-off-canvas" href="#"></a>
+
+
+        <section id="main-content" role="main" class="scroll-container">
+        
+       
+
+ <script type="text/javascript">
+	$(function(){
+		$('#menu_item_index').addClass('is_active');
+	});
+</script>
+<div class="row">
+	<div class="large-8 medium-8 columns">
+		<div class="markdown-body home-categories">
+		
+			<div class="article">
+                <a class="clearlink" href="15815876783958.html">
+                
+                  <h1>iOS 中的锁</h1>
+                  <div class="a-content">
+                      
+                      <div class="a-content-text">
+                        
+                        	<ul>
+<li>自旋锁(OSSpinLock)</li>
+<li>互斥锁</li>
+<li>pthread_mutex</li>
+<li>信号量(dispatch_semaphore)</li>
+<li>NSLock</li>
+<li>递归锁(NSRecursiveLock)</li>
+<li>条件锁(NSConditionLock)</li>
+<li>@synchronized</li>
+</ul>
+
+<p><strong>自旋锁(OSSpinLock)</strong></p>
+
+<blockquote>
+<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
+</blockquote>
+
+<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
+自旋锁的问题:<br/>
+    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
+    2. 递归调用有可能引起死锁<br/>
+    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
+
+<p><strong>互斥锁</strong><br/>
+互斥锁属于 sleep-waiting 类型的锁.</p>
+
+<blockquote>
+<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
+</blockquote>
+
+<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
+自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
+
+<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
+互斥锁适用:</p>
+
+<ul>
+<li>临界区有 IO 操作</li>
+<li>临界区代码复制或者循环量大</li>
+<li>临界区竞争非常激烈</li>
+<li>单核处理器</li>
+</ul>
+
+<p>自旋锁适用:<br/>
+临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
+
+<blockquote>
+<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
+优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
+</blockquote>
+
+<p><strong>os_unfair_lock</strong></p>
+
+<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
+
+<p><strong>pthread_mutex</strong><br/>
+mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
+
+<p><strong>NSLock</strong><br/>
+NSLock是对 mutex 的普通锁的封装<br/>
+NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
+trylock 是尝试加锁,如果失败的话就返回 NO</p>
+
+<p><strong>信号量</strong><br/>
+    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
+    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
+
+<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
+dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
+dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
+用法:
+信号量常用于对资源进行加锁操作
+</code></pre>
+
+<pre class="line-numbers"><code class="language-text">//在init等函数初始化
+_lock = dispatch_semaphore_create(1); 
+dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
+//修改Array或字典等数据的信息
+dispatch_semaphore_signal(_lock);
+</code></pre>
+
+<p><strong>@synchronized</strong><br/>
+@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
+
+<pre class="line-numbers"><code class="language-text">// 写数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
+    }
+});
+// 读数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        id obj = [dict objectForKey:@&quot;trail&quot;];
+    }
+});
+</code></pre>
+
+<p>参考:<br/>
+<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
+<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
+<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
+
+                        
+                      </div>
+                  </div>
+                </a>
+                <div class="read-more clearfix">
+                  <div class="more-left left">
+                  
+                    <span class="date">2020/02/13</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
+          				   
+                    
+
+                  </div>
+                  <div class="more-right right">
+                  <span class="comments">
+                      
+
+                       
+                  </span>
+                  </div>
+                </div>
+              </div><!-- article -->
+        
+              
+
+
+			<div class="row">
+			  <div class="large-6 columns">
+			  <p class="text-left" style="padding-top:25px;">
+			   <a href="iOS 底层进阶_12.html">&laquo; Prev Page</a>  
+			  </p>
+			  </div>
+			  <div class="large-6 columns">
+			<p class="text-right" style="padding-top:25px;">
+			 <a href="iOS 底层进阶_14.html">&raquo; Next Page</a> 
+			</p>
+			  </div>
+			</div>
+		</div>
+	</div><!-- large 8 -->
+
+ <div class="large-4 medium-4 columns">
+  <div class="hide-for-small">
+    <div id="sidebar" class="sidebar">
+          <div id="site-info" class="site-info">
+            
+                <div class="site-a-logo"><img src="img/icon.jpg" /></div>
+            
+                <h1>路漫漫其修远兮</h1>
+                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="social">
+
+
+
+
+
+
+
+<a target="_blank" class="weibo" href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" title="weibo">Weibo</a>
+
+<a target="_blank" class="github" target="_blank" href="https://github.com/macongLeo/macongLeo.github.io.git" title="GitHub">GitHub</a>
+
+  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
+                
+              	 </div>
+          	</div>
+
+             
+
+              <div id="site-categories" class="side-item ">
+                <div class="side-header">
+                  <h2>Categories</h2>
+                </div>
+                <div class="side-content">
+
+      	<p class="cat-list">
+        
+            <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
+        
+            <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
+        
+            <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
+        
+            <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
+        
+            <a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html"><strong>网络进阶</strong></a>
+        
+            <a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html"><strong>性能优化</strong></a>
+        
+            <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
+        
+            <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
+        
+            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
+        
+            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
+         
+        </p>
+
+
+                </div>
+              </div>
+
+              <div id="site-categories" class="side-item">
+                <div class="side-header">
+                  <h2>Recent Posts</h2>
+                </div>
+                <div class="side-content">
+                <ul class="posts-list">
+	      
+		      
+			      <li class="post">
+			        <a href="15853864599373.html">iOS 网络总结</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15851198875953.html">Runtime 学习总结</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852331403843.html">iOS 高手课</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
+			      </li>
+		     
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		   
+		  		</ul>
+                </div>
+              </div>
+        </div><!-- sidebar -->
+      </div><!-- hide for small -->
+</div><!-- large 4 -->
+
+</div><!-- row -->
+
+ <div class="page-bottom clearfix">
+  <div class="row">
+   <p class="copyright">Copyright &copy; 2015
+Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
+  </div>
+</div>
+
+        </section>
+      </div>
+    </div>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+figure{margin: 0;padding: 0;}
+figcaption{text-align:center;}
+
+/* PrismJS 1.14.0
+ http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
+/**
+ * prism.js default theme for JavaScript, CSS and HTML
+ * Based on dabblet (http://dabblet.com)
+ * @author Lea Verou
+ */
+
+code[class*="language-"],
+pre[class*="language-"] {
+    color: black;
+    background: none;
+    text-shadow: 0 1px white;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+    
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+    
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
+}
+
+pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
+code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
+    text-shadow: none;
+    background:#b3d4fc;
+}
+
+pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
+code[class*="language-"]::selection, code[class*="language-"] ::selection {
+    text-shadow: none;
+    background: #b3d4fc;
+}
+
+@media print {
+    code[class*="language-"],
+    pre[class*="language-"] {
+        text-shadow: none;
+    }
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+    padding: 1em;
+    margin: .5em 0;
+    overflow: auto;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+    background: #F7F7F7;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+    padding: .1em;
+    border-radius: .3em;
+    white-space: normal;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: slategray;
+}
+
+.token.punctuation {
+    color: #999;
+}
+
+.namespace {
+    opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: #905;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: #690;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #9a6e3a;
+    background: hsla(0, 0%, 100%, .5);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: #07a;
+}
+
+.token.function,
+.token.class-name {
+    color: #DD4A68;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+    color: #e90;
+}
+
+.token.important,
+.token.bold {
+    font-weight: bold;
+}
+.token.italic {
+    font-style: italic;
+}
+
+.token.entity {
+    cursor: help;
+}
+
+
+pre[class*="language-"].line-numbers {
+    position: relative;
+    padding-left: 3.8em;
+    counter-reset: linenumber;
+}
+
+pre[class*="language-"].line-numbers > code {
+    position: relative;
+    white-space: inherit;
+}
+
+.line-numbers .line-numbers-rows {
+    position: absolute;
+    pointer-events: none;
+    top: 0;
+    font-size: 100%;
+    left: -3.8em;
+    width: 3em; /* works for line-numbers below 1000 lines */
+    letter-spacing: -1px;
+    border-right: 1px solid #999;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+}
+
+    .line-numbers-rows > span {
+        pointer-events: none;
+        display: block;
+        counter-increment: linenumber;
+    }
+
+        .line-numbers-rows > span:before {
+            content: counter(linenumber);
+            color: #999;
+            display: block;
+            padding-right: 0.8em;
+            text-align: right;
+        }
+
+</style>
+
+  
+    
+
+    <script src="asset/js/foundation.min.js"></script>
+    <script>
+      $(document).foundation();
+      function fixSidebarHeight(){
+        var w1 = $('.markdown-body').height();
+          var w2 = $('#sidebar').height();
+          if (w1 > w2) { $('#sidebar').height(w1); };
+      }
+      $(function(){
+        fixSidebarHeight();
+      })
+      $(window).load(function(){
+          fixSidebarHeight();
+      });
+     
+    </script>
+
+
+
+  </body>
+</html>

@@ -92,6 +92,8 @@
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
         
             <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
+        
+            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
          
 
       </ul>
@@ -114,32 +116,42 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15841930756133.html">
+                <a class="clearlink" href="15851180141482.html">
                 
-                  <h1>layoutIfNeeded和setNeedsLayout的区别</h1>
+                  <h1>iOS 语言特性相关</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">layoutIfNeeded</h2>
+                        	<p><img src="media/15851180141482/15851180841539.jpg" alt="" style="width:1065px;"/></p>
 
-<p><code>layoutIfNeeded</code>：<strong>强制视图立即更新其布局，即同步执行</strong>。当使用Auto Layout时，布局引擎根据约束的变化更新视图的位置。该方法的接收者将作为根视图，布局时也将从视图树的根视图开始。如果没有待处理的布局更新，则此方法将直接退出，而不会修改布局，或调用任何与布局有关的方法。</p>
+<p><img src="media/15851180141482/15851181679589.jpg" alt="" style="width:1087px;"/></p>
 
-<h2 id="toc_1">setNeedsLayout</h2>
+<p><img src="media/15851180141482/15851182113619.jpg" alt="" style="width:1155px;"/></p>
 
-<p><code>setNeedsLayout</code>：当需要调整UIView子视图布局时，需要在主线程调用该方法。该方法记录请求并立即返回(即异步执行)，<strong>等待下一个更新周期更新视图(runloop 迭代)</strong>。因此，可以将多个视图布局更新合并到一个update cycle，这样有助于提高性能。需要注意的是，我们无法知道下个update cycle在何时发生。</p>
+<p><img src="media/15851180141482/15851182576877.jpg" alt="" style="width:1172px;"/></p>
 
-<p><a href="https://developer.apple.com/documentation/uikit/uiview?language=objc">Apple 官方文档</a>已经明确说明,开发者不要直接调用 <code>layoutSubViews</code>与<code>drawRect</code>,应该在你认为系统默认的布局和重绘不能带给你想要的效果时,在之类中重写这些方法,然后分别通过 <code>setNeedsLayout</code>和 <code>setNeedsDisPlayInRectangle:</code> 来进行调用</p>
+<p><img src="media/15851180141482/15851182812951.jpg" alt="" style="width:980px;"/></p>
 
-<h3 id="toc_2">哪些操作会出触发 layoutSubViews?</h3>
+<p><img src="media/15851180141482/15851183434238.jpg" alt="" style="width:1224px;"/></p>
 
-<ul>
-<li>init 初始化不会触发layoutSubViews</li>
-<li>addSubviews 会触发layoutSubViews</li>
-<li>设置 view的frame 会触发layoutSubViews(前提是 frame 发生了变化)</li>
-<li>滑动一个 UIScrollView 会触发layoutSubViews</li>
-<li>改变一个 view 的大小也会触发父 View 的layoutSubViews事件</li>
-</ul>
+<p><img src="media/15851180141482/15851187975853.jpg" alt="" style="width:1240px;"/></p>
+
+<p><img src="media/15851180141482/15851188622213.jpg" alt="" style="width:1236px;"/></p>
+
+<p><img src="media/15851180141482/15851189332279.jpg" alt="" style="width:1181px;"/></p>
+
+<p><img src="media/15851180141482/15851191229527.jpg" alt="" style="width:1186px;"/></p>
+
+<p><img src="media/15851180141482/15851191509747.jpg" alt="" style="width:1068px;"/></p>
+
+<p><img src="media/15851180141482/15851192753872.jpg" alt="" style="width:1245px;"/></p>
+
+<p><img src="media/15851180141482/15851194300827.jpg" alt="" style="width:889px;"/></p>
+
+<p><img src="media/15851180141482/15851195044156.jpg" alt="" style="width:991px;"/></p>
+
+<p><img src="media/15851180141482/15851196936570.jpg" alt="" style="width:1261px;"/></p>
 
                         
                       </div>
@@ -148,10 +160,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/14</span>
+                    <span class="date">2020/03/25</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
           				   
                     
 
@@ -237,6 +249,8 @@
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
         
             <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
+        
+            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
          
         </p>
 
@@ -253,31 +267,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			        <a href="15853864599373.html">iOS 网络总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15846246156341.html">两数之和问题</a>
+			        <a href="15851198875953.html">Runtime 学习总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			        <a href="15852331403843.html">iOS 高手课</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

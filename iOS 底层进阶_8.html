@@ -92,6 +92,8 @@
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
         
             <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
+        
+            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
          
 
       </ul>
@@ -114,81 +116,80 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15795063924352.html">
+                <a class="clearlink" href="15834860456410.html">
                 
-                  <h1>AutoReleasePool 自动释放池</h1>
+                  <h1>Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ul>
-<li>App启动后，苹果在主线程 RunLoop 里注册了两个 Observer，其回调都是 _wrapRunLoopWithAutoreleasePoolHandler()。</li>
-<li>第一个 Observer 监视的事件是 Entry(即将进入Loop)，其回调内会调用 _objc_autoreleasePoolPush() 创建自动释放池。其 order 是-2147483647，优先级最高，保证创建释放池发生在其他所有回调之前。</li>
-<li>第二个 Observer 监视了两个事件： BeforeWaiting(准备进入休眠) 时调用_objc_autoreleasePoolPop() 和 _objc_autoreleasePoolPush() 释放旧的池并创建新池；Exit(即将退出Loop) 时调用 _objc_autoreleasePoolPop() 来释放自动释放池。这个 Observer 的 order 是 2147483647，优先级最低，保证其释放池子发生在其他所有回调之后。</li>
-<li>在主线程执行的代码，通常是写在诸如事件回调、Timer回调内的。这些回调会被 RunLoop 创建好的 AutoreleasePool 环绕着，所以不会出现内存泄漏，开发者也不必显示创建 Pool 了。</li>
-</ul>
+                        	<p>isMemberOfClass和isKindOfClass一直以来都是想当然的使用,有时候得不到想要的结果,最后决定探究一下,彻底搞清楚,闲话不多说,先看下源码;</p>
 
-<p>也就是说<mark>AutoreleasePool创建是在一个RunLoop事件开始之前(push)，AutoreleasePool释放是在一个RunLoop事件即将结束之前(pop)。</mark><br/>
-AutoreleasePool里的Autorelease对象的加入是在RunLoop事件中，AutoreleasePool里的Autorelease对象的释放是在AutoreleasePool释放时。</p>
+<h2 id="toc_0">isMemberOfClass</h2>
 
-<h2 id="toc_0">Autorelease对象什么时候释放？</h2>
+<pre class="line-numbers"><code class="language-text">+ (BOOL)isMemberOfClass:(Class)cls {
+    return object_getClass((id)self) == cls;
+}
+- (BOOL)isMemberOfClass:(Class)cls {
+    return [self class] == cls;
+}
+</code></pre>
 
-<p>在没有手动添加 AutoreleasePool的情况下,<br/>
-**Autorelease对象是在当前的 RunLoop 迭代结束的时候释放的 **<br/>
-原因:<br/>
-    系统在每个 RunLoop 迭代中都加入了自动释放池的 Push 和 Pop</p>
-
-<h2 id="toc_1">AutoreleasePool原理</h2>
-
-<p><img src="media/15795063924352/15795107102374.jpg" alt="" style="width:702px;"/></p>
-
-<p><img src="media/15795063924352/15795070852300.jpg" alt="" style="width:536px;"/></p>
+<p>isMemberOfClass有两个方法,一个是实例方法,一个是类方法,他俩的区别是:</p>
 
 <ul>
-<li>AutoreleasePool并没有单独的结构,而是由若干个 AutoreleasePoolPage 以双向链表的形式结合而成(分别对应图中的 parent 和 child 指针)</li>
-<li>AutoreleasePool是按线程一一对应的(结构中的 thread 指向当前线程)</li>
-<li>AutoreleasePoolPage 每个对象会开辟 4096 个字节内存(一页虚拟内存的大小)除了上面的实例变量所占的空间,剩下的空间都用来存储 Autorelease对象</li>
-<li>上面的 id *next 指针作为游标指向栈顶最新 add 进来的 Autorelease对象的下一个位置</li>
-<li>一个 AutoreleasePoolPage 的空间被沾满时,会创建一个新的 AutoreleasePoolPage 对象,连接链表,后来的 Autorelease对象在新的 page 加入</li>
+<li>实例方法- (BOOL)isMemberOfClass:(Class)cls: 根据实例对象取得类对象,再去判断</li>
+<li>类方法 + (BOOL)isMemberOfClass:(Class)cls:根据对象取得元类对象,再去判断</li>
 </ul>
 
-<p>所以若当前线程中只有一个 AutoreleasePoolPage 对象,并记录了很多 Autorelease对象地址时,内存:<br/>
-<img src="media/15795063924352/15795075970216.jpg" alt="" style="width:520px;"/><br/>
-图中的情况，这一页再加入一个autorelease对象就要满了（也就是next指针马上指向栈顶），这时就要执行上面说的操作，建立下一页page对象，与这一页链表连接完成后，新page的next指针被初始化在栈底（begin的位置），然后继续向栈顶添加新对象。</p>
+<p>其实简单的说是根据传入的类的 isa,来判断,因为实例对象的 isa 是实例的类对象,类对象的 isa 指向的是类的元类,Meta Class</p>
 
-<p><mark><strong>向一个对象发送- autorelease消息，就是将这个对象加入到当前AutoreleasePoolPage的栈顶next指针指向的位置</strong></mark><br/>
-这一步只是把 Autorelease对象加入到了自动释放池,还并没有释放</p>
+<p>验证:<br/>
+创建两个类,Person 类继承自 NSObject<br/>
+Student 类继承自 Person<br/>
+<img src="media/15834860456410/15834866616638.jpg" alt="" style="width:259px;"/><br/>
+<img src="media/15834860456410/15834866735409.jpg" alt="" style="width:232px;"/></p>
 
-<h3 id="toc_2">真正释放时刻</h3>
+<p>先看代码,思考一下打印结果是什么<br/>
+<img src="media/15834860456410/15834890909476.jpg" alt="" style="width:554px;"/><br/>
+res1 : [Person class] Person 类的元类 是不是和[NSObject class]类一致? 肯定是不一致 所以返回 NO<br/>
+res2: [Person class] Person 类的元类 是不是和[Person class]类一致? 元类和类肯定也是不一致 所以返回 NO</p>
 
-<p>每当进行一次<mark><strong>objc_autoreleasePoolPush</strong></mark>调用时，runtime向当前的AutoreleasePoolPage中add进一个哨兵对象，值为0（也就是个nil），那么这一个page就变成了下面的样子：<br/>
-<img src="media/15795063924352/15795082558655.jpg" alt="" style="width:754px;"/><br/>
-<mark>objc_autoreleasePoolPush</mark>的返回值正是这个哨兵对象的地址，被<mark>objc_autoreleasePoolPop</mark>(哨兵对象)作为入参，于是：</p>
+<p>实例对象;<br/>
+<img src="media/15834860456410/15834894446040.jpg" alt="" style="width:524px;"/><br/>
+第一行,Person new 出来一个实例,该实例的 isa 指向类 Person, 而 Person 很明显不是 NSObject类,所以为 0;<br/>
+第二行,Person new 出来一个实例,该实例的 isa 指向类 Person, 判断 Person 类是不是 Person,答案是肯定的,所以为 1;</p>
 
-<ol>
-<li> 根据传入的哨兵对象地址找到哨兵对象所处的page</li>
-<li>在当前page中，将晚于哨兵对象插入的所有autorelease对象都发送一次- release消息，并向回移动next指针到正确位置</li>
-<li>补充2：从最新加入的对象一直向前清理，可以向前跨越若干个page，直到哨兵所在的page<br/>
-刚才的objc_autoreleasePoolPop执行后，
-<img src="media/15795063924352/15795086281414.jpg" alt="" style="width:758px;"/>
-最终变成了下面的样子:
-<img src="media/15795063924352/15795084636880.jpg" alt="" style="width:725px;"/></li>
-</ol>
+<p><img src="media/15834860456410/15834896748734.jpg" alt="" style="width:765px;"/></p>
 
-<p><strong>嵌套的AutoreleasePool</strong><br/>
-知道了上面的原理，嵌套的AutoreleasePool就非常简单了，pop的时候总会释放到上次push的位置为止，多层的pool就是多个哨兵对象而已，就像剥洋葱一样，每次一层，互不影响。 </p>
+<p><strong>object_getClass(cls)</strong> 这个方法返回是传入类的元类 </p>
 
-<p><img src="media/15795063924352/15795095043776.jpg" alt="" style="width:767px;"/></p>
+<h2 id="toc_1">isKindOfClass</h2>
 
-<p><img src="media/15795063924352/15795109308256.jpg" alt="" style="width:700px;"/></p>
+<ul>
+<li>调用者是传入的类的实例对象，或者调用者是传入类的继承者链中的类的实例对象，则返回YES</li>
+<li>判断调用者是否是传入对象的子类，别弄反了</li>
+<li>去父类递归查找判断</li>
+</ul>
 
-<p>注意点:<br/>
-NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添加到该pool里面的所有OC对象都执行一遍release（retainCount-=1），如果恰好此时retainCount&lt;=0 ，那么系统会自动调用<mark>dealloc</mark>方法废弃对象。</p>
+<pre class="line-numbers"><code class="language-text">+ (BOOL)isKindOfClass:(Class)cls {
+    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls-&gt;super_class) {
+        if(tcls == cls) return YES;
+    }
+    return NO;
+}
+-（BOOL)isKindOfClass:(Class)cls {
+    for(Class tcls = [self class]; tcls; tcls = tcls-&gt;super_class) {
+        if(tcls == cls) return YES;
+    }
+    return NO;
+}
+</code></pre>
+
+<p><img src="media/15834860456410/15834900954033.jpg" alt="" style="width:783px;"/></p>
 
 <p>参考:<br/>
-<a href="https://www.jianshu.com/p/61d8131c6bf3">https://www.jianshu.com/p/61d8131c6bf3</a><br/>
-<a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/">https://blog.sunnyxx.com/2014/10/15/behind-autorelease/</a><br/>
-<a href="https://juejin.im/post/5d7765756fb9a06af82503b6">https://juejin.im/post/5d7765756fb9a06af82503b6</a></p>
+<a href="https://www.lagou.com/lgeduarticle/14758.html">https://www.lagou.com/lgeduarticle/14758.html</a></p>
 
                         
                       </div>
@@ -197,10 +198,10 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/20</span>
+                    <span class="date">2020/03/06</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -286,6 +287,8 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
         
             <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
+        
+            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
          
         </p>
 
@@ -302,31 +305,31 @@ NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添�
 	      
 		      
 			      <li class="post">
-			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			        <a href="15853864599373.html">iOS 网络总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15846246156341.html">两数之和问题</a>
+			        <a href="15851198875953.html">Runtime 学习总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			        <a href="15852331403843.html">iOS 高手课</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

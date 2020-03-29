@@ -92,6 +92,8 @@
             <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
         
             <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
+        
+            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
          
 
       </ul>
@@ -114,14 +116,57 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15833972428291.html">
+                <a class="clearlink" href="15846246156341.html">
                 
-                  <h1>设计模式-行为型模式</h1>
+                  <h1>两数之和问题</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	
+                        	<p>给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。</p>
+
+<p>你可以假设每种输入只会对应一个答案。但是，你不能重复利用这个数组中同样的元素。</p>
+
+<p>示例:<br/>
+ 给定 nums = [2, 7, 11, 15], target = 9<br/>
+ 因为 nums[0] + nums[1] = 2 + 7 = 9<br/>
+ 所以返回 [0, 1]</p>
+
+<p>这个题目的在 OC 里的解法就是用字典,<br/>
+首先创建一个字典,value 为数组的 index,key 为数组元素,<br/>
+例如:数组[2,7,11,15];<br/>
+那么这个字典就是<br/>
+ @{@(0):@&quot;2&quot;,<br/>
+                                  @(1):@&quot;7&quot;,<br/>
+                                  @(2):@&quot;11&quot;,<br/>
+                                  @(3):@&quot;15&quot;,<br/>
+                                    }<br/>
+比如目标和为 9, 那么组合的话,第一个为 2,那么 &quot;9-2&quot; 作为 key,去字典里查找,看能否找到目标值,如果这个字典里有符合的 肯定能找到 value,反之就是没有            </p>
+
+<p>代码如下:</p>
+
+<pre class="line-numbers"><code class="language-text">
+- (NSArray *)getTwoNumSum:(int)targetSum array:(NSArray *)arr {
+    NSMutableDictionary *tmpDic = [NSMutableDictionary dictionary];
+    NSMutableArray *tmpA = [NSMutableArray array];
+    for (int i = 0; i &lt; arr.count; i++) {
+        [tmpDic setValue:@(i) forKey:arr[i]];
+    }
+    
+    [arr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSString *keyString = [NSString stringWithFormat:@&quot;%d&quot;,targetSum - ((NSString *)obj).intValue];
+        NSNumber *lastIndex = tmpDic[keyString];
+        if (lastIndex &amp;&amp; idx &lt; lastIndex.integerValue) {
+            [tmpA addObject:@([lastIndex integerValue])];
+            [tmpA addObject:@(idx)];
+        }
+    }];
+    
+    return tmpA;
+    
+}
+</code></pre>
+
                         
                       </div>
                   </div>
@@ -129,10 +174,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/05</span>
+                    <span class="date">2020/03/19</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html'>设计模式(架构)</a></span>
+          					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
           				   
                     
 
@@ -218,6 +263,8 @@
             <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
         
             <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
+        
+            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
          
         </p>
 
@@ -234,31 +281,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15847867316208.html">子线程的AutoRelease对象释放</a>
+			        <a href="15853864599373.html">iOS 网络总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15847832065526.html">iOS核心动画高级技巧-Gitbook</a>
+			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15846246156341.html">两数之和问题</a>
+			        <a href="15851198875953.html">Runtime 学习总结</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15845005873890.html">1-100 数字求和 (递归算法)</a>
+			        <a href="15852331403843.html">iOS 高手课</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15844949626994.html">Block 进阶 (一)</a>
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  
