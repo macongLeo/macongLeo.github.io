@@ -116,80 +116,42 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15834860456410.html">
+                <a class="clearlink" href="15851180141482.html">
                 
-                  <h1>Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</h1>
+                  <h1>iOS 语言特性相关</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>isMemberOfClass和isKindOfClass一直以来都是想当然的使用,有时候得不到想要的结果,最后决定探究一下,彻底搞清楚,闲话不多说,先看下源码;</p>
+                        	<p><img src="media/15851180141482/15851180841539.jpg" alt="" style="width:1065px;"/></p>
 
-<h2 id="toc_0">isMemberOfClass</h2>
+<p><img src="media/15851180141482/15851181679589.jpg" alt="" style="width:1087px;"/></p>
 
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isMemberOfClass:(Class)cls {
-    return object_getClass((id)self) == cls;
-}
-- (BOOL)isMemberOfClass:(Class)cls {
-    return [self class] == cls;
-}
-</code></pre>
+<p><img src="media/15851180141482/15851182113619.jpg" alt="" style="width:1155px;"/></p>
 
-<p>isMemberOfClass有两个方法,一个是实例方法,一个是类方法,他俩的区别是:</p>
+<p><img src="media/15851180141482/15851182576877.jpg" alt="" style="width:1172px;"/></p>
 
-<ul>
-<li>实例方法- (BOOL)isMemberOfClass:(Class)cls: 根据实例对象取得类对象,再去判断</li>
-<li>类方法 + (BOOL)isMemberOfClass:(Class)cls:根据对象取得元类对象,再去判断</li>
-</ul>
+<p><img src="media/15851180141482/15851182812951.jpg" alt="" style="width:980px;"/></p>
 
-<p>其实简单的说是根据传入的类的 isa,来判断,因为实例对象的 isa 是实例的类对象,类对象的 isa 指向的是类的元类,Meta Class</p>
+<p><img src="media/15851180141482/15851183434238.jpg" alt="" style="width:1224px;"/></p>
 
-<p>验证:<br/>
-创建两个类,Person 类继承自 NSObject<br/>
-Student 类继承自 Person<br/>
-<img src="media/15834860456410/15834866616638.jpg" alt="" style="width:259px;"/><br/>
-<img src="media/15834860456410/15834866735409.jpg" alt="" style="width:232px;"/></p>
+<p><img src="media/15851180141482/15851187975853.jpg" alt="" style="width:1240px;"/></p>
 
-<p>先看代码,思考一下打印结果是什么<br/>
-<img src="media/15834860456410/15834890909476.jpg" alt="" style="width:554px;"/><br/>
-res1 : [Person class] Person 类的元类 是不是和[NSObject class]类一致? 肯定是不一致 所以返回 NO<br/>
-res2: [Person class] Person 类的元类 是不是和[Person class]类一致? 元类和类肯定也是不一致 所以返回 NO</p>
+<p><img src="media/15851180141482/15851188622213.jpg" alt="" style="width:1236px;"/></p>
 
-<p>实例对象;<br/>
-<img src="media/15834860456410/15834894446040.jpg" alt="" style="width:524px;"/><br/>
-第一行,Person new 出来一个实例,该实例的 isa 指向类 Person, 而 Person 很明显不是 NSObject类,所以为 0;<br/>
-第二行,Person new 出来一个实例,该实例的 isa 指向类 Person, 判断 Person 类是不是 Person,答案是肯定的,所以为 1;</p>
+<p><img src="media/15851180141482/15851189332279.jpg" alt="" style="width:1181px;"/></p>
 
-<p><img src="media/15834860456410/15834896748734.jpg" alt="" style="width:765px;"/></p>
+<p><img src="media/15851180141482/15851191229527.jpg" alt="" style="width:1186px;"/></p>
 
-<p><strong>object_getClass(cls)</strong> 这个方法返回是传入类的元类 </p>
+<p><img src="media/15851180141482/15851191509747.jpg" alt="" style="width:1068px;"/></p>
 
-<h2 id="toc_1">isKindOfClass</h2>
+<p><img src="media/15851180141482/15851192753872.jpg" alt="" style="width:1245px;"/></p>
 
-<ul>
-<li>调用者是传入的类的实例对象，或者调用者是传入类的继承者链中的类的实例对象，则返回YES</li>
-<li>判断调用者是否是传入对象的子类，别弄反了</li>
-<li>去父类递归查找判断</li>
-</ul>
+<p><img src="media/15851180141482/15851194300827.jpg" alt="" style="width:889px;"/></p>
 
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isKindOfClass:(Class)cls {
-    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
--（BOOL)isKindOfClass:(Class)cls {
-    for(Class tcls = [self class]; tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
-</code></pre>
+<p><img src="media/15851180141482/15851195044156.jpg" alt="" style="width:991px;"/></p>
 
-<p><img src="media/15834860456410/15834900954033.jpg" alt="" style="width:783px;"/></p>
-
-<p>参考:<br/>
-<a href="https://www.lagou.com/lgeduarticle/14758.html">https://www.lagou.com/lgeduarticle/14758.html</a></p>
+<p><img src="media/15851180141482/15851196936570.jpg" alt="" style="width:1261px;"/></p>
 
                         
                       </div>
@@ -198,10 +160,10 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/06</span>
+                    <span class="date">2020/03/25</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
           				   
                     
 
@@ -305,31 +267,31 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
 	      
 		      
 			      <li class="post">
-			        <a href="15853864599373.html">iOS 网络总结</a>
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15851198875953.html">Runtime 学习总结</a>
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852331403843.html">iOS 高手课</a>
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
 			      </li>
 		     
 		  

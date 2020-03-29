@@ -116,181 +116,91 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15820364056941.html">
+                <a class="clearlink" href="15780200209710.html">
                 
-                  <h1>关联对象 AssociatedObject 完全解析</h1>
+                  <h1>iOS 响应者链及事件传递</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>相关面试题:</p>
+                        	<h2 id="toc_0">UIResponder</h2>
 
-<blockquote>
-<p>关联对象有什么应用，系统如何管理关联对象？其被释放的时候需要手动将所有的关联对象的指针置空么？</p>
-</blockquote>
+<p>在 iOS中，所有响应事件处理事件的对象都直接或间接的继承UIResponder。</p>
 
-<p>先回答问题:</p>
+<p><img src="media/15780200209710/2526037-c8d367c7064cf59c.jpg" alt="2526037-c8d367c7064cf59"/></p>
+
+<p>在 iOS 视图结构中，呈现出来的是一个 N 叉树的树形结构，每个视图都只有一个父视图，可以有多个子视图。<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpldkdtyj30he0go46i.jpg" alt=""/></p>
+
+<h2 id="toc_1">寻找第一响应者</h2>
+
+<p>当用户点击某个视图或者按钮的时候，会首先响应 applocation 中的 UIWindow 一层一层的向下查找，直到找到点击的 view，这阶段用到的两个方法：</p>
+
+<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;   // recursively calls -pointInside:withEvent:. point is in the receiver&#39;s coordinate system
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;   // default returns YES if point is in bounds
+</code></pre>
+
+<p>例如有这样一个图层结构：<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpsaqbekj30e80jamy9.jpg" alt=""/></p>
+
+<p>在上图中用户点击视图中的ViewD时，UIWindow首先接收到响应，此响应包括用户点击的区域和一个封装好的UIEvent对象，然后UIWindow通过这些信息利用以下方法查找：</p>
 
 <ol>
-<li>关联对象的作用是可以为分类<mark>增加实例变量和存取发法</mark>(分类不能直接添加)</li>
-<li>系统使用AssociationsManager管理关联对象</li>
+<li><p>UIWindow会通过调用pointInside:withEvent:方法返回的YES得知用户点击的范围在ViewA中；</p></li>
+<li><p>ViewA调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewB、ViewC)调用hitTest:withEvent:方法；</p></li>
+<li><p>在遍历中发现使用ViewC调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewC范围之内；</p></li>
+<li><p>ViewC调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewD、ViewE)调用hitTest:withEvent:方法;</p></li>
+<li><p>在遍历中发现使用ViewD调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewD范围之内;</p></li>
+<li><p>在ViewD调用hitTest:withEvent:方法之前发现View的subViews的count为0，故确定用户点击在ViewD之上。</p></li>
 </ol>
 
-<p><strong>在分类中,因为类的实例变量布局已经固定</strong>,使用@property 已经无法向固定的布局中添加新的实例变量(这样做可能会覆盖之类的实例变量),所以我们需要使用关联对象以及两个方法来模拟构成属性的三个要素.</p>
+<p>UIWindow会用遍历subviews，使用每一个subview调用hitTest:withEvent:方法，如果用户点击在某一个subview上，pointInside:withEvent:方法返回YES，再用这个subview调用hitTest:withEvent:方法，依次类推，直到当前view没有子view或点击的位置没有在其任何子view之上，便确定用户点击在某view上</p>
 
-<p>在分类中@property 并不会自动生成实例变量以及存取方法,所以需要使用关联对象为已经存在的类添加属性,例如:</p>
-
-<pre class="line-numbers"><code class="language-text">#import &quot;DKObject+Category.h&quot;
-#import &lt;objc/runtime.h&gt;
-
-@implementation DKObject (Category)
-
-- (NSString *)categoryProperty {
-    return objc_getAssociatedObject(self, _cmd);
-}
-
-- (void)setCategoryProperty:(NSString *)categoryProperty {
-    objc_setAssociatedObject(self, @selector(categoryProperty), categoryProperty, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-@end
-</code></pre>
-
-<p>我们使用了 <mark>objc_getAssociateedObjcet</mark>以及 <mark>objc_serAssociatedObject</mark> 来模拟属性的存取方法,使用关联对象来模拟实例变量</p>
-
-<p>这里有两个需要解释的问题:</p>
-
-<ol>
-<li>为什么向方法中传入@selector(catagoryProperty)?</li>
-<li>OBJC_ASSOCIATION_RETAIN_NONATOMIC是干什么的</li>
-</ol>
-
-<p>关于第一个,我们先看这两个方法的原型;</p>
-
-<pre class="line-numbers"><code class="language-text">id objc_getAssociatedObject(id object, const void *key);
-void objc_setAssociatedObject(id object, const void *key, id value, objc_AssociationPolicy policy);
-</code></pre>
-
-<p>@selector(categoryProperty)其实也就是参数中的 key,其实可以使用静态指针 stati void * 类型的参数来代替,不过这里强烈建议使用@selector(categoryProperty)作为key 传入.因为这种方法省略了生命参数的代码,并且能很好的保证 key 的唯一性.<br/>
-关于OBJC_ASSOCIATION_RETAIN_NONATOMIC,其实就是内存管理语句.<br/>
-<img src="media/15820364056941/15820966989089.jpg" alt="" style="width:519px;"/><br/>
-注意:关联对象的内存管理策略中没有对应的 weak.如果确实需要使用 weak 应该怎么处理呢?<br/>
-最简单的方法是使用 block 包起来,例如:</p>
-
-<pre class="line-numbers"><code class="language-text">-(void)setWeakvalue:(NSObject *)weakvalue {
-    __weak typeof(weakvalue) weakObj = weakvalue;
-    typeof(weakvalue) (^block)() = ^(){
-        return weakObj;
-    };
-    objc_setAssociatedObject(self, weakValueKey, block, OBJC_ASSOCIATION_COPY_NONATOMIC);
-}
--(NSObject *)weakvalue {
-    id (^block)() = objc_getAssociatedObject(self, weakValueKey);
-    return block();
-}
-</code></pre>
-
-<p>首先我们在 setter 方法里面使用了一个weak 的局部变量 weakObj 来存储值,并在 block 中将其捕获并返回,由于 weakObj 是弱引用,所以不会修改对象的引用计数,当对象释放时,由于 weakObj 的 weak 属性,它在释放后也会指向 nil,所以在 getter 返回的时候也就是 nil,也就是模拟了 weak 释放后自动置为 nil.</p>
-
-<p><strong>objc_setAssociatedObject</strong></p>
-
-<pre class="line-numbers"><code class="language-text">void _object_set_associative_reference(id object, void *key, id value, uintptr_t policy) {
-    // 关联对象使用 ObjcAssociation 这个c++对象来存储。
-      // 设置新对象，那么有可能有老的对象会被废弃。那么新建一个ObjcAssociation对象，之后用来存储老的对象
-    ObjcAssociation old_association(0, nil);
-
-      // acquireValue函数： 设置新的对象的retainCount，也就是对他进行手动内存管理
-    id new_value = value ? acquireValue(value, policy) : nil;
-    {
-        AssociationsManager manager;
-        AssociationsHashMap &amp;associations(manager.associations());
-        disguised_ptr_t disguised_object = DISGUISE(object);
-
-          // 如果确实是要设置新关联对象的时候
-        if (new_value) {
-            // break any existing association.
-            AssociationsHashMap::iterator i = associations.find(disguised_object);
-
-              // 这个对象之前设置过关联对象，也就是说该对象的关联对象数量大于1
-            if (i != associations.end()) {
-                // secondary table exists
-                ObjectAssociationMap *refs = i-&gt;second;
-                ObjectAssociationMap::iterator j = refs-&gt;find(key);
-                 // 寻找全局的关联对象表，如果存在老对象的话
-                if (j != refs-&gt;end()) {
-                      // 存储老对象到之前新建的ObjcAssociation对象中
-                    old_association = j-&gt;second;
-                      // 设置新的关联对象
-                    j-&gt;second = ObjcAssociation(policy, new_value);
-                }
-                  // 不存在老对象，直接设置新关联对象
-                  else {
-                    (*refs)[key] = ObjcAssociation(policy, new_value);
-                }
-            }
-              // 这个对象之前没有设置过任何的关联对象
-              else {
-                // create the new association (first time).
-                ObjectAssociationMap *refs = new ObjectAssociationMap;
-                associations[disguised_object] = refs;
-                (*refs)[key] = ObjcAssociation(policy, new_value);
-                 // 将对象的isa的has_assoc字段设置成true
-                object-&gt;setHasAssociatedObjects();
-            }
-        } 
-          // 要将关联对象设成 nil，也就是取消该关联对象。先存老对象，再在全局表中删除该关联对象
-          else {
-            // setting the association to nil breaks the association.
-            AssociationsHashMap::iterator i = associations.find(disguised_object);
-            if (i !=  associations.end()) {
-                ObjectAssociationMap *refs = i-&gt;second;
-                ObjectAssociationMap::iterator j = refs-&gt;find(key);
-                if (j != refs-&gt;end()) {
-                    old_association = j-&gt;second;
-                    refs-&gt;erase(j);
-                }
+<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
+    for (UIView *view in self.subviews) {
+        if([view pointInside:point withEvent:event]){
+            UIView *hitTestView = [view hitTest:point withEvent:event];
+            if(nil == hitTestView){
+                return view;
             }
         }
     }
-    // 释放老对象，retainCount相关，内存管理相关
-    if (old_association.hasValue()) ReleaseValue()(old_association);
+    return nil;
 }
 </code></pre>
 
-<p>可以看到设置新的关联对象其实很简单：</p>
+<blockquote>
+<p>1.Alpha=0、子视图超出父视图的情况、userInteractionEnabled=NO、hidden=YES视图会被忽略，不会调用hitTest<br/>
+2.父视图被忽略后其所有子视图也会被忽略<br/>
+3.出现视图无法响应的情况，可以考虑上诉情况来排查问题</p>
+</blockquote>
 
-<ul>
-<li>现在全局关联对象表中寻找这个 key</li>
-<li>先存原来关联对象</li>
-<li>再设置新的关联对象</li>
-<li>释放原有的关联对象</li>
-</ul>
+<h2 id="toc_2">事件传递</h2>
 
-<p><strong>关联对象的实现</strong><br/>
-关联对象使用的是全局的表来存储所有关联对象,如图:<br/>
-<img src="media/15820364056941/15820977012071.jpg" alt="" style="width:643px;"/><br/>
-<strong>关联对象是和对象一一对应的,而不是和类一一对应的</strong></p>
+<p>事件传递的顺序其实就是寻找第一响应者的逆序，当找到了第一响应（View，button）之后，响应者就要对事件作出响应，这里就是使用了 UIResponder 的 nextResponder 方法。</p>
 
-<ol>
-<li>所有的关联对象都由一个<strong>AssociationsManager</strong>对象来管理,这个对象里有一个<strong>AssociationsHashMap</strong>.</li>
-<li><strong>AssociationsHashMap</strong>由许多 key-value 构成.key 是对象的地址,value 是一个<strong>ObjectAssociationMap</strong>,也就是所谓的关联对象</li>
-<li><strong>ObjectAssociationMap</strong>就是关联对象,每个关联对象里面包含多个 key-value 对,key 是属性名,value 是<strong>ObjcAssociation</strong>,也就是相当于属性对应的实例变量.</li>
-<li><strong>ObjcAssociation</strong>相当于实例变量,这个结构体有两个成员,_policy 属性的内存管理语句,_value 属性的值</li>
-</ol>
+<h3 id="toc_3">nextResponder 的规则</h3>
 
-<p>总结:</p>
+<p>因为UIView和UIViewController都是继承于UIResponder，所以在调用nextResponder时有几条规则如下：</p>
 
 <ol>
-<li>category 可以给现有类添加属性,方法,协议,但是不能添加实例变量</li>
-<li>添加属性对应的实例变量需要使用关联对象来实现</li>
-<li>category 里面的方法不会覆盖掉原有同名方法,只是会提前检索到,所以感觉是被覆盖掉了</li>
-<li>对于系统自带的类,在 runtime 时才会加载 category,但是自定义的分类在编译期就已经全部加载了,就像不存在分类,但是存在一个大大的自定义类一样.</li>
+<li><p>当一个view调用其nextResponder会返回其superView;</p></li>
+<li><p>如果当前的view为UIViewController的view被添加到其他view上，那么调用nextResponder会返回当前的UIViewController，而这个UIViewController的nextResponder为view的superView；</p></li>
+<li><p>如果当前的UIViewController的view没有添加到任何其他view上，当前的UIViewController的nextResponder为nil，不管它是keyWinodw或UINavigationController的rootViewController，都是如此；</p></li>
+<li><p>如果当前application的keyWindow的rootViewController为UINavigationController(或UITabViewController)，那么通过调用UINavigationController(或UITabViewController)的nextResponder得到keyWinodw；</p></li>
+<li><p>keyWinodw的nextResponder为UIApplication，UIApplication的nextResponder为AppDelegate，AppDelegate的nextResponder为nil。</p></li>
 </ol>
 
-<p>参考:<br/>
-<a href="https://draveness.me/ao">https://draveness.me/ao</a><br/>
-<a href="http://vanney9.com/2017/07/14/association-object-and-retain-count/">http://vanney9.com/2017/07/14/association-object-and-retain-count/</a><br/>
-<a href="http://vanney9.com/2017/06/07/objective-c-runtime-category/">http://vanney9.com/2017/06/07/objective-c-runtime-category/</a><br/>
-<a href="https://www.jianshu.com/p/1b0a1f9ecf39">https://www.jianshu.com/p/1b0a1f9ecf39</a></p>
+<p>通过知道了上述规则，便可以通过用户点击的ViewD，查看ViewD是否响应了点击事件，如果没有找它的nextResponder，如果没有再继续找，直到找到AppDelegate再没有响应，则此点击事件被系统丢弃，大致流程如下：<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lu7zsmnqj30fa0f8adu.jpg" alt=""/><br/>
+事件响应链的大致流程就是如此了，大概就是一个先向下找，再向上找的过程！</p>
+
+<h2 id="toc_4">无法响应的情况</h2>
+
+<p>参考：<br/>
+<a href="">https://www.cnblogs.com/easy-coding/p/3604856.html</a></p>
+
+<p><a href="">https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/using_responders_and_the_responder_chain_to_handle_events?language=objc</a></p>
 
                         
                       </div>
@@ -299,10 +209,10 @@ void objc_setAssociatedObject(id object, const void *key, id value, objc_Associa
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/18</span>
+                    <span class="date">2020/01/03</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
           				   
                     
 
@@ -406,31 +316,31 @@ void objc_setAssociatedObject(id object, const void *key, id value, objc_Associa
 	      
 		      
 			      <li class="post">
-			        <a href="15853864599373.html">iOS 网络总结</a>
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15851198875953.html">Runtime 学习总结</a>
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852331403843.html">iOS 高手课</a>
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
 			      </li>
 		     
 		  

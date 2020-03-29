@@ -116,44 +116,61 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15848634915010.html">
+                <a class="clearlink" href="15851144136539.html">
                 
-                  <h1>Block 对于变量的截获</h1>
+                  <h1>RunLoop 总结</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ol>
-<li>对于基本数据类型的截获,是值截获,仅仅截获值,在截获的时候值是多少就是多少,后续更改,不会影响 Block 内部的变化</li>
-<li>对于<mark>局部静态变量,是截获的该静态变量的指针</mark>,也是就是说这个静态变量变化的话,Block 截获的值也会跟着变化</li>
-<li><mark>对于对象类型的局部变量,连同所有权修饰符一同截获</mark>(这也从一个侧面说明了__weak 的原理,因为截获对象类型的时候,连同所有权修饰符一同截获了,weak 修饰的话,就打破了强引用环,解决了循环引用)</li>
-<li>全局变量,全局静态变量,是不会截获的.</li>
+                        	<p><img src="media/15851144136539/15851144387632.jpg" alt="" style="width:935px;"/></p>
+
+<p><img src="media/15851144136539/15851145412477.jpg" alt="" style="width:1211px;"/></p>
+
+<p><img src="media/15851144136539/15851146078217.jpg" alt="" style="width:1161px;"/></p>
+
+<p><img src="media/15851144136539/15851148964885.jpg" alt="" style="width:1114px;"/></p>
+
+<p><img src="media/15851144136539/15852300277502.jpg" alt="" style="width:997px;"/></p>
+
+<p><img src="media/15851144136539/15851151794985.jpg" alt="" style="width:1192px;"/></p>
+
+<p><img src="media/15851144136539/15851153719616.jpg" alt="" style="width:1221px;"/></p>
+
+<h2 id="toc_0">这里有一个问题,子线程有没有自动释放池? 程序里有几个自动释放池?</h2>
+
+<p>在子线程你手动创建了 Pool 的话，产生的 Autorelease 对象就会交给 pool 去管理。如果你没有创建 Pool ，但是产生了 Autorelease 对象，就会调用 <strong>autoreleaseNoPage</strong> 方法。在这个方法中，会自动帮你创建一个 hotpage（hotPage 可以理解为当前正在使用的 AutoreleasePoolPage，如果你还是不理解，可以先看看 Autoreleasepool 的源代码，再来看这个问题 ），并调用page-&gt;add(obj)将对象添加到 AutoreleasePoolPage 的栈中，也就是说你不进行手动的内存管理，也不会内存泄漏啦！</p>
+
+<p><img src="media/15851144136539/15851154799167.jpg" alt="" style="width:1229px;"/></p>
+
+<p><img src="media/15851144136539/15851155283402.jpg" alt="" style="width:859px;"/></p>
+
+<p><img src="media/15851144136539/15851155475362.jpg" alt="" style="width:1061px;"/></p>
+
+<p><img src="media/15851144136539/15851156383244.jpg" alt="" style="width:1098px;"/></p>
+
+<p><img src="media/15851144136539/15851158254408.jpg" alt="" style="width:1205px;"/></p>
+
+<p><img src="media/15851144136539/15851158715819.jpg" alt="" style="width:1118px;"/></p>
+
+<p><img src="media/15851144136539/15851160599323.jpg" alt="" style="width:1111px;"/></p>
+
+<p><img src="media/15851144136539/15851161669058.jpg" alt="" style="width:1129px;"/></p>
+
+<p><img src="media/15851144136539/15851163007850.jpg" alt="" style="width:1137px;"/></p>
+
+<p><img src="media/15851144136539/15851164026503.jpg" alt="" style="width:960px;"/></p>
+
+<p><img src="media/15851144136539/15851173090330.jpg" alt="" style="width:1193px;"/></p>
+
+<ol>
+<li>开启一个常驻线程（让一个子线程不进入消亡状态，等待其他线程发来消息，处理其他事件）</li>
+<li>在子线程中开启一个定时器<br/>
+在子线程中进行一些长期监控</li>
+<li>可以控制定时器在特定模式下执行</li>
+<li>可以让某些事件（行为、任务）在特定模式下执行<br/>
+可以添加Observer监听Runloop的状态，比如监听点击事件的处理（在所有点击事件之前做一些事情）</li>
 </ol>
-
-<p>我们先定义一个比较简单的 Block</p>
-
-<pre class="line-numbers"><code class="language-text">- (void)testMethod {
-    int mutiNum = 6;
-    int (^Block)(int) = ^int(int num) {
-        return num * mutiNum;
-    };
-    Block(2);
-}
-
-</code></pre>
-
-<p><img src="media/15848634915010/15848690037809.jpg" alt="" style="width:740px;"/><br/>
-在终端中 输入命令: clang -rewrite-objc MCBlock.m <br/>
-可以查看我们自定义的这个 MCBlock.m 的文件编译之后的源码.终端执行完成之后,在原文件夹会生成一个.cpp 的文件<br/>
-<img src="media/15848634915010/15848691080865.jpg" alt="" style="width:489px;"/><br/>
-打开这个 cpp 的源码文件</p>
-
-<p>找到我们定义这个 testMethod 方法<br/>
-<img src="media/15848634915010/15848691727627.jpg" alt="" style="width:907px;"/><br/>
-从这个源码我们可以看到,mutiNum = 6,是直接被捕获到了</p>
-
-<p>我们可以看到里面有一个__block_impl 的参数.找到这个参数的定义<br/>
-<img src="media/15848634915010/15848696004996.jpg" alt="" style="width:467px;"/></p>
 
                         
                       </div>
@@ -162,10 +179,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/22</span>
+                    <span class="date">2020/03/25</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Block%20%E7%9B%B8%E5%85%B3.html'>Block 相关</a></span>
+          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
           				   
                     
 
@@ -269,31 +286,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15853864599373.html">iOS 网络总结</a>
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15851198875953.html">Runtime 学习总结</a>
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852331403843.html">iOS 高手课</a>
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
 			      </li>
 		     
 		  

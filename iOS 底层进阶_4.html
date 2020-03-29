@@ -116,120 +116,69 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15850184530012.html">
+                <a class="clearlink" href="15854675822663.html">
                 
-                  <h1>iOS 的内存管理</h1>
+                  <h1>iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>内存分布图<br/>
-<img src="media/15850184530012/15850185492355.jpg" alt="" style="width:858px;"/></p>
+                        	<h2 id="toc_0">数据结构</h2>
 
-<p><img src="media/15850184530012/15850192095288.jpg" alt="" style="width:834px;"/></p>
+<ul>
+<li>Spinlock_t (自旋锁)</li>
+<li>RefcountMap (引用计数表)</li>
+<li>weak_table_t(弱引用表)</li>
+</ul>
 
-<p><img src="media/15850184530012/15850193047250.jpg" alt="" style="width:867px;"/><br/>
-<img src="media/15850184530012/15850193615115.jpg" alt="" style="width:862px;"/><br/>
-<img src="media/15850184530012/15850194160899.jpg" alt="" style="width:866px;"/></p>
+<h3 id="toc_1">自旋锁(Spinlock_t)</h3>
 
-<p><img src="media/15850184530012/15850194749345.jpg" alt="" style="width:936px;"/></p>
+<blockquote>
+<p>自旋锁是计算机科学用于多线程同步的一种锁，线程反复检查锁变量是否可用。由于线程在这一过程中保持执行，因此是一种忙等待。一旦获取了自旋锁，线程会一直保持该锁，直至显式释放自旋锁。<br/>
+自旋锁避免了进程上下文的调度开销，因此对于线程只会阻塞很短时间的场合是有效的。因此操作系统的实现在很多地方往往用自旋锁。Windows操作系统提供的轻型读写锁 ----维基百科</p>
+</blockquote>
 
-<p><img src="media/15850184530012/15850194918011.jpg" alt="" style="width:979px;"/></p>
+<ul>
+<li>忙等锁</li>
+<li>适用于轻型访问(简单的 int 值 +1/-1 操作（在引用计数方面应用）)</li>
+</ul>
 
-<p><img src="media/15850184530012/15850195352728.jpg" alt="" style="width:979px;"/></p>
+<h3 id="toc_2">引用计数表(RefcountMap)</h3>
 
-<p><img src="media/15850184530012/15850195587728.jpg" alt="" style="width:979px;"/><br/>
-分离锁: 提高访问效率</p>
+<p><img src="media/15854675822663/15854683584252.jpg" alt="" style="width:530px;"/></p>
 
-<p><img src="media/15850184530012/15850601985504.jpg" alt="" style="width:731px;"/></p>
+<blockquote>
+<p>size_t 代表的就是对应对象的引用计数值，实际上就是一个无符号 long 型的变量</p>
+</blockquote>
 
-<p><img src="media/15850184530012/15850196921670.jpg" alt="" style="width:979px;"/></p>
+<p><strong>引用计数表是哈希表，正如名字 Map，可以理解为是一个字典</strong>，也就是说通过一个指针可以找到对应对象的引用计数，这个查找过程也是哈希查找，这个哈希查找的哈希算法实际上是对传入对象的指针进行伪装的操作，然后获取对应的引用计数<br/>
+在这里再次明确一下哈希查找的过程，实际上之所以使用哈希查找就是为了提高查找效率，而查找效率的提高源于我们存储一个对象的引用计数是通过这个函数来计算存储位置的，而获取这个对象所代表的引用计数值的时候，也是通过这个函数来计算应该获取的索引位置，所以插入和获取都是通过同一函数来计算位置的，也就避免了一些循环遍历的操作，所以哈希查找可以提高查找效率</p>
 
-<p><img src="media/15850184530012/15850198119787.jpg" alt="" style="width:917px;"/></p>
+<h4 id="toc_3">size_t</h4>
 
-<p><img src="media/15850184530012/15850198962114.jpg" alt="" style="width:938px;"/></p>
+<p>假如 size_t 使用一个 64 位来表示<br/>
+<img src="media/15854675822663/15854703659468.jpg" alt="" style="width:996px;"/></p>
 
-<p><img src="media/15850184530012/15850199192935.jpg" alt="" style="width:924px;"/></p>
+<ul>
+<li>第一个二进制位 weakly_referenced 表示的是这个对象是否有弱引用，0没有，1有</li>
+<li>第二位表示当前对象是否正在进行 dealloc 操作</li>
+<li>后面的存储的就是这个对象实际的引用计数值<br/>
+那么在计算对象的具体引用计数值，需要对这个值（2-63）向右偏移两位，因为后面这两位要去掉才可以取到真实的引用计数值</li>
+</ul>
 
-<p><img src="media/15850184530012/15850199647005.jpg" alt="" style="width:951px;"/></p>
+<h4 id="toc_4">弱引用表(weak_table_t)</h4>
 
-<p><img src="media/15850184530012/15850200383486.jpg" alt="" style="width:961px;"/></p>
+<p><img src="media/15854675822663/15854704667848.jpg" alt="" style="width:470px;"/></p>
 
-<p><img src="media/15850184530012/15850200876436.jpg" alt="" style="width:954px;"/></p>
+<ul>
+<li>weak_table_t 也是一张哈希表</li>
+<li>weak_entry_t 是一个结构体数组</li>
+</ul>
 
-<p><img src="media/15850184530012/15850201877684.jpg" alt="" style="width:953px;"/></p>
-
-<p><img src="media/15850184530012/15850202525726.jpg" alt="" style="width:949px;"/></p>
-
-<p><img src="media/15850184530012/15850203223423.jpg" alt="" style="width:969px;"/></p>
-
-<p><img src="media/15850184530012/15850203400278.jpg" alt="" style="width:971px;"/></p>
-
-<p><img src="media/15850184530012/15850205496980.jpg" alt="" style="width:970px;"/></p>
-
-<p><img src="media/15850184530012/15850205879482.jpg" alt="" style="width:960px;"/></p>
-
-<p><img src="media/15850184530012/15850206478224.jpg" alt="" style="width:969px;"/></p>
-
-<p><img src="media/15850184530012/15850207066295.jpg" alt="" style="width:962px;"/></p>
-
-<p><img src="media/15850184530012/15850207396384.jpg" alt="" style="width:971px;"/></p>
-
-<p><img src="media/15850184530012/15850207608561.jpg" alt="" style="width:947px;"/></p>
-
-<p><img src="media/15850184530012/15850210697010.jpg" alt="" style="width:905px;"/></p>
-
-<p><img src="media/15850184530012/15850212350177.jpg" alt="" style="width:960px;"/></p>
-
-<p><img src="media/15850184530012/15850212575758.jpg" alt="" style="width:941px;"/></p>
-
-<p><img src="media/15850184530012/15850212850247.jpg" alt="" style="width:958px;"/></p>
-
-<p><img src="media/15850184530012/15850213194390.jpg" alt="" style="width:909px;"/></p>
-
-<p><img src="media/15850184530012/15850213660368.jpg" alt="" style="width:955px;"/></p>
-
-<p><img src="media/15850184530012/15850213853081.jpg" alt="" style="width:961px;"/></p>
-
-<p><img src="media/15850184530012/15850214068756.jpg" alt="" style="width:946px;"/></p>
-
-<p><img src="media/15850184530012/15850214329200.jpg" alt="" style="width:925px;"/></p>
-
-<p><img src="media/15850184530012/15850214597880.jpg" alt="" style="width:965px;"/></p>
-
-<p><img src="media/15850184530012/15850298949596.jpg" alt="" style="width:951px;"/></p>
-
-<p><img src="media/15850184530012/15850299116460.jpg" alt="" style="width:739px;"/></p>
-
-<p><img src="media/15850184530012/15850299454982.jpg" alt="" style="width:919px;"/></p>
-
-<p><img src="media/15850184530012/15850299637114.jpg" alt="" style="width:862px;"/></p>
-
-<p><img src="media/15850184530012/15850299814203.jpg" alt="" style="width:719px;"/></p>
-
-<p><img src="media/15850184530012/15850300681263.jpg" alt="" style="width:957px;"/></p>
-
-<p><img src="media/15850184530012/15850301248399.jpg" alt="" style="width:763px;"/></p>
-
-<p><img src="media/15850184530012/15850301421396.jpg" alt="" style="width:778px;"/></p>
-
-<p><img src="media/15850184530012/15850301560783.jpg" alt="" style="width:889px;"/></p>
-
-<p><img src="media/15850184530012/15850301725047.jpg" alt="" style="width:930px;"/></p>
-
-<p><img src="media/15850184530012/15850301945003.jpg" alt="" style="width:758px;"/></p>
-
-<p><img src="media/15850184530012/15850302269775.jpg" alt="" style="width:852px;"/></p>
-
-<p><img src="media/15850184530012/15850302519639.jpg" alt="" style="width:761px;"/></p>
-
-<p><img src="media/15850184530012/15850302736090.jpg" alt="" style="width:917px;"/></p>
-
-<p><img src="media/15850184530012/15850303046859.jpg" alt="" style="width:935px;"/></p>
-
-<p><img src="media/15850184530012/15850303446196.jpg" alt="" style="width:854px;"/></p>
-
-<p><img src="media/15850184530012/15850305123047.jpg" alt="" style="width:938px;"/></p>
+<blockquote>
+<p>在 Runtime 源码当中，弱引用表系统是通过 weak_table t 来定义的，weak table t 实际上也是一张哈希表，同样的给以一个对象的指针作为 Key ，通过一个哈希函数就可以计算出对应的弱引用的对象它的存储位置，weak entryt 是一个结构体数组，这个结构体数组当中存储的每一个对象是弱引用指针，也就是在代码中定义的，比如说 _ weak id obj，那么 obj 这个内存地址或者说指针就存储到 weak_entry_t 这个结构体数组当中<br/>
+这就是弱引用表的数据结构的描述</p>
+</blockquote>
 
                         
                       </div>
@@ -238,7 +187,7 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/24</span>
+                    <span class="date">2020/03/29</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
@@ -345,31 +294,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15853864599373.html">iOS 网络总结</a>
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15851198875953.html">Runtime 学习总结</a>
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852331403843.html">iOS 高手课</a>
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
 			      </li>
 		     
 		  

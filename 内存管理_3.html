@@ -1,0 +1,672 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+    
+  内存管理 - 路漫漫其修远兮
+  
+  </title>
+  
+  
+  <link href="atom.xml" rel="alternate" title="路漫漫其修远兮" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/foundation.min.css" />
+    <link rel="stylesheet" href="asset/css/docs.css" />
+    <script src="asset/js/vendor/modernizr.js"></script>
+    <script src="asset/js/vendor/jquery.js"></script>
+ 
+<script type="text/javascript">
+  function before_search(){
+    var searchVal = 'site: ' + document.getElementById('search_input').value;
+    document.getElementById('search_q').value = searchVal;
+    return true;
+  }
+</script>
+  </head>
+  <body class="antialiased hide-extras">
+    
+    <div class="marketing off-canvas-wrap" data-offcanvas>
+      <div class="inner-wrap">
+
+
+<nav class="top-bar docs-bar hide-for-small" data-topbar>
+
+
+  <section class="top-bar-section">
+  <div class="row">
+      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
+        <ul id="main-menu" class="left">
+        
+        <li id=""><a target="self" href="index.html">Home</a></li>
+        
+        <li id=""><a target="_self" href="archives.html">Archives</a></li>
+        
+        </ul>
+
+        <ul class="right" id="search-wrap">
+          <li>
+<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
+    <input type="hidden" id="search_q" name="q" value="" />
+    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
+</form>
+</li>
+          </ul>
+      </div></div>
+  </div>
+  </section>
+
+</nav>
+
+        <nav class="tab-bar show-for-small">
+  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
+    <span> &nbsp; 路漫漫其修远兮</span>
+  </a>
+</nav>
+
+<aside class="left-off-canvas-menu">
+      <ul class="off-canvas-list">
+        
+        <li><a target="self" href="index.html">Home</a></li>
+        
+        <li><a target="_self" href="archives.html">Archives</a></li>
+        
+
+    <li><label>Categories</label></li>
+
+        
+            <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
+        
+            <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
+        
+            <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
+        
+            <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
+        
+            <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a></li>
+        
+            <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a></li>
+        
+            <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
+        
+            <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
+        
+            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
+        
+            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
+         
+
+      </ul>
+    </aside>
+
+<a class="exit-off-canvas" href="#"></a>
+
+
+        <section id="main-content" role="main" class="scroll-container">
+        
+       
+
+ <script type="text/javascript">
+	$(function(){
+		$('#menu_item_index').addClass('is_active');
+	});
+</script>
+<div class="row">
+	<div class="large-8 medium-8 columns">
+		<div class="markdown-body home-categories">
+		
+			<div class="article">
+                <a class="clearlink" href="15854826531787.html">
+                
+                  <h1>iOS 的内存管理(三) 引用计数管理</h1>
+                  <div class="a-content">
+                      
+                      <div class="a-content-text">
+                        
+                        	<h3 id="toc_0">MRC</h3>
+
+<p><img src="media/15854826531787/15854837401174.jpg" alt="" style="width:538px;"/><br/>
+MRC：是通过手动引用计数来进行对象的内存管理，关于内存管理涉及到这么几个方法</p>
+
+<ul>
+<li>alloc：用来分配一个对象的内存空间</li>
+<li>retain：可以使一个对象的引用计数加一</li>
+<li>release：对一个对象的引用计数进行减一操作</li>
+<li>retainCount：这个函数可以获取当前对象的引用计数值</li>
+<li>autorelease：如果调用了一个对象的 autorelease 方法，那么当前这个对象会在 autorelease pool 结束的时候调用它的 release 操作进行计数减一</li>
+<li>dealloc：在 MRC 中调用 dealloc 的话，需要显示的调用 super dealloc 来释放或者说废弃父类的相关成员变量</li>
+<li>在 MRC 当中所使用的特有方法，就是标红的这四个方法，在 ARC 当中如果调用这个四个方法，会引起编译报错</li>
+</ul>
+
+<h3 id="toc_1">ARC</h3>
+
+<p><img src="media/15854826531787/15854838107212.jpg" alt="" style="width:546px;"/><br/>
+ARC：是自动引用计数管理内存</p>
+
+<p>实际上是由编译器自动为我们插入 retain release 之外，还需要 Runtime 的功能支持，然后由编译器和 Runtime 共同协作才能组成 ARC 的全部功能</p>
+
+<p>ARC 中禁止手动调用 MRC 当中独有的方法，比如 retain release retainCount dealloc，在 ARC 当中可以重写某个对象的 dealloc 方法，但是不能在 dealloc 方法当中显式调用 super dealloc 方法<br/>
+除此之外 ARC 当中增加了 weak 和 strong 属性关键字</p>
+
+<p>1.<strong>alloc 实现</strong></p>
+
+<p>进过一系列调用，最终调用了 C 函数 calloc</p>
+
+<p>此时并没有设置引用计数为 1</p>
+
+<p>alloc 比较简单，只是经过一系列的函数封装和调用最终调用了一个<strong>C 函数 calloc</strong></p>
+
+<p><strong>alloc 分配之后的对象它并没有设置引用计数为 1</strong>，但是通过 retainCount 获取它的引用计数时为 1，原因请往下看:<br/>
+2.<strong>retain 实现</strong></p>
+
+<p><img src="media/15854826531787/15854839454208.jpg" alt="" style="width:511px;"/></p>
+
+<ul>
+<li>这段代码表示通过当前对象的指针到 SideTables 当中去获取它所指的 SideTable ，当获取到这个对象引用计数相关的 SideTable 之后，再在这个 SideTable 的结构当中去获取引用计数 refcnts 成员变量（引用计数表），通过当前对象的指针在这个 SideTables 当中的引用计数表当中去获取当前对象的引用计数值</li>
+<li>在进行 retain 操作的时候是进行了两次哈希查找，最终查找到的结构是 size_t 类型的（无符号 long 型）值，然后再对引用计数值加一操作</li>
+<li>这里面所加的是一个 SIDE_TAVLE_RC_ONE 的宏定义，加的值不是实际的 1，因为我们在讲述 size_t 这个存储引用计数变量的时候，说明了它64个bit位前两个位置不是存储引用计数的，而是在后面的62位中存储的引用计数，这里的所谓加一操作实际上加上了对应的偏移量，这个偏移量实际上应该是 4，给我们反应出来的结果就是加一操作</li>
+</ul>
+
+<p>3.<strong>release 实现</strong></p>
+
+<p><img src="media/15854826531787/15854840341775.jpg" alt="" style="width:522px;"/></p>
+
+<ul>
+<li>第一行代码和上面分析的一样，通过当前对象的指针经过哈希算法在 SideTables 当中去获取它所指的 SideTable</li>
+<li>然后再根据当前对象指针访问 table 当中的引用计数表去查找它对应的引用计数表</li>
+<li><p>查找到之后，把对应的值进行减一操作</p>
+<p>4.retainCount 实现</p>
+<p><img src="media/15854826531787/15854840872021.jpg" alt="" style="width:520px;"/></p></li>
+<li><p>第一句代码同上</p></li>
+<li><p>声明了一个局部变量，指定它的值是 1，然后通过当前对象到引用计数表当中去查找，把查找的结果做一个向右便宜的操作，然后再结合这个局部变量的 1 进行一个加的操作，再返回给调用方</p></li>
+<li><p>所以说，如果我们刚新 alloc 出来的对象，在引用计数表当中是没有这个对象相关联的一个 Key Value 的映射的，这个值读出来就是 0，然后由于局部变量是 1，所以此时只经过 alloc 调用产生的对象去调用它的 retainCount 就可以获取到它的值为 1</p></li>
+</ul>
+
+<p>5.<strong>dealloc 实现（重要）</strong></p>
+
+<p><img src="media/15854826531787/15854841670162.jpg" alt="" style="width:546px;"/></p>
+
+<ul>
+<li>首先会调用 _ objc _rootDealloc() 私有函数</li>
+<li>这个函数又会调用 rootDealloc() 函数，然后会在这个函数内部判断当前对象是否可以直接释放</li>
+<li>如果这些条件都不满足就直接调用 C 函数的 free() 进行对象的内存释放</li>
+<li>否则就要再调用一个函数做后续的清理</li>
+</ul>
+
+<p>直接释放的判断条件</p>
+
+<ul>
+<li>nonpointer_isa：判断当前对象是否使用了非指针型的 isa</li>
+<li>weakly_referenced：当前对象是否有 weak 指针指向它</li>
+<li>has_assoc：当前对象是否有关联对象</li>
+<li>has_cxx_dtor：当期对象的内部实现是否有涉及到一些C++相关的内容，以及当前对象是否使用 ARC 管理内存，如果有涉及C++或者使用ARC管理内存返回YES</li>
+<li>has_sidetable_rc：当前对象的引用计数是否是在通过 sidetable 当中的引用计数表来维护的，因为在前面讲述关于 nonpointer_isa 的时候提到过如果说采用这中非指针型的 isa 指针的话，它当中存储了一部分引用计数的值，当超出上限的时候，再使用 sidetable 这种方式去存储</li>
+</ul>
+
+<p>只有当当前对象既不是非指针型的 isa ，同时没有弱引用，并且也没有关联对象，并且也没有涉及到 C++ 相关内容，并且没有涉及到 ARC，并且当前对象没有采用 sidetable 来存储引用计数，只有在这种条件下，才可以调用 C 函数直接释放，否则的话就要调用 object_dispose() 对象清除函数</p>
+
+<p>思考：为什么要进行这么多的判断才能进行后续的 object_dispose() 方法调用？</p>
+
+<ul>
+<li>如果对象有弱引用的话，那么在这个对象释放废弃的时候需要对它的引用对象进行处理</li>
+<li>如果有关联对象需要对关联对象进行处理</li>
+<li>包括C++、引用计数相关的处理</li>
+</ul>
+
+<p><strong>object_dispose() 实现</strong><br/>
+<img src="media/15854826531787/15854844199890.jpg" alt="" style="width:354px;"/></p>
+
+<ul>
+<li>首先这个函数内部会调用一个 objc_destructInstance() 函数，看这名字就可以得出是销毁实例的含义</li>
+<li>然后这个方法调用之后再调用 C 函数的 free()</li>
+<li>然后结束 dealloc 实现</li>
+</ul>
+
+<p><strong>objc_destructInstance() 实现</strong><br/>
+<img src="media/15854826531787/15854844674550.jpg" alt="" style="width:550px;"/></p>
+
+<ul>
+<li>在这个函数当中首先会判断当前还有是否有 C++ 相关的内容或者当前对象是否采用的是 ARC</li>
+<li>如果有的话会调用 objec_cxxDestruct() 这个方法，如果没有的话会判断当前对象是否有关联对象</li>
+<li>如果当前对象有关联对象的话在 dealloc 内部实现会调用 _object_remove_assocations() ,通过名称可以看出是做了对象的相关关联对象的移除</li>
+<li>关联对象的判断过了之后会调用一个叫 clearDeallocating() 函数，然后结束 dealloc 流程</li>
+</ul>
+
+<p>思考：我通过关联对象的技术为一个类添加了一些实例变量，那么在对象的 dealloc 方法方法当中是否有必要对它的关联对象进行移除操作？<br/>
+<strong>不需要</strong><br/>
+在系统的 dealloc 内部实现当中，会自动判断当前对象是否有关联对象，<strong>如果有的话系统内部就帮助我们把相关的关联对象移除掉</strong></p>
+
+<p><strong>clearDeallocating() 实现</strong><br/>
+<img src="media/15854826531787/15854845474639.jpg" alt="" style="width:552px;"/></p>
+
+<ul>
+<li>首先需要调用 sidetable_clearDeallocating() 函数</li>
+<li>之后会调用 weak_clear_no_lock() 函数，这个函数做的就是将指向该对象的弱引用指针置为 nil</li>
+<li>之后会调用 table.refcnts.erase() ,table 的引用计数的擦除操作，实际上就是将当前对象在引用计数表当中的一些存储数据给清除掉</li>
+<li>然后结束调用流程</li>
+</ul>
+
+                        
+                      </div>
+                  </div>
+                </a>
+                <div class="read-more clearfix">
+                  <div class="more-left left">
+                  
+                    <span class="date">2020/03/29</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
+          				   
+                    
+
+                  </div>
+                  <div class="more-right right">
+                  <span class="comments">
+                      
+
+                       
+                  </span>
+                  </div>
+                </div>
+              </div><!-- article -->
+        
+              
+
+
+			<div class="row">
+			  <div class="large-6 columns">
+			  <p class="text-left" style="padding-top:25px;">
+			   <a href="内存管理_2.html">&laquo; Prev Page</a>  
+			  </p>
+			  </div>
+			  <div class="large-6 columns">
+			<p class="text-right" style="padding-top:25px;">
+			 <a href="内存管理_4.html">&raquo; Next Page</a> 
+			</p>
+			  </div>
+			</div>
+		</div>
+	</div><!-- large 8 -->
+
+ <div class="large-4 medium-4 columns">
+  <div class="hide-for-small">
+    <div id="sidebar" class="sidebar">
+          <div id="site-info" class="site-info">
+            
+                <div class="site-a-logo"><img src="img/icon.jpg" /></div>
+            
+                <h1>路漫漫其修远兮</h1>
+                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="social">
+
+
+
+
+
+
+
+<a target="_blank" class="weibo" href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" title="weibo">Weibo</a>
+
+<a target="_blank" class="github" target="_blank" href="https://github.com/macongLeo/macongLeo.github.io.git" title="GitHub">GitHub</a>
+
+  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
+                
+              	 </div>
+          	</div>
+
+             
+
+              <div id="site-categories" class="side-item ">
+                <div class="side-header">
+                  <h2>Categories</h2>
+                </div>
+                <div class="side-content">
+
+      	<p class="cat-list">
+        
+            <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
+        
+            <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
+        
+            <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
+        
+            <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
+        
+            <a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html"><strong>网络进阶</strong></a>
+        
+            <a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html"><strong>性能优化</strong></a>
+        
+            <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
+        
+            <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
+        
+            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
+        
+            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
+         
+        </p>
+
+
+                </div>
+              </div>
+
+              <div id="site-categories" class="side-item">
+                <div class="side-header">
+                  <h2>Recent Posts</h2>
+                </div>
+                <div class="side-content">
+                <ul class="posts-list">
+	      
+		      
+			      <li class="post">
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		  
+		      
+		   
+		  		</ul>
+                </div>
+              </div>
+        </div><!-- sidebar -->
+      </div><!-- hide for small -->
+</div><!-- large 4 -->
+
+</div><!-- row -->
+
+ <div class="page-bottom clearfix">
+  <div class="row">
+   <p class="copyright">Copyright &copy; 2015
+Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
+  </div>
+</div>
+
+        </section>
+      </div>
+    </div>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+figure{margin: 0;padding: 0;}
+figcaption{text-align:center;}
+
+/* PrismJS 1.14.0
+ http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
+/**
+ * prism.js default theme for JavaScript, CSS and HTML
+ * Based on dabblet (http://dabblet.com)
+ * @author Lea Verou
+ */
+
+code[class*="language-"],
+pre[class*="language-"] {
+    color: black;
+    background: none;
+    text-shadow: 0 1px white;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.5;
+    
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+    
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
+}
+
+pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
+code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
+    text-shadow: none;
+    background:#b3d4fc;
+}
+
+pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
+code[class*="language-"]::selection, code[class*="language-"] ::selection {
+    text-shadow: none;
+    background: #b3d4fc;
+}
+
+@media print {
+    code[class*="language-"],
+    pre[class*="language-"] {
+        text-shadow: none;
+    }
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+    padding: 1em;
+    margin: .5em 0;
+    overflow: auto;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+    background: #F7F7F7;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+    padding: .1em;
+    border-radius: .3em;
+    white-space: normal;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: slategray;
+}
+
+.token.punctuation {
+    color: #999;
+}
+
+.namespace {
+    opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: #905;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: #690;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #9a6e3a;
+    background: hsla(0, 0%, 100%, .5);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: #07a;
+}
+
+.token.function,
+.token.class-name {
+    color: #DD4A68;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+    color: #e90;
+}
+
+.token.important,
+.token.bold {
+    font-weight: bold;
+}
+.token.italic {
+    font-style: italic;
+}
+
+.token.entity {
+    cursor: help;
+}
+
+
+pre[class*="language-"].line-numbers {
+    position: relative;
+    padding-left: 3.8em;
+    counter-reset: linenumber;
+}
+
+pre[class*="language-"].line-numbers > code {
+    position: relative;
+    white-space: inherit;
+}
+
+.line-numbers .line-numbers-rows {
+    position: absolute;
+    pointer-events: none;
+    top: 0;
+    font-size: 100%;
+    left: -3.8em;
+    width: 3em; /* works for line-numbers below 1000 lines */
+    letter-spacing: -1px;
+    border-right: 1px solid #999;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+}
+
+    .line-numbers-rows > span {
+        pointer-events: none;
+        display: block;
+        counter-increment: linenumber;
+    }
+
+        .line-numbers-rows > span:before {
+            content: counter(linenumber);
+            color: #999;
+            display: block;
+            padding-right: 0.8em;
+            text-align: right;
+        }
+
+</style>
+
+  
+    
+
+    <script src="asset/js/foundation.min.js"></script>
+    <script>
+      $(document).foundation();
+      function fixSidebarHeight(){
+        var w1 = $('.markdown-body').height();
+          var w2 = $('#sidebar').height();
+          if (w1 > w2) { $('#sidebar').height(w1); };
+      }
+      $(function(){
+        fixSidebarHeight();
+      })
+      $(window).load(function(){
+          fixSidebarHeight();
+      });
+     
+    </script>
+
+
+
+  </body>
+</html>

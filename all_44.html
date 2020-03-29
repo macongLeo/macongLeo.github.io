@@ -116,101 +116,115 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780315733102.html">
+                <a class="clearlink" href="15815876783958.html">
                 
-                  <h1>探寻 OC 对象的本质</h1>
+                  <h1>iOS 中的锁</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<blockquote>
-<p>面试题：一个 NSObject 对象占用多少内存？</p>
-</blockquote>
-
-<p>我们平时编写的代码都是 Objective-C 的代码，但是底层实现其实都是 C/C++的代码</p>
-
-<pre class="line-numbers"><code class="language-text">#import &lt;Foundation/Foundation.h&gt;
-#import &lt;malloc/malloc.h&gt;
-#import &lt;objc/runtime.h&gt;
-
-int main(int argc, const char * argv[]) {
-    @autoreleasepool {
-        NSObject *obj = [[NSObject alloc] init];
-        // 创建一个实例对象，实际上分配多少内存 - 16
-        NSLog(@&quot;%zd&quot;, malloc_size((__bridge const void *)obj));
-
-        // 创建一个实例对象，至少需要多少内存 - 8
-        NSLog(@&quot;%zd&quot;, class_getInstanceSize([NSObject class]));
-    }
-    return 0;
-}
-</code></pre>
-
-<ul>
-<li>系统分配了 16 个字节给 NSObject 对象（通过 malloc——size 函数获得）</li>
-<li><p>OC 源码显示分配给对象的内存为 16 个字节的整数倍，至少是 16 个字节</p>
-<p><img src="media/15780315733102/15780350303674.jpg" alt="" style="width:660px;"/></p></li>
+                        	<ul>
+<li>自旋锁(OSSpinLock)</li>
+<li>互斥锁</li>
+<li>pthread_mutex</li>
+<li>信号量(dispatch_semaphore)</li>
+<li>NSLock</li>
+<li>递归锁(NSRecursiveLock)</li>
+<li>条件锁(NSConditionLock)</li>
+<li>@synchronized</li>
 </ul>
 
-<blockquote>
-<p>OC的对象、类主要是基于C\C++的什么数据结构实现的呢？<br/>
-结构体<br/>
-OC 的对象是基于 C 的结构体实现的<br/>
-这个结构体只有一个成员：isa 指针，而指针在 64 位架构中占 8 个字节。<br/>
-那么这个结构体占多大的内存空间呢，我们发现这个结构体只有一个成员，isa指针，而指针在64位架构中占8个字节。也就是说一个NSObjec对象所占用的内存是8个字节。到这里我们已经可以基本解答第一个问题。但是我们发现NSObject对象中还有很多方法，那这些方法不占用内存空间吗？其实类的方法等也占用内存空间，但是这些方法所占用的存储空间并不在NSObject对象中。</p>
-</blockquote>
-
-<h2 id="toc_0">实例对象 类（对象） 元类</h2>
-
-<p><img src="media/15780315733102/15780363563241.jpg" alt="" style="width:552px;"/></p>
+<p><strong>自旋锁(OSSpinLock)</strong></p>
 
 <blockquote>
-<ol>
-<li>instance的isa指向class</li>
-<li>class的isa指向meta-class</li>
-<li>meta-class的isa指向基类的meta-class，基类的isa指向自己</li>
-<li>class的superclass指向父类的class，如果没有父类，superclass指针为nil</li>
-<li>meta-class的superclass指向父类的meta-class，基类的meta-class的superclass指向基类的class</li>
-<li>instance调用对象方法的轨迹，isa找到class，方法不存在，就通过superclass找父类</li>
-<li>class调用类方法的轨迹，isa找meta-class，方法不存在，就通过superclass找父类</li>
-</ol>
+<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
 </blockquote>
 
-<h2 id="toc_1">为什么会存在元类？</h2>
+<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
+自旋锁的问题:<br/>
+    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
+    2. 递归调用有可能引起死锁<br/>
+    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
 
-<p>元类是一个类对象的类<br/>
-简而言之：<br/>
-当你向一个对象发送一条消息的时候，运行时会在对象的类的方法列表中查找这条消息是否存在。<br/>
-当你向一个类发送一条消息的时候，运行时会在类的元类的方法列表中查找这条消息是否存在。</p>
+<p><strong>互斥锁</strong><br/>
+互斥锁属于 sleep-waiting 类型的锁.</p>
 
-<p>元类的存在是必需的，因为他存储了一个类的所有类方法。每个类的元类都是独一无二的，因为每个类都有一系列独特的类方法。<br/>
-什么是元类的类</p>
+<blockquote>
+<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
+</blockquote>
 
-<p>元类，和类一样，也是一个对象。这表示你能够对元类调用方法。自然的，这表示他必须也有一个类指针。</p>
+<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
+自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
 
-<p>所有元类使用基类的元类（即继承链顶端的类的元类）作为他们的类，而所有类的基类都是 NSObject（大多数类是这样的），所以大多数元类使用 NSObject 的元类作为他的类。</p>
+<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
+互斥锁适用:</p>
 
-<p>根据规则所有元类使用基类的元类作为他们的类，那么基类的元类就是他自己的类（他们的isa指针指向了自己）。这表明NSObject的元类的指针指向的是他自己（他是一个他自己的实例）。</p>
+<ul>
+<li>临界区有 IO 操作</li>
+<li>临界区代码复制或者循环量大</li>
+<li>临界区竞争非常激烈</li>
+<li>单核处理器</li>
+</ul>
 
-<h2 id="toc_2">继承类和元类</h2>
+<p>自旋锁适用:<br/>
+临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
 
-<p>同样的，类使用 super_class 指针指向他们的 superclass，元类也有 super_class 指针来指向 superclass。<br/>
-这里又有一个奇怪的地方，基类的元类设置的 superclass 是基类自己。<br/>
-这种继承结构导致的结果是所有结构中的实例、类以及元类都继承自结构中的基类。</p>
+<blockquote>
+<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
+优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
+</blockquote>
 
-<p>所有实例、类和元类都在 NSObject 的层级下，这表明所有 NSObject 的实例方法都能够被使用，同样的，对类以及元类来说，所有 NSObject 的类方法也是有效的。</p>
+<p><strong>os_unfair_lock</strong></p>
 
-<h2 id="toc_3">元类总结：</h2>
+<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
 
-<p>元类是一个类对象的类。每一个类有他自己独一无二的元类（因为每个类能够有自己独一无二的方法列表）。这就意味着类对象的类并不是和他们一样的类。</p>
+<p><strong>pthread_mutex</strong><br/>
+mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
 
-<p>元类能确保类对象有所有底层类的实例和类方法，中间加上所有自己的类方法。所有类继承自NSObject，这意味着NSObject所有的实例和协议方法为所有类（和元类）对象都定义了。</p>
+<p><strong>NSLock</strong><br/>
+NSLock是对 mutex 的普通锁的封装<br/>
+NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
+trylock 是尝试加锁,如果失败的话就返回 NO</p>
 
-<p>所有元类使用基类的元类（NSObject 元类）来作为他们的类，包括只在运行时自定义的类的元类。</p>
+<p><strong>信号量</strong><br/>
+    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
+    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
 
-<p>参考：<br/>
-<a href="https://juejin.im/post/5ac81c75518825556534c0af">https://juejin.im/post/5ac81c75518825556534c0af</a><br/>
-<a href="https://www.jianshu.com/p/79b06fabb459">https://www.jianshu.com/p/79b06fabb459</a></p>
+<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
+dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
+dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
+用法:
+信号量常用于对资源进行加锁操作
+</code></pre>
+
+<pre class="line-numbers"><code class="language-text">//在init等函数初始化
+_lock = dispatch_semaphore_create(1); 
+dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
+//修改Array或字典等数据的信息
+dispatch_semaphore_signal(_lock);
+</code></pre>
+
+<p><strong>@synchronized</strong><br/>
+@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
+
+<pre class="line-numbers"><code class="language-text">// 写数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
+    }
+});
+// 读数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        id obj = [dict objectForKey:@&quot;trail&quot;];
+    }
+});
+</code></pre>
+
+<p>参考:<br/>
+<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
+<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
+<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
 
                         
                       </div>
@@ -219,10 +233,10 @@ OC 的对象是基于 C 的结构体实现的<br/>
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
+                    <span class="date">2020/02/13</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
           				   
                     
 
@@ -326,31 +340,31 @@ OC 的对象是基于 C 的结构体实现的<br/>
 	      
 		      
 			      <li class="post">
-			        <a href="15853864599373.html">iOS 网络总结</a>
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15851198875953.html">Runtime 学习总结</a>
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852331403843.html">iOS 高手课</a>
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
 			      </li>
 		     
 		  

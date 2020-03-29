@@ -116,32 +116,35 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15841930756133.html">
+                <a class="clearlink" href="15847867316208.html">
                 
-                  <h1>layoutIfNeeded和setNeedsLayout的区别</h1>
+                  <h1>子线程的AutoRelease对象释放</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">layoutIfNeeded</h2>
+                        	<p>问:Autorelease对象何时释放?<br/>
+答:在 AutoreleasePoolPage pop 的时候释放,在主线程的 runloop 中,有两个 obserserver 负责创建和清空 AutoreleasePool,具体的可以查看<a href="https://blog.ibireme.com/2015/05/18/runloop/">YY 大神的这篇文章</a>.<br/>
+如果是子线程呢?子线程的 runloop 需要手动开启,那么子线程使用 Autorelease 的对象会内存泄漏么?如果不会,又是在什么时候释放的.</p>
 
-<p><code>layoutIfNeeded</code>：<strong>强制视图立即更新其布局，即同步执行</strong>。当使用Auto Layout时，布局引擎根据约束的变化更新视图的位置。该方法的接收者将作为根视图，布局时也将从视图树的根视图开始。如果没有待处理的布局更新，则此方法将直接退出，而不会修改布局，或调用任何与布局有关的方法。</p>
+<p>针对这个问题,需要很细致的度过 Rumtime,AutoreleasePool的源码才可以,参考 StackOverFlow 的回答<a href="https://stackoverflow.com/questions/24952549/does-nsthread-create-autoreleasepool-automatically-now">does NSThread create autoreleasepool automatically now?<br/>
+</a><br/>
+在子线程你创建了 Pool 的话，产生的 Autorelease 对象就会交给 pool 去管理。如果你没有创建 Pool ，但是产生了 Autorelease 对象，就会调用 autoreleaseNoPage 方法。在这个方法中，会自动帮你创建一个 hotpage（hotPage 可以理解为当前正在使用的 AutoreleasePoolPage，如果你还是不理解，可以先看看 Autoreleasepool 的源代码，再来看这个问题 ），并调用page-&gt;add(obj)将对象添加到 AutoreleasePoolPage 的栈中，也就是说你不进行手动的内存管理，也不会内存泄漏啦！</p>
 
-<h2 id="toc_1">setNeedsLayout</h2>
+<h3 id="toc_0">何时释放</h3>
 
-<p><code>setNeedsLayout</code>：当需要调整UIView子视图布局时，需要在主线程调用该方法。该方法记录请求并立即返回(即异步执行)，<strong>等待下一个更新周期更新视图(runloop 迭代)</strong>。因此，可以将多个视图布局更新合并到一个update cycle，这样有助于提高性能。需要注意的是，我们无法知道下个update cycle在何时发生。</p>
+<p>明确了何时创建,那么子线程的 autorelease 对象是何时释放的呢?线程退出的时候会释放资源,执行AutoreleasePoolPage::tls_dealloc,在这里面会清空autoreleasepool.</p>
 
-<p><a href="https://developer.apple.com/documentation/uikit/uiview?language=objc">Apple 官方文档</a>已经明确说明,开发者不要直接调用 <code>layoutSubViews</code>与<code>drawRect</code>,应该在你认为系统默认的布局和重绘不能带给你想要的效果时,在之类中重写这些方法,然后分别通过 <code>setNeedsLayout</code>和 <code>setNeedsDisPlayInRectangle:</code> 来进行调用</p>
+<h3 id="toc_1">总结:</h3>
 
-<h3 id="toc_2">哪些操作会出触发 layoutSubViews?</h3>
+<ol>
+<li>子线程在使用autorelease对象时，如果没有autoreleasepool会在autoreleaseNoPage中懒加载一个出来。</li>
+<li>在runloop的run:beforeDate，以及一些source的callback中，有autoreleasepool的push和pop操作，总结就是系统在很多地方都差不多autorelease的管理操作。</li>
+<li>就算插入没有pop也没关系，在线程exit的时候会释放资源，执行AutoreleasePoolPage::tls_dealloc，在这里面会清空autoreleasepool。</li>
+</ol>
 
-<ul>
-<li>init 初始化不会触发layoutSubViews</li>
-<li>addSubviews 会触发layoutSubViews</li>
-<li>设置 view的frame 会触发layoutSubViews(前提是 frame 发生了变化)</li>
-<li>滑动一个 UIScrollView 会触发layoutSubViews</li>
-<li>改变一个 view 的大小也会触发父 View 的layoutSubViews事件</li>
-</ul>
+<p>参考: <br/>
+<a href="https://suhou.github.io/2018/01/21/%E5%B8%A6%E7%9D%80%E9%97%AE%E9%A2%98%E7%9C%8B%E6%BA%90%E7%A0%81----%E5%AD%90%E7%BA%BF%E7%A8%8BAutoRelease%E5%AF%B9%E8%B1%A1%E4%BD%95%E6%97%B6%E9%87%8A%E6%94%BE/">https://suhou.github.io/2018/01/21/%E5%B8%A6%E7%9D%80%E9%97%AE%E9%A2%98%E7%9C%8B%E6%BA%90%E7%A0%81----%E5%AD%90%E7%BA%BF%E7%A8%8BAutoRelease%E5%AF%B9%E8%B1%A1%E4%BD%95%E6%97%B6%E9%87%8A%E6%94%BE/</a></p>
 
                         
                       </div>
@@ -150,10 +153,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/14</span>
+                    <span class="date">2020/03/21</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
+          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
           				   
                     
 
@@ -257,31 +260,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15853864599373.html">iOS 网络总结</a>
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15851198875953.html">Runtime 学习总结</a>
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852331403843.html">iOS 高手课</a>
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
 			      </li>
 		     
 		  

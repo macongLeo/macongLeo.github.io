@@ -116,42 +116,44 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15851180141482.html">
+                <a class="clearlink" href="15854850504833.html">
                 
-                  <h1>iOS 语言特性相关</h1>
+                  <h1>iOS 的内存管理(四) 弱引用管理</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15851180141482/15851180841539.jpg" alt="" style="width:1065px;"/></p>
+                        	<p>思考：一个 weak 变量是怎么样被添加到弱引用表当中的？<br/>
+<img src="media/15854850504833/15854858551940.jpg" alt="" style="width:558px;"/></p>
 
-<p><img src="media/15851180141482/15851181679589.jpg" alt="" style="width:1087px;"/></p>
+<ul>
+<li>在这个代码块当中是使用了一个 杠杠weak 关键字修饰的 obj1 这个变量来指向一个通过 alloc 分配的一个对象 obj，此时就产生了一个 杠杠weak 弱引用指针</li>
+<li>这个代码块经过编译之后会变成后者的代码块，这里面实际是调用了 objc_initWeak 函数，传递的两个参数，第一个参数是 obj1 这个弱引用变量的地址，第二个是传递了被修饰的对象</li>
+</ul>
 
-<p><img src="media/15851180141482/15851182113619.jpg" alt="" style="width:1155px;"/></p>
+<p>在这个过程中都发生了什么？来看一下 objc_initWeak 的调用栈：<br/>
+<img src="media/15854850504833/15854858902773.jpg" alt="" style="width:531px;"/><br/>
+首先 objc_initWeak 这个函数会调用一个叫 storeWeak 的函数，然后会调用 weak-register-no-lock 函数，通过名称可以得知，这个 weak 指针被添加到弱引用表的具体实现就在这个函数当中（register注册）</p>
 
-<p><img src="media/15851180141482/15851182576877.jpg" alt="" style="width:1172px;"/></p>
+<p>代码的讲解：<br/>
+通过原对象的指针地址进行哈希算法的计算获取到这个对象在弱引用表当中一个对应索引位置，然后通过所查找的这个索引位置返回给调用放相应的这个对象的所对应的弱引用的数组<br/>
+获取到的 entry 可以理解为是一个数组，实际上是一个比数组复杂一点的结构，如果获取到了这个结构，就把新产生的弱引用指针添加到数组当中，如果没有获取到被修饰对象的弱引用数组的话，就需要重新创建一个弱引用数组，初始化全是 nil，创建的这个数组的个数大小是为4的限制，之后会把弱引用的数组插入弱引用表的对应位置当中</p>
 
-<p><img src="media/15851180141482/15851182812951.jpg" alt="" style="width:980px;"/></p>
+<p><strong>添加 weak 变量总结：</strong></p>
 
-<p><img src="media/15851180141482/15851183434238.jpg" alt="" style="width:1224px;"/></p>
+<ul>
+<li>一个被声明为 - -weak 的对象指针经过编译器的编译后，会调用相应的 objc_initWeak 方法，然后经过一系列的函数调用栈，最终在<strong>weak-register-no-lock</strong> 函数当中进行弱引用变量的添加，具体添加的位置是通过一个哈希算法来进行位置查找的</li>
+<li>如果说我们查找对应位置当中已经有了当前对象所对应的一个弱引用数组，就把新的弱引用变量添加到数组当中</li>
+<li>如果没有的话，会重新创建一个弱引用数组，然后把第 0 个位置添加上最新的 weak 指针后面的都初始化为 0 或者为 nil</li>
+</ul>
 
-<p><img src="media/15851180141482/15851187975853.jpg" alt="" style="width:1240px;"/></p>
+<p><strong>思考：当一个对象被释放后者废弃之后 weak 变量是怎么处理的？</strong><br/>
+<img src="media/15854850504833/15854860775667.jpg" alt="" style="width:519px;"/><br/>
+在调 dealloc 方法之后，进过一系列的调用，在他内部当中最终会调用 weak_chear_no_lock 方法</p>
 
-<p><img src="media/15851180141482/15851188622213.jpg" alt="" style="width:1236px;"/></p>
+<p>源码分析系统是如何实现把一个废弃的对象的弱引用指针自动置为 nil 的</p>
 
-<p><img src="media/15851180141482/15851189332279.jpg" alt="" style="width:1181px;"/></p>
-
-<p><img src="media/15851180141482/15851191229527.jpg" alt="" style="width:1186px;"/></p>
-
-<p><img src="media/15851180141482/15851191509747.jpg" alt="" style="width:1068px;"/></p>
-
-<p><img src="media/15851180141482/15851192753872.jpg" alt="" style="width:1245px;"/></p>
-
-<p><img src="media/15851180141482/15851194300827.jpg" alt="" style="width:889px;"/></p>
-
-<p><img src="media/15851180141482/15851195044156.jpg" alt="" style="width:991px;"/></p>
-
-<p><img src="media/15851180141482/15851196936570.jpg" alt="" style="width:1261px;"/></p>
+<p>总结：当一个对象被 dealloc 之后，在 dealloc 的内部实现当中会去调用它弱引用清楚的相关函数，然后在这个函数的内部实现当中会根据当前对象的指针查找弱引用表，把当前对象相对应的弱引用都拿出来，是一个数组，然后遍历这个数组当中所有的弱引用指针，分别置为 nil .</p>
 
                         
                       </div>
@@ -160,10 +162,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/25</span>
+                    <span class="date">2020/03/29</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
+          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
           				   
                     
 
@@ -267,31 +269,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15853864599373.html">iOS 网络总结</a>
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15851198875953.html">Runtime 学习总结</a>
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852331403843.html">iOS 高手课</a>
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
 			      </li>
 		     
 		  

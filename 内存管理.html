@@ -116,120 +116,49 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15850184530012.html">
+                <a class="clearlink" href="15854871989163.html">
                 
-                  <h1>iOS 的内存管理</h1>
+                  <h1>iOS 的内存管理(六) 循环引用</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>内存分布图<br/>
-<img src="media/15850184530012/15850185492355.jpg" alt="" style="width:858px;"/></p>
+                        	<h2 id="toc_0">循环引用的介绍</h2>
 
-<p><img src="media/15850184530012/15850192095288.jpg" alt="" style="width:834px;"/></p>
+<p>循环引用主要可以分为三种类型</p>
 
-<p><img src="media/15850184530012/15850193047250.jpg" alt="" style="width:867px;"/><br/>
-<img src="media/15850184530012/15850193615115.jpg" alt="" style="width:862px;"/><br/>
-<img src="media/15850184530012/15850194160899.jpg" alt="" style="width:866px;"/></p>
+<ul>
+<li>自循环引用</li>
+<li>相互循环引用</li>
+<li>多循环引用</li>
+</ul>
 
-<p><img src="media/15850184530012/15850194749345.jpg" alt="" style="width:936px;"/></p>
+<p><img src="media/15854871989163/15854872705391.jpg" alt="" style="width:539px;"/><br/>
+假如有一个对象，对象当中有一个成员变量 obj，这个对象是强持有他的成员变量，如果此时给这个成员变量 obj 赋值原对象的话，就造成自循环引用</p>
 
-<p><img src="media/15850184530012/15850194918011.jpg" alt="" style="width:979px;"/></p>
+<p><strong>相互循环引用</strong><br/>
+<img src="media/15854871989163/15854873014377.jpg" alt="" style="width:521px;"/><br/>
+比如说有一个对象 A ，其中有一个 id 类型的 obj，还有一个对象 B 它当中也有一个 id 类型的 obj，如果此时对象 A 中的 obj 指向对象 B，同时对象 B 中的 obj 指向对象 A，此时就造成相互循坏引用</p>
 
-<p><img src="media/15850184530012/15850195352728.jpg" alt="" style="width:979px;"/></p>
+<p><strong>多循环引用</strong><br/>
+<img src="media/15854871989163/15854873378510.jpg" alt="" style="width:547px;"/><br/>
+假如在某一个类当中，有对象 1，对象 2，对象 n，每一个对象当中都一个 id 类型的 obj，假如说此时每一个对象的 obj 都指向下一个对象，就产生了一个多循环引用</p>
 
-<p><img src="media/15850184530012/15850195587728.jpg" alt="" style="width:979px;"/><br/>
-分离锁: 提高访问效率</p>
+<h3 id="toc_1">循环引用的解决方案</h3>
 
-<p><img src="media/15850184530012/15850601985504.jpg" alt="" style="width:731px;"/></p>
+<p><strong>_ _weak破解</strong><br/>
+<img src="media/15854871989163/15854874246559.jpg" alt="" style="width:506px;"/><br/>
+假如说左侧的对象 A 和 右侧的对象 B 都有一个成员变量 id 类型的 obj，当把 对象 A 中的成员变量声明为 _ _weak 的时候，就可以破除相互循环引用<br/>
+对象 B 强持有 A ，而 A 弱引用 B，此时规避了循环引用.</p>
 
-<p><img src="media/15850184530012/15850196921670.jpg" alt="" style="width:979px;"/></p>
+<p><strong>NSTimer的循环引用问题</strong><br/>
+<img src="media/15854871989163/15854874775275.jpg" alt="" style="width:545px;"/><br/>
+假如一个实际的场景：比如有一个页面，在这个页面当中有一个 banner 广告栏，需要在每一秒钟滚动一次，一般情况下会把 banner 广告栏的 UI 对象作为 VC 的一个成员变量，由 VC 对它进行强持有，那么由于 banner 需要每个一秒钟进行一个滚动播放，又涉及到定会器的使用，所以需要在这个对象当中去添加一个成员变量 NSTimer，当添加了 NSTimer 之后，在为它分配了一个相应的定时回调事件之后，NSTimer 会对他的 target 进行强引用，这个时候就产生了一个相互循环引用</p>
 
-<p><img src="media/15850184530012/15850198119787.jpg" alt="" style="width:917px;"/></p>
-
-<p><img src="media/15850184530012/15850198962114.jpg" alt="" style="width:938px;"/></p>
-
-<p><img src="media/15850184530012/15850199192935.jpg" alt="" style="width:924px;"/></p>
-
-<p><img src="media/15850184530012/15850199647005.jpg" alt="" style="width:951px;"/></p>
-
-<p><img src="media/15850184530012/15850200383486.jpg" alt="" style="width:961px;"/></p>
-
-<p><img src="media/15850184530012/15850200876436.jpg" alt="" style="width:954px;"/></p>
-
-<p><img src="media/15850184530012/15850201877684.jpg" alt="" style="width:953px;"/></p>
-
-<p><img src="media/15850184530012/15850202525726.jpg" alt="" style="width:949px;"/></p>
-
-<p><img src="media/15850184530012/15850203223423.jpg" alt="" style="width:969px;"/></p>
-
-<p><img src="media/15850184530012/15850203400278.jpg" alt="" style="width:971px;"/></p>
-
-<p><img src="media/15850184530012/15850205496980.jpg" alt="" style="width:970px;"/></p>
-
-<p><img src="media/15850184530012/15850205879482.jpg" alt="" style="width:960px;"/></p>
-
-<p><img src="media/15850184530012/15850206478224.jpg" alt="" style="width:969px;"/></p>
-
-<p><img src="media/15850184530012/15850207066295.jpg" alt="" style="width:962px;"/></p>
-
-<p><img src="media/15850184530012/15850207396384.jpg" alt="" style="width:971px;"/></p>
-
-<p><img src="media/15850184530012/15850207608561.jpg" alt="" style="width:947px;"/></p>
-
-<p><img src="media/15850184530012/15850210697010.jpg" alt="" style="width:905px;"/></p>
-
-<p><img src="media/15850184530012/15850212350177.jpg" alt="" style="width:960px;"/></p>
-
-<p><img src="media/15850184530012/15850212575758.jpg" alt="" style="width:941px;"/></p>
-
-<p><img src="media/15850184530012/15850212850247.jpg" alt="" style="width:958px;"/></p>
-
-<p><img src="media/15850184530012/15850213194390.jpg" alt="" style="width:909px;"/></p>
-
-<p><img src="media/15850184530012/15850213660368.jpg" alt="" style="width:955px;"/></p>
-
-<p><img src="media/15850184530012/15850213853081.jpg" alt="" style="width:961px;"/></p>
-
-<p><img src="media/15850184530012/15850214068756.jpg" alt="" style="width:946px;"/></p>
-
-<p><img src="media/15850184530012/15850214329200.jpg" alt="" style="width:925px;"/></p>
-
-<p><img src="media/15850184530012/15850214597880.jpg" alt="" style="width:965px;"/></p>
-
-<p><img src="media/15850184530012/15850298949596.jpg" alt="" style="width:951px;"/></p>
-
-<p><img src="media/15850184530012/15850299116460.jpg" alt="" style="width:739px;"/></p>
-
-<p><img src="media/15850184530012/15850299454982.jpg" alt="" style="width:919px;"/></p>
-
-<p><img src="media/15850184530012/15850299637114.jpg" alt="" style="width:862px;"/></p>
-
-<p><img src="media/15850184530012/15850299814203.jpg" alt="" style="width:719px;"/></p>
-
-<p><img src="media/15850184530012/15850300681263.jpg" alt="" style="width:957px;"/></p>
-
-<p><img src="media/15850184530012/15850301248399.jpg" alt="" style="width:763px;"/></p>
-
-<p><img src="media/15850184530012/15850301421396.jpg" alt="" style="width:778px;"/></p>
-
-<p><img src="media/15850184530012/15850301560783.jpg" alt="" style="width:889px;"/></p>
-
-<p><img src="media/15850184530012/15850301725047.jpg" alt="" style="width:930px;"/></p>
-
-<p><img src="media/15850184530012/15850301945003.jpg" alt="" style="width:758px;"/></p>
-
-<p><img src="media/15850184530012/15850302269775.jpg" alt="" style="width:852px;"/></p>
-
-<p><img src="media/15850184530012/15850302519639.jpg" alt="" style="width:761px;"/></p>
-
-<p><img src="media/15850184530012/15850302736090.jpg" alt="" style="width:917px;"/></p>
-
-<p><img src="media/15850184530012/15850303046859.jpg" alt="" style="width:935px;"/></p>
-
-<p><img src="media/15850184530012/15850303446196.jpg" alt="" style="width:854px;"/></p>
-
-<p><img src="media/15850184530012/15850305123047.jpg" alt="" style="width:938px;"/></p>
+<p><img src="media/15854871989163/15854875265652.jpg" alt="" style="width:562px;"/><br/>
+因为 NSTimer 刚被分派之后，会被当前线程的 RunLoop 强引用，如果说我们这个对象后者说 NSTimer 是在主线程中创建的，那么就由主线程的 RunLoop 持有这个 NSTimer，所以即使这个对象弱引用了 NSTimer，但是由于主线程的 RunLoop 常住内存 通过对 NSTimer 的强引用，再通过 NSTimer 对对象的强引用，仍然对这个对象产生了一个强引用，那么此时，即使 VC 页面退出，对对象的引用去掉的话，这个当前 banner 广告栏由于被 RunLoop 间接的持有，这个对象也不会被释放，此时就产生了内存泄露.<br/>
+<img src="media/15854871989163/15854875550481.jpg" alt="" style="width:545px;"/><br/>
+在左侧是 RunLoop 对 NSTimer 的强引用，在右侧是 VC 对 对象的强引用，我们可以在 NSTimer 和对象中间添加一个中间对象，然后由 NSTimer 对中间对象执行一个强引用，同时中间对象分别对 NSTimer 和 banner广告栏的对象做一个弱引用，此时对于一个重复的定时器而言，当当前 VC 或者说页面退出之后，VC 就释放了对 banner 广告栏这个对象强引用，当下次 NSTimer 的回调事件回来的时候，我们可以在中间对象当中 NSTimer 的回调方法里面去判断当前中间对象所持有的弱引用对象是否被废弃掉了，实际上就是判断中间对象所持有的 weak 变量是否为 nil，如果为 nil 的话，在定时器的回调方法当中调用 invalidate 和做 timer 置 nil 的操作，这样的话就可以释放 RunLoop 对 NSTimer 的强引用，NSTimer 对中间对象的强引用，NSTimer和中间对象都可以得到内存的释放达到破除循环引用的目的</p>
 
                         
                       </div>
@@ -238,7 +167,7 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/24</span>
+                    <span class="date">2020/03/29</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
@@ -267,7 +196,7 @@
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			
+			 <a href="内存管理_1.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -345,31 +274,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15853864599373.html">iOS 网络总结</a>
+			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15841929373401.html">打开一个 web 页面 发送 Http 的过程是怎么样的</a>
+			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15851198875953.html">Runtime 学习总结</a>
+			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852331403843.html">iOS 高手课</a>
+			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
+			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
 			      </li>
 		     
 		  
