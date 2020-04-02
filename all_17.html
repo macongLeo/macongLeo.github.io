@@ -116,115 +116,144 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15851010269707.html">
+                <a class="clearlink" href="15791552193020.html">
                 
-                  <h1>多线程 01</h1>
+                  <h1>RunLoop 详解</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15851010269707/15851011219392.jpg" alt="" style="width:490px;"/></p>
+                        	<ul>
+<li>RunLoop 概念</li>
+<li>RunLoop与线程的关系<br/>
+## RunLoop 概念<br/>
+一般来讲一个线程一次只能执行一个任务,执行完成后线程就会推出了,很明显,现在的 APP 都是不可能这种模式的,否则 APP 打开之后就死掉了,也就没有任何作用了.<br/>
+现在的这种模式其实是一种循环模式,保持一个线程始终存在,然后再处理各种操作(功能)等.<br/>
+现在 APP 的实现机制其实是需要线程能随时处理事件,但是并不退出,通常的代码逻辑是这样的:(伪代码)
+<img src="media/15791552193020/15794166325797.jpg" alt="" style="width:772px;"/>
+从代码可以看出是一种循环机制.<br/>
+这种模式通常被称为 EventLoop.iOS/OSX里的 runloop 就是这种模式.<br/>
+这种模式的关键点:
+<ul>
+<li>如何管理事件/消息</li>
+<li>如何让线程在没有消息处理的时候休眠,避免占用资源</li>
+<li>在有消息需要处理的时候立刻被唤醒(否则就是卡顿了)</li>
+</ul></li>
+</ul>
 
-<p><img src="media/15851010269707/15851058456651.jpg" alt="" style="width:1057px;"/></p>
+<p>所以 runloop 实际上就是一个对象,这个对象管理了需要其处理的事件和消息.并且提供了一个入口函数来执行上面的 EventLoop 逻辑.<br/>
+线程执行了这个函数之后,就会一直处于这个函数内部&quot;接受消息-&gt;等待-&gt;处理&quot;的循环中,知道这个循环结束,函数返回.<br/>
+OSX/iOS 中提供了两个这样对象:<strong>NSRunLoop,CFRunLoopRef</strong> .</p>
 
-<p><img src="media/15851010269707/15851069438172.jpg" alt="" style="width:873px;"/></p>
+<ul>
+<li><strong>CFRunLoopRef</strong> 是在 CoreFoundation 框架内的,提供的<strong>纯 C 函数的 API,所有这些 API 都是线程安全的</strong>.</li>
+<li>NSRunLoop 是基于 CFRunLoopRef 的封装,提供了面向对象的 API,但是这些 API 不是线程安全的</li>
+</ul>
 
-<p><img src="media/15851010269707/15851070411432.jpg" alt="" style="width:968px;"/></p>
+<h2 id="toc_0">RunLoop 与线程的关系</h2>
 
-<h2 id="toc_0">同步异步的嵌套情况</h2>
+<p>先给结论:<br/>
+   1. RunLoop 和线程是一一对应的.<br/>
+   2. RunLoop 和线程的对应关系保存在一个全局的字典里<br/>
+   3. 线程刚创建的时候是没有 RunLoop 的,如果不主动获取就一直不会有!<br/>
+   4. RunLoop 的创建是发生在第一次获取时.<br/>
+   5. RunLoop 的销毁是发生在线程结束时<br/>
+   6. 你只能在一个线程内部获取其 RunLoop(主线程除外)<br/>
+   7. 苹果并不允许主动创建 RunLoop,只提供了两个获取的函数:CFRunLoopGetMain(),CFRunLoopGetCurrent().<br/>
+<img src="media/15791552193020/15794176750269.jpg" alt="" style="width:916px;"/></p>
+
+<p>在 CoreFoundation 中关于 RunLoop 有 5 个类:</p>
+
+<ul>
+<li>CFRunLoopRef</li>
+<li>CFRunLoopModeRef</li>
+<li>CFRunLoopSourceRef</li>
+<li>CFRunLoopTimerRef</li>
+<li>CFRunLoopObserverRef<br/>
+其中的 CFRunLoopModeRef 并没有对外暴露,只是通过 CFRunLoopRef 的接口对外进行了封装
+<img src="media/15791552193020/15794179265453.jpg" alt="" style="width:724px;"/>
+一个 RunLoop 包含若干个 Mode，每个 Mode 又包含若干个 Source/Timer/Observer。每次调用 RunLoop 的主函数时，只能指定其中一个 Mode，这个Mode被称作 CurrentMode。
+<strong>如果需要切换 Mode，只能退出 Loop，再重新指定一个 Mode 进入。这样做主要是为了分隔开不同组的 Source/Timer/Observer，让其互不影响。</strong></li>
+</ul>
+
+<p><strong>CFRunLoopSourceRef</strong> 是事件产生的地方。Source有两个版本：Source0 和 Source1。</p>
 
 <ol>
-<li>同一个串行队列不能嵌套同步任务</li>
+<li>Source0 只包含了一个回调(函数指针)</li>
+<li><p>Source1 包含了一个回调(函数指针)和一个 mach_port</p>
+<p>Source0 并不能主动触发事件,使用的时候需要先调用CFRunLoopSourceSignal(source)，将这个 Source 标记为待处理,然后手动调用CFRunLoopWakeUp(runloop) 来唤醒 RunLoop，让其处理这个事件。<br/>
+Source1 能主动唤醒 RunLoop 的线程.通常用于内核和其他线程相互发送消息</p></li>
 </ol>
 
-<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad {
-    [super viewDidLoad];
-    dispatch_queue_t serialQueue = dispatch_queue_create(&quot;com.test.serial&quot;, DISPATCH_QUEUE_SERIAL);
-    dispatch_sync(serialQueue, ^{
-        NSLog(@&quot;outside -- %@&quot;,[NSThread currentThread]);
-        dispatch_sync(serialQueue, ^{
-            NSLog(@&quot;inside -- %@&quot;,[NSThread currentThread]);
-        });
-    });
-}
-</code></pre>
+<p><strong>CFRunLoopTimerRef</strong> 是基于时间的触发器,它和 NSTimer 是toll-free bridged <sup id="fnref1"><a href="#fn1" rel="footnote">1</a></sup> 的,可以混用.其包含一个时间长度和一个回调(函数指针).当其加入 RunLoop 中时,RunLoop 会注册对应的时间点,当时间点到了,RunLoop 会被唤醒以执行那个回调.</p>
 
-<p>如果outside的那个NSLog写在当前任务的最后，也就是放在第二个同步任务的后面，运行结果是什么都不会打印。<br/>
-好，现在使用刚才讲的队列和任务的特点分析一下。<br/>
-首先外层的任务是一个<strong>同步任务，会阻塞当前线程</strong>，这里的当前线程就是主线程了，因为是在viewDidLoad里面嘛。那就执行这个同步任务呗，由于该任务是添加在serialQueue队列中，所以从这个队列里面取出这个同步任务并执行，执行到outside的那个log时打印出了当前线程，结果是主线程，因为阻塞了主线程嘛，自然就在主线程中运行了。<br/>
-接着往下执行，又往serialQueue中添加一个任务，这又是个同步任务，阻塞当前线程，要执行完了这个任务才能接着往下执行。那就把这个任务取出来，赶快执行掉好往下走啊。很遗憾，serialQueue是一个串行队列，现在正在执行第一个同步任务，就是有outside打印的那个同步任务，所以serialQueue取不出inside那个任务。所以，inside这个任务要等outside执行完才能执行。另一方面，由于第二个任务(inside)是同步任务，一定要执行完这个同步任务才能往下走，所以outside要等inside这个任务执行完了，才能往下走，才能走完，这个任务才得以结束。所以outside要等inside执行完才能执行完。这两个任务就这样互相掐着，永远不能执行或者执行完毕。更悲惨的是，这两个任务阻塞的是主线程，那主线程就没办法再继续走下去了。解决的方法，可以将两个任务添加到不同的队列中，两个队列取任务互不干扰，就不会出现“互掐”的情况了。或者将队列改成并行队列，或者将第二个任务改成异步任务，这些都会在下面的组合情况中看到。<br/>
-这也就解释了，为什么在主队列上只能添加异步任务。首先主队列是一个串行队列，其次程序启动后，主队列中一直有一个任务，不断地监听用户输入及各种事件。所以如果在主线程中，往主队列中添加同步任务，则这个同步任务会阻塞主线程，而且永远取不出来，应用中断不能进行下去。如果是在其他线程向主队列添加同步任务，则主线程不会影响，但这个同步任务是永远不会执行到了。</p>
+<p><strong>CFRunLoopObserverRef</strong> 是观察者,每个 Observer 都包含了一个回调(函数指针),当 RunLoop 的状态发生变化时,观察者就能通过回调接受到这个变化.可以观察的时间点:<br/>
+<img src="media/15791552193020/15794192089256.jpg" alt="" style="width:995px;"/></p>
 
-<h3 id="toc_1">小结:同一个串行队列不能嵌套同步任务，注意是同一个哦。</h3>
+<p>上面的 Source/Timer/Observer 被统称为 mode item，一个 item 可以被同时加入多个 mode。但一个 item 被重复加入同一个 mode 时是不会有效果的。如果一个 mode 中一个 item 都没有，则 RunLoop 会直接退出，不进入循环。</p>
 
-<p>总结:</p>
+<h2 id="toc_1">RunLoop 的 Mode</h2>
+
+<p>CFRunLoopMode 和 CFRunLoop 的结构大致如下：<br/>
+<img src="media/15791552193020/15794203021817.jpg" alt="" style="width:1225px;"/><br/>
+这里有一个概念叫&quot;CommonModes&quot;:<br/>
+    一个 Mode 可以将自己标记为&quot;common&quot;属性(通过将其 ModeName 添加到 RunLoop 的&quot;commonModes&quot;中),每当 Runloop 的内容发生变化时,RunLoop 会自动将_commonModeItems 里的 Source/Obsever/Timer 同步到具有 Common 标记的所有 Mode 里<br/><br/>
+<img src="media/15791552193020/15794205749856.jpg" alt="" style="width:1527px;"/><br/>
+<img src="media/15791552193020/15794206571347.jpg" alt="" style="width:1537px;"/></p>
+
+<h2 id="toc_2">RunLoop 的内部逻辑</h2>
+
+<p>根据苹果在文档里的说明，RunLoop 内部的逻辑大致如下:<br/>
+<img src="media/15791552193020/15794207296297.jpg" alt="" style="width:1118px;"/></p>
+
+<p>内部代码整理:<br/>
+<img src="media/15791552193020/FireShot%20Capture%20023%20-%20%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3RunLoop%20-%20Garan%20no%20dou%20-%20blog.ibireme.com.png" alt="FireShot Capture 023 - 深入理解RunLoop - Garan no dou - blog.ibireme.co"/><br/>
+可以看到，实际上 RunLoop 就是这样一个函数，其内部是一个 do-while 循环。当你调用 CFRunLoopRun() 时，线程就会一直停留在这个循环里；直到超时或被手动停止，该函数才会返回。</p>
+
+<h2 id="toc_3">苹果用 Runloop 实现的功能</h2>
 
 <ol>
-<li>同一串行队列下，任务的嵌套，内部只能嵌套异步任务，这也就是主队列中只能添加异步任务的原因；</li>
-<li>同一串行队列中的任务运行结果总是可预测但可能造成“互掐”的情况，导致某些任务不能正确执行；</li>
-<li>并行队列中的任务，不管如何组合都不会造成“互掐”的情况，但某些运行结果不可预测；</li>
+<li>kCFRunLoopDefaultMode: App的默认 Mode，通常主线程是在这个 Mode 下运行的。</li>
+<li>UITrackingRunLoopMode: 界面跟踪 Mode，用于 ScrollView 追踪触摸滑动，保证界面滑动时不受其他 Mode 影响。</li>
+<li>UIInitializationRunLoopMode: 在刚启动 App 时第进入的第一个 Mode，启动完成后就不再使用。<br/>
+4: GSEventReceiveRunLoopMode: 接受系统事件的内部 Mode，通常用不到。<br/>
+5: kCFRunLoopCommonModes: 这是一个占位的 Mode，没有实际作用。</li>
 </ol>
 
-<p><img src="media/15851010269707/15851075862036.jpg" alt="" style="width:820px;"/></p>
+<h3 id="toc_4">AutoreleasePool</h3>
 
-<p><img src="media/15851010269707/15851090585252.jpg" alt="" style="width:838px;"/></p>
+<p>App 启动之后,苹果在主线程 RunLoop 里注册了两个 Observer,这两个观察者的回调都是_wrapRunLoopWithAutoreleasePoolHandler().</p>
 
-<p><img src="media/15851010269707/15851017111972.jpg" alt="" style="width:836px;"/></p>
+<ul>
+<li>第一个 Observer 监视的事件是 Entry(即将进入 Loop)其回调回调用_objc_autoreleasePoolPush()创建自动释放池,优先级最高,保证创建自动释放池在所有回调之前</li>
+<li>第二个 Observer 监视了两个事件:
+<ol>
+<li>BeforeWaiting(准备进入休眠)时调用_objc_autoreleasePoolPop()和_objc_autoreleasePoolPush()释放旧的池并创建新的自动释放池;</li>
+<li>Exit(退出Loop)时调用_objc_autoreleasePoolPop()释放自动释放池,这个 Observer 的优先级最低,保证释放自动释放池发生在所有回调之后</li>
+</ol></li>
+</ul>
 
-<p><img src="media/15851010269707/15851017567172.jpg" alt="" style="width:879px;"/></p>
+<h3 id="toc_5">事件响应</h3>
 
-<p><img src="media/15851010269707/15851018121080.jpg" alt="" style="width:848px;"/><br/>
-<img src="media/15851010269707/15851020176877.jpg" alt="" style="width:884px;"/></p>
+<p>苹果注册了一个 Source1 (基于 mach port 的) 用来接收系统事件，其回调函数为 __IOHIDEventSystemClientQueueCallback()。</p>
 
-<p><img src="media/15851010269707/15851020960997.jpg" alt="" style="width:822px;"/><br/>
-<img src="media/15851010269707/15851023213655.jpg" alt="" style="width:897px;"/></p>
+<p>当一个硬件事件(触摸/锁屏/摇晃等)发生后，首先由 IOKit.framework 生成一个 IOHIDEvent 事件并由 SpringBoard 接收。这个过程的详细情况可以参考这里。SpringBoard 只接收按键(锁屏/静音等)，触摸，加速，接近传感器等几种 Event，随后用 mach port 转发给需要的App进程。随后苹果注册的那个 Source1 就会触发回调，并调用 _UIApplicationHandleEventQueue() 进行应用内部的分发。</p>
 
-<p>同步提交队列,都会在当前线程执行</p>
-
-<p><img src="media/15851010269707/15851027199062.jpg" alt="" style="width:899px;"/></p>
-
-<p><img src="media/15851010269707/15851030188745.jpg" alt="" style="width:904px;"/></p>
-
-<p><img src="media/15851010269707/15851031442106.jpg" alt="" style="width:881px;"/></p>
-
-<p><img src="media/15851010269707/15851031777487.jpg" alt="" style="width:869px;"/></p>
-
-<p><img src="media/15851010269707/15851032063949.jpg" alt="" style="width:876px;"/></p>
-
-<p><img src="media/15851010269707/15851040806193.jpg" alt="" style="width:844px;"/></p>
-
-<p><img src="media/15851010269707/15851041160345.jpg" alt="" style="width:704px;"/></p>
-
-<p><img src="media/15851010269707/15851041534668.jpg" alt="" style="width:865px;"/><br/>
-<img src="media/15851010269707/15851043842920.jpg" alt="" style="width:854px;"/></p>
-
-<p><img src="media/15851010269707/15851045388676.jpg" alt="" style="width:866px;"/></p>
-
-<p><img src="media/15851010269707/15851047722705.jpg" alt="" style="width:845px;"/><br/>
-<img src="media/15851010269707/15851047827469.jpg" alt="" style="width:794px;"/></p>
-
-<p><img src="media/15851010269707/15851048287042.jpg" alt="" style="width:637px;"/></p>
-
-<p><img src="media/15851010269707/15851048435496.jpg" alt="" style="width:708px;"/></p>
-
-<p><img src="media/15851010269707/15851048607668.jpg" alt="" style="width:692px;"/></p>
-
-<p><img src="media/15851010269707/15851050042189.jpg" alt="" style="width:892px;"/></p>
-
-<p><img src="media/15851010269707/15851050789988.jpg" alt="" style="width:887px;"/></p>
-
-<p><img src="media/15851010269707/15851051160079.jpg" alt="" style="width:897px;"/></p>
-
-<p><img src="media/15851010269707/15851051994795.jpg" alt="" style="width:877px;"/></p>
-
-<p><img src="media/15851010269707/15851053149191.jpg" alt="" style="width:741px;"/></p>
-
-<p><img src="media/15851010269707/15851053527547.jpg" alt="" style="width:826px;"/></p>
-
-<p><img src="media/15851010269707/15851053908129.jpg" alt="" style="width:818px;"/></p>
+<p>_UIApplicationHandleEventQueue() 会把 IOHIDEvent 处理并包装成 UIEvent 进行处理或分发，其中包括识别 UIGesture/处理屏幕旋转/发送给 UIWindow 等。通常事件比如 UIButton 点击、touchesBegin/Move/End/Cancel 事件都是在这个回调中完成的。</p>
 
 <p>参考:<br/>
-链接：<a href="https://www.jianshu.com/p/de406582131e">https://www.jianshu.com/p/de406582131e</a></p>
+<a href="https://blog.ibireme.com/2015/05/18/runloop/">https://blog.ibireme.com/2015/05/18/runloop/</a></p>
+
+<div class="footnotes">
+<hr/>
+<ol>
+
+<li id="fn1">
+<p>Toll-free bridging,简称为TFB，是一种允许某些ObjC类与其对应的CoreFoundation类之间可以互换使用的机制。比如 NSString与CFString是桥接(bridged)的, 这意味着可以将任意NSString当做CFString使用，也可以将任意的CFString当做NSString使用&nbsp;<a href="#fnref1" rev="footnote">&#8617;</a></p>
+</li>
+
+</ol>
+</div>
 
                         
                       </div>
@@ -233,10 +262,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/25</span>
+                    <span class="date">2020/01/16</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
+          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
           				   
                     
 
@@ -340,6 +369,12 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
@@ -359,12 +394,6 @@
 		      
 			      <li class="post">
 			        <a href="15857060089212.html">设计模式-听课笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

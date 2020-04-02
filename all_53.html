@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  其他 - 路漫漫其修远兮
+  路漫漫其修远兮
   
   </title>
   
@@ -116,14 +116,45 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15852331403843.html">
+                <a class="clearlink" href="shu-xing-de-shi-zhi-shu-xing-d.html">
                 
-                  <h1>iOS 高手课</h1>
+                  <h1>属性的实质</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><a href="https://github.com/rogertan30/GeekTime/tree/master/iOS%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/App%E5%90%AF%E5%8A%A8%E9%80%9F%E5%BA%A6%E6%80%8E%E4%B9%88%E5%81%9A%E4%BC%98%E5%8C%96%E4%B8%8E%E7%9B%91%E6%8E%A7%EF%BC%9F">https://github.com/rogertan30/GeekTime/tree/master/iOS%E5%BC%80%E5%8F%91%E9%AB%98%E6%89%8B%E8%AF%BE/App%E5%90%AF%E5%8A%A8%E9%80%9F%E5%BA%A6%E6%80%8E%E4%B9%88%E5%81%9A%E4%BC%98%E5%8C%96%E4%B8%8E%E7%9B%91%E6%8E%A7%EF%BC%9F</a></p>
+                        	<blockquote>
+<p>属性的实质是什么？<br/>
+包括哪几个部分？<br/>
+属性默认的关键字都有哪些？<br/>
+@dynamic关键字和@synthesize关键字是用来做什么的</p>
+</blockquote>
+
+<p>实质包含部分:</p>
+
+<p>@property = ivar + getter + setter;</p>
+
+<p>实例变量+get方法+ set方法，也就是说使用@property系统会自动生成setter和getter方法;</p>
+
+<p>默认常用关键字:</p>
+
+<p>property中我们经常使用的关键字有strong，weak，assign，copy，nonatomic，atomic....等</p>
+
+<p>@dynamic这个关键词，通常是用不到的。<br/>
+它与@synthesize的区别在于：<br/>
+使用@synthesize编译器会确实的产生getter和setter方法，而@dynamic仅仅是告诉编译器这两个方法在运行期会有的，无需产生警告。</p>
+
+<p>假设有这么个场景，B类，C类分别继承A类，A类实现某个协议（@protocol），协议中某个属性( somePropety )我不想在A中实现，而在B类，C类中分别实现。如果A中不写任何代码，编译器就会给出警告：“use @synthesize, @dynamic or provide a method implementation&quot;这时你给用@dynamic somePropety; <br/>
+编译器就不会警告，同时也不会产生任何默认代码。</p>
+
+<p>@dynamic 就是要来告诉编译器，代码中用@dynamic修饰的属性，其getter和setter方法会在程序运行的时候或者用其他方式动态绑定，以便让编译器通过编译。<br/>
+其主要的作用就是用在NSManageObject对象的属性声明上，由于此类对象的属性一般是从Core Data的属性中生成的，Core Data框架会在程序运行的时候为此类属性生成getter和Setter方法。</p>
+
+<p>参考:</p>
+
+<p><a href="">https://www.jianshu.com/p/00dbeec23291</a></p>
+
+<hr/>
 
                         
                       </div>
@@ -132,10 +163,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/26</span>
+                    <span class="date">2020/01/03</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%85%B6%E4%BB%96.html'>其他</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
           				   
                     
 
@@ -156,7 +187,7 @@
 			<div class="row">
 			  <div class="large-6 columns">
 			  <p class="text-left" style="padding-top:25px;">
-			   <a href="其他.html">&laquo; Prev Page</a>  
+			   <a href="all_52.html">&laquo; Prev Page</a>  
 			  </p>
 			  </div>
 			  <div class="large-6 columns">
@@ -239,6 +270,12 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
@@ -258,12 +295,6 @@
 		      
 			      <li class="post">
 			        <a href="15857060089212.html">设计模式-听课笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

@@ -116,80 +116,35 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15834860456410.html">
+                <a class="clearlink" href="15847867316208.html">
                 
-                  <h1>Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</h1>
+                  <h1>子线程的AutoRelease对象释放</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>isMemberOfClass和isKindOfClass一直以来都是想当然的使用,有时候得不到想要的结果,最后决定探究一下,彻底搞清楚,闲话不多说,先看下源码;</p>
+                        	<p>问:Autorelease对象何时释放?<br/>
+答:在 AutoreleasePoolPage pop 的时候释放,在主线程的 runloop 中,有两个 obserserver 负责创建和清空 AutoreleasePool,具体的可以查看<a href="https://blog.ibireme.com/2015/05/18/runloop/">YY 大神的这篇文章</a>.<br/>
+如果是子线程呢?子线程的 runloop 需要手动开启,那么子线程使用 Autorelease 的对象会内存泄漏么?如果不会,又是在什么时候释放的.</p>
 
-<h2 id="toc_0">isMemberOfClass</h2>
+<p>针对这个问题,需要很细致的度过 Rumtime,AutoreleasePool的源码才可以,参考 StackOverFlow 的回答<a href="https://stackoverflow.com/questions/24952549/does-nsthread-create-autoreleasepool-automatically-now">does NSThread create autoreleasepool automatically now?<br/>
+</a><br/>
+在子线程你创建了 Pool 的话，产生的 Autorelease 对象就会交给 pool 去管理。如果你没有创建 Pool ，但是产生了 Autorelease 对象，就会调用 autoreleaseNoPage 方法。在这个方法中，会自动帮你创建一个 hotpage（hotPage 可以理解为当前正在使用的 AutoreleasePoolPage，如果你还是不理解，可以先看看 Autoreleasepool 的源代码，再来看这个问题 ），并调用page-&gt;add(obj)将对象添加到 AutoreleasePoolPage 的栈中，也就是说你不进行手动的内存管理，也不会内存泄漏啦！</p>
 
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isMemberOfClass:(Class)cls {
-    return object_getClass((id)self) == cls;
-}
-- (BOOL)isMemberOfClass:(Class)cls {
-    return [self class] == cls;
-}
-</code></pre>
+<h3 id="toc_0">何时释放</h3>
 
-<p>isMemberOfClass有两个方法,一个是实例方法,一个是类方法,他俩的区别是:</p>
+<p>明确了何时创建,那么子线程的 autorelease 对象是何时释放的呢?线程退出的时候会释放资源,执行AutoreleasePoolPage::tls_dealloc,在这里面会清空autoreleasepool.</p>
 
-<ul>
-<li>实例方法- (BOOL)isMemberOfClass:(Class)cls: 根据实例对象取得类对象,再去判断</li>
-<li>类方法 + (BOOL)isMemberOfClass:(Class)cls:根据对象取得元类对象,再去判断</li>
-</ul>
+<h3 id="toc_1">总结:</h3>
 
-<p>其实简单的说是根据传入的类的 isa,来判断,因为实例对象的 isa 是实例的类对象,类对象的 isa 指向的是类的元类,Meta Class</p>
+<ol>
+<li>子线程在使用autorelease对象时，如果没有autoreleasepool会在autoreleaseNoPage中懒加载一个出来。</li>
+<li>在runloop的run:beforeDate，以及一些source的callback中，有autoreleasepool的push和pop操作，总结就是系统在很多地方都差不多autorelease的管理操作。</li>
+<li>就算插入没有pop也没关系，在线程exit的时候会释放资源，执行AutoreleasePoolPage::tls_dealloc，在这里面会清空autoreleasepool。</li>
+</ol>
 
-<p>验证:<br/>
-创建两个类,Person 类继承自 NSObject<br/>
-Student 类继承自 Person<br/>
-<img src="media/15834860456410/15834866616638.jpg" alt="" style="width:259px;"/><br/>
-<img src="media/15834860456410/15834866735409.jpg" alt="" style="width:232px;"/></p>
-
-<p>先看代码,思考一下打印结果是什么<br/>
-<img src="media/15834860456410/15834890909476.jpg" alt="" style="width:554px;"/><br/>
-res1 : [Person class] Person 类的元类 是不是和[NSObject class]类一致? 肯定是不一致 所以返回 NO<br/>
-res2: [Person class] Person 类的元类 是不是和[Person class]类一致? 元类和类肯定也是不一致 所以返回 NO</p>
-
-<p>实例对象;<br/>
-<img src="media/15834860456410/15834894446040.jpg" alt="" style="width:524px;"/><br/>
-第一行,Person new 出来一个实例,该实例的 isa 指向类 Person, 而 Person 很明显不是 NSObject类,所以为 0;<br/>
-第二行,Person new 出来一个实例,该实例的 isa 指向类 Person, 判断 Person 类是不是 Person,答案是肯定的,所以为 1;</p>
-
-<p><img src="media/15834860456410/15834896748734.jpg" alt="" style="width:765px;"/></p>
-
-<p><strong>object_getClass(cls)</strong> 这个方法返回是传入类的元类 </p>
-
-<h2 id="toc_1">isKindOfClass</h2>
-
-<ul>
-<li>调用者是传入的类的实例对象，或者调用者是传入类的继承者链中的类的实例对象，则返回YES</li>
-<li>判断调用者是否是传入对象的子类，别弄反了</li>
-<li>去父类递归查找判断</li>
-</ul>
-
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isKindOfClass:(Class)cls {
-    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
--（BOOL)isKindOfClass:(Class)cls {
-    for(Class tcls = [self class]; tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
-</code></pre>
-
-<p><img src="media/15834860456410/15834900954033.jpg" alt="" style="width:783px;"/></p>
-
-<p>参考:<br/>
-<a href="https://www.lagou.com/lgeduarticle/14758.html">https://www.lagou.com/lgeduarticle/14758.html</a></p>
+<p>参考: <br/>
+<a href="https://suhou.github.io/2018/01/21/%E5%B8%A6%E7%9D%80%E9%97%AE%E9%A2%98%E7%9C%8B%E6%BA%90%E7%A0%81----%E5%AD%90%E7%BA%BF%E7%A8%8BAutoRelease%E5%AF%B9%E8%B1%A1%E4%BD%95%E6%97%B6%E9%87%8A%E6%94%BE/">https://suhou.github.io/2018/01/21/%E5%B8%A6%E7%9D%80%E9%97%AE%E9%A2%98%E7%9C%8B%E6%BA%90%E7%A0%81----%E5%AD%90%E7%BA%BF%E7%A8%8BAutoRelease%E5%AF%B9%E8%B1%A1%E4%BD%95%E6%97%B6%E9%87%8A%E6%94%BE/</a></p>
 
                         
                       </div>
@@ -198,10 +153,10 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/06</span>
+                    <span class="date">2020/03/21</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
           				   
                     
 
@@ -305,6 +260,12 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
 	      
 		      
 			      <li class="post">
+			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
@@ -324,12 +285,6 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
 		      
 			      <li class="post">
 			        <a href="15857060089212.html">设计模式-听课笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

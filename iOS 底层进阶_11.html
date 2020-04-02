@@ -116,44 +116,65 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15848634915010.html">
+                <a class="clearlink" href="15844949626994.html">
                 
-                  <h1>Block 对于变量的截获</h1>
+                  <h1>Block 进阶 (一)</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ol>
-<li>对于基本数据类型的截获,是值截获,仅仅截获值,在截获的时候值是多少就是多少,后续更改,不会影响 Block 内部的变化</li>
-<li>对于<mark>局部静态变量,是截获的该静态变量的指针</mark>,也是就是说这个静态变量变化的话,Block 截获的值也会跟着变化</li>
-<li><mark>对于对象类型的局部变量,连同所有权修饰符一同截获</mark>(这也从一个侧面说明了__weak 的原理,因为截获对象类型的时候,连同所有权修饰符一同截获了,weak 修饰的话,就打破了强引用环,解决了循环引用)</li>
-<li>全局变量,全局静态变量,是不会截获的.</li>
+                        	<h2 id="toc_0">什么是 BLOCK</h2>
+
+<p><strong>Blocks 是带有自动变量(局部变量)的匿名函数</strong><br/>
+顾名思义,所谓的匿名函数,就是不带名称的函数</p>
+
+<h3 id="toc_1">Block语法</h3>
+
+<p>完整形式的 Block 语法与一般的 C语言函数相比,仅有两点不同:</p>
+
+<ol>
+<li>没有函数名</li>
+<li>带有标识符 ^</li>
 </ol>
 
-<p>我们先定义一个比较简单的 Block</p>
+<p><img src="media/15844949626994/15848551473057.jpg" alt="" style="width:265px;"/></p>
 
-<pre class="line-numbers"><code class="language-text">- (void)testMethod {
-    int mutiNum = 6;
-    int (^Block)(int) = ^int(int num) {
-        return num * mutiNum;
-    };
-    Block(2);
-}
+<p>比如定义一个 Block:<br/>
+<sup>int</sup> (int coun) {return count +1;}</p>
 
-</code></pre>
+<p><img src="media/15844949626994/15848602566357.jpg" alt="" style="width:1280px;"/></p>
 
-<p><img src="media/15848634915010/15848690037809.jpg" alt="" style="width:740px;"/><br/>
-在终端中 输入命令: clang -rewrite-objc MCBlock.m <br/>
-可以查看我们自定义的这个 MCBlock.m 的文件编译之后的源码.终端执行完成之后,在原文件夹会生成一个.cpp 的文件<br/>
-<img src="media/15848634915010/15848691080865.jpg" alt="" style="width:489px;"/><br/>
-打开这个 cpp 的源码文件</p>
+<p>__block </p>
 
-<p>找到我们定义这个 testMethod 方法<br/>
-<img src="media/15848634915010/15848691727627.jpg" alt="" style="width:907px;"/><br/>
-从这个源码我们可以看到,mutiNum = 6,是直接被捕获到了</p>
+<ol>
+<li>赋值</li>
+<li>使用<br/>
+赋值和使用的区别</li>
+</ol>
 
-<p>我们可以看到里面有一个__block_impl 的参数.找到这个参数的定义<br/>
-<img src="media/15848634915010/15848696004996.jpg" alt="" style="width:467px;"/></p>
+<p><img src="media/15844949626994/15848609404010.jpg" alt="" style="width:1178px;"/></p>
+
+<p><img src="media/15844949626994/15848704478850.jpg" alt="" style="width:1213px;"/></p>
+
+<p><img src="media/15844949626994/15848706459399.jpg" alt="" style="width:1222px;"/></p>
+
+<p><img src="media/15844949626994/15848610458567.jpg" alt="" style="width:1280px;"/></p>
+
+<p><img src="media/15844949626994/15848611114983.jpg" alt="" style="width:1095px;"/><br/>
+<strong>栈上的 Block 的__forwarding 指针,是指向他自己的!</strong></p>
+
+<p><img src="media/15844949626994/15848613522664.jpg" alt="" style="width:851px;"/></p>
+
+<p><img src="media/15844949626994/15848621885769.jpg" alt="" style="width:1092px;"/></p>
+
+<p>三种 Block<br/>
+<img src="media/15844949626994/15848614833261.jpg" alt="" style="width:1226px;"/></p>
+
+<p><img src="media/15844949626994/15848615309355.jpg" alt="" style="width:1212px;"/></p>
+
+<p><img src="media/15844949626994/15848627599661.jpg" alt="" style="width:1183px;"/></p>
+
+<p><img src="media/15844949626994/15848628231886.jpg" alt="" style="width:1131px;"/></p>
 
                         
                       </div>
@@ -162,7 +183,7 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/22</span>
+                    <span class="date">2020/03/18</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='Block%20%E7%9B%B8%E5%85%B3.html'>Block 相关</a></span>
@@ -269,6 +290,12 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
@@ -288,12 +315,6 @@
 		      
 			      <li class="post">
 			        <a href="15857060089212.html">设计模式-听课笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

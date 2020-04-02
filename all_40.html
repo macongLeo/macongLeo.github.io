@@ -116,91 +116,36 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780200209710.html">
+                <a class="clearlink" href="15825371776074.html">
                 
-                  <h1>iOS 响应者链及事件传递</h1>
+                  <h1>mmap 内存映射</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">UIResponder</h2>
+                        	<p><img src="media/15825371776074/15825373318908.jpg" alt="" style="width:943px;"/></p>
 
-<p>在 iOS中，所有响应事件处理事件的对象都直接或间接的继承UIResponder。</p>
+<p><strong>什么是内存映射?</strong><br/>
+所谓内存映射,就是将<strong>文件的磁盘扇区映射到进程的虚拟内存空间</strong>的过程.</p>
 
-<p><img src="media/15780200209710/2526037-c8d367c7064cf59c.jpg" alt="2526037-c8d367c7064cf59"/></p>
-
-<p>在 iOS 视图结构中，呈现出来的是一个 N 叉树的树形结构，每个视图都只有一个父视图，可以有多个子视图。<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpldkdtyj30he0go46i.jpg" alt=""/></p>
-
-<h2 id="toc_1">寻找第一响应者</h2>
-
-<p>当用户点击某个视图或者按钮的时候，会首先响应 applocation 中的 UIWindow 一层一层的向下查找，直到找到点击的 view，这阶段用到的两个方法：</p>
-
-<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;   // recursively calls -pointInside:withEvent:. point is in the receiver&#39;s coordinate system
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;   // default returns YES if point is in bounds
-</code></pre>
-
-<p>例如有这样一个图层结构：<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpsaqbekj30e80jamy9.jpg" alt=""/></p>
-
-<p>在上图中用户点击视图中的ViewD时，UIWindow首先接收到响应，此响应包括用户点击的区域和一个封装好的UIEvent对象，然后UIWindow通过这些信息利用以下方法查找：</p>
+<p><strong>操作系统读写文件流程</strong><br/>
+<strong>读写操作流程:</strong></p>
 
 <ol>
-<li><p>UIWindow会通过调用pointInside:withEvent:方法返回的YES得知用户点击的范围在ViewA中；</p></li>
-<li><p>ViewA调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewB、ViewC)调用hitTest:withEvent:方法；</p></li>
-<li><p>在遍历中发现使用ViewC调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewC范围之内；</p></li>
-<li><p>ViewC调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewD、ViewE)调用hitTest:withEvent:方法;</p></li>
-<li><p>在遍历中发现使用ViewD调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewD范围之内;</p></li>
-<li><p>在ViewD调用hitTest:withEvent:方法之前发现View的subViews的count为0，故确定用户点击在ViewD之上。</p></li>
+<li>进程发起一个读文件请求</li>
+<li>内核通过查找<strong>进程文件符表</strong>,定位到内核已打开的文件集上的文件信息,从而找到对应文件的 inode;</li>
+<li>inode 在地址空间上查找要请求的文件是否已经缓存在内核页的高速缓存中,如果存在,则直接放回该文件的内容</li>
+<li>如果文件不存在高速缓存中,则通过 inode 定位到文件的磁盘地址,将数据从磁盘复制到内核页高速缓存.之后再次读页面的过程,将内核高速缓存中的数据发送给用户进程</li>
 </ol>
-
-<p>UIWindow会用遍历subviews，使用每一个subview调用hitTest:withEvent:方法，如果用户点击在某一个subview上，pointInside:withEvent:方法返回YES，再用这个subview调用hitTest:withEvent:方法，依次类推，直到当前view没有子view或点击的位置没有在其任何子view之上，便确定用户点击在某view上</p>
-
-<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
-    for (UIView *view in self.subviews) {
-        if([view pointInside:point withEvent:event]){
-            UIView *hitTestView = [view hitTest:point withEvent:event];
-            if(nil == hitTestView){
-                return view;
-            }
-        }
-    }
-    return nil;
-}
-</code></pre>
 
 <blockquote>
-<p>1.Alpha=0、子视图超出父视图的情况、userInteractionEnabled=NO、hidden=YES视图会被忽略，不会调用hitTest<br/>
-2.父视图被忽略后其所有子视图也会被忽略<br/>
-3.出现视图无法响应的情况，可以考虑上诉情况来排查问题</p>
+<p><strong>什么是 inode?</strong><br/>
+全程为 index node,即为存储文件元信息的区域,中文译名&quot;索引节点&quot;.<br/>
+例如包含:文件权限,文件拥有者的 UID,文件的大小等等</p>
 </blockquote>
 
-<h2 id="toc_2">事件传递</h2>
-
-<p>事件传递的顺序其实就是寻找第一响应者的逆序，当找到了第一响应（View，button）之后，响应者就要对事件作出响应，这里就是使用了 UIResponder 的 nextResponder 方法。</p>
-
-<h3 id="toc_3">nextResponder 的规则</h3>
-
-<p>因为UIView和UIViewController都是继承于UIResponder，所以在调用nextResponder时有几条规则如下：</p>
-
-<ol>
-<li><p>当一个view调用其nextResponder会返回其superView;</p></li>
-<li><p>如果当前的view为UIViewController的view被添加到其他view上，那么调用nextResponder会返回当前的UIViewController，而这个UIViewController的nextResponder为view的superView；</p></li>
-<li><p>如果当前的UIViewController的view没有添加到任何其他view上，当前的UIViewController的nextResponder为nil，不管它是keyWinodw或UINavigationController的rootViewController，都是如此；</p></li>
-<li><p>如果当前application的keyWindow的rootViewController为UINavigationController(或UITabViewController)，那么通过调用UINavigationController(或UITabViewController)的nextResponder得到keyWinodw；</p></li>
-<li><p>keyWinodw的nextResponder为UIApplication，UIApplication的nextResponder为AppDelegate，AppDelegate的nextResponder为nil。</p></li>
-</ol>
-
-<p>通过知道了上述规则，便可以通过用户点击的ViewD，查看ViewD是否响应了点击事件，如果没有找它的nextResponder，如果没有再继续找，直到找到AppDelegate再没有响应，则此点击事件被系统丢弃，大致流程如下：<br/>
-<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lu7zsmnqj30fa0f8adu.jpg" alt=""/><br/>
-事件响应链的大致流程就是如此了，大概就是一个先向下找，再向上找的过程！</p>
-
-<h2 id="toc_4">无法响应的情况</h2>
-
-<p>参考：<br/>
-<a href="">https://www.cnblogs.com/easy-coding/p/3604856.html</a></p>
-
-<p><a href="">https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/using_responders_and_the_responder_chain_to_handle_events?language=objc</a></p>
+<p>参考:<br/>
+<a href="https://juejin.im/post/5caaf564f265da24d60e9c8d">https://juejin.im/post/5caaf564f265da24d60e9c8d</a></p>
 
                         
                       </div>
@@ -209,7 +154,7 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
+                    <span class="date">2020/02/24</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
@@ -316,6 +261,12 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
@@ -335,12 +286,6 @@
 		      
 			      <li class="post">
 			        <a href="15857060089212.html">设计模式-听课笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

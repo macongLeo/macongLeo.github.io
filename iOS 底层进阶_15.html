@@ -116,358 +116,438 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15820198947096.html">
+                <a class="clearlink" href="15833975374504.html">
                 
-                  <h1>weak 的释放及原理</h1>
+                  <h1>Runtime 底层1- isa&Class</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>1.被weak修饰的对象在被释放的时候会发生什么？是如何实现的？知道sideTable么？里面的结构可以画出来么<br/>
-在回答问题之前,我们先来了解一下 weak 的内部结构:</p>
+                        	<h2 id="toc_0"><strong>一,Runtime 是什么?</strong></h2>
+
+<p>Runtime 看字面意思就是运行时,是一套底层的 C语言 API,Objective-C 之所以具有动态性,就是因为 Runtime 的存在,否则 OC根本不能算动态性语言,Runtime 是 iOS 系统的核心之一.我们在编码的过程中,可以给任何一个对象发送消息,在编译阶段只是确定了要向接受者发送这条消息,而接受者将要如何响应和处理这条消息,就由运行时来决定了.<br/>
+C语言中在编译期,函数的调用就会决定调用哪个函数(OC 中叫方法)<br/>
+而 OC 方法属于动态调用过程,在编译期并不能真正调用哪个函数,只有在真正运行的时候才会根据函数的名称来找到对象的函数来调用.<br/>
+OC 是一个动态语言,意味着他不仅仅需要一个编译器,也需要一个运行时系统来动态创建类和对象,进行消息传递和转发.<br/>
+OC 在三种层面上与 Runtime 系统进行交互:<br/>
+<img src="media/15833975374504/15833981399452.jpg" alt="" style="width:837px;"/></p>
+
+<ol>
+<li>通过 OC 源代码</li>
+<li>通过 Foundation 框架的 NSObject 类定义的方法</li>
+<li>通过对 Runtime 库函数的直接调用</li>
+</ol>
+
+<p><strong>通过 OC 源代码</strong></p>
 
 <blockquote>
-<p>我们常说的 weak,其实是 runtime 维护的用于存储对象的所有 weak 指针的 hash 表,<mark>key 是对象的指针,value 是 weak 指针的地址(这个地址的值是所指对象的地址)数组</mark></p>
+<p>一般情况下开发者只需要编写 OC代码,Runtime 系统会自动的在幕后把我们编写的 OC 源代码在编译阶段转换成运行时代码,在运行时确定对应的数据结构和调用的具体哪个方法.</p>
 </blockquote>
 
-<p>例如:</p>
+<p><strong>通过 Foundation 框架的 NSObject 类定义的方法</strong></p>
 
-<pre class="line-numbers"><code class="language-text">NSObject *b = [NSObject new];
-__weak id a = b;
+<blockquote>
+<p>在 OC 的世界中,除了 NSProxy 类以外,所有的类都是 NSObject 的子类.在 Foundation 框架下定义了 NSObject 和 NSProxy 两个基类.这两个基类都遵循了NSObject 协议,在 NSObject 协议中,有以下 5 个方法,是可以从 Runtime 中获取信息,让对象自我检查.</p>
+
+<pre class="line-numbers"><code class="language-text">- (Class)class OBJC_SWIFT_UNAVAILABLE(&quot;use &#39;anObject.dynamicType&#39; instead&quot;);
+- (BOOL)isKindOfClass:(Class)aClass;
+- (BOOL)isMemberOfClass:(Class)aClass;
+- (BOOL)conformsToProtocol:(Protocol *)aProtocol;
+- (BOOL)respondsToSelector:(SEL)aSelector;
 </code></pre>
 
-<p>这里的 b 就是 weak 表的 key,&amp;a(a的内存地址)就是 value;</p>
+<p>-class方法返回对象的类；<br/>
+-isKindOfClass: 和 -isMemberOfClass: 方法检查对象是否存在于指定的类的继承体系中；<br/>
+-respondsToSelector: 检查对象能否响应指定的消息；<br/>
+-conformsToProtocol:检查对象是否实现了指定协议类的方法；</p>
 
-<p><strong>weak 的实现原理简单的概括就三步:</strong></p>
+<p>在 NSObject 的类中还定义了一个方法:</p>
 
-<ol>
-<li>初始化时:runtime 会调用objc_initWeak 函数,初始化一个新的 weak 指针指向对象的地址</li>
-<li>添加引用时:objc_initWeak 函数会调用 objc_storeWeak()函数,objc_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
-<li>释放时:调用 clearDeallocating 函数.clearDeallocating函数首先根据对象地址获取所有 weak 指针地址的数组,然后遍历这个数组把其中的数据置为 nil,最后把这个 entry 从 weak 表中删除,最后清理对象的记录.</li>
-</ol>
+<pre class="line-numbers"><code class="language-text">- (IMP)methodForSelector:(SEL)aSelector;
+</code></pre>
 
-<p>在 runtime 里,weak 修饰符变量是通过 objc_initWeak 函数来初始化的,在变量作用域结束的时候通过 objc_destroyWeak 函数来释放的.</p>
+<p>这个方法会返回指定方法实现的地址 IMP.</p>
+</blockquote>
 
-<p>这两个函数长这样:</p>
+<p><strong>通过对 Runtime 库函数的直接调用</strong></p>
 
-<pre class="line-numbers"><code class="language-text">id objc_initWeak(id *location, id newObj)
-{
-    // 查看对象实例是否有效
-    // 无效对象直接导致指针释放
-    if (!newObj) {
-        *location = nil;
-        return nil;
-    }
-    // 这里传递了三个 bool 数值
-    // 使用 template 进行常量参数传递是为了优化性能
-    return storeWeak&lt;false/*old*/, true/*new*/, true/*crash*/&gt;
-        (location, (objc_object*)newObj);
+<blockquote>
+<p>关于库函数可以在Objective-C Runtime Reference中查看 Runtime 函数的详细文档。<br/>
+    当我们导入了objc/Runtime.h和objc/message.h两个头文件之后，我们查找到了Runtime的函数之后，代码打完，发现没有代码提示了，那些函数里面的参数和描述都没有了。对于熟悉Runtime的开发者来说，这并没有什么难的，因为参数早已铭记于胸。但是对于新手来说，这是相当不友好的。而且，如果是从iOS6开始开发的同学，依稀可能能感受到，关于Runtime的具体实现的官方文档越来越少了？可能还怀疑是不是错觉。其实从Xcode5开始，苹果就不建议我们手动调用Runtime的API，也同样希望我们不要知道具体底层实现。所以IDE上面默认代了一个参数，禁止了Runtime的代码提示，源码和文档方面也删除了一些解释。</p>
+
+<p>具体设置如下:<br/>
+<img src="media/15833975374504/15834020842465.jpg" alt="" style="width:1154px;"/><br/>
+如果发现导入了两个库文件之后，仍然没有代码提示，就需要把这里的设置改成NO，即可。</p>
+</blockquote>
+
+<h2 id="toc_1">二 NSObject 起源</h2>
+
+<p>上面我们可以看出,Runtime 都和 NSObject 有关,所以我们先来研究一下 NSObject .<br/>
+NSObject 的定义:</p>
+
+<pre class="line-numbers"><code class="language-text">typedef struct objc_class *Class;
+
+@interface NSObject &lt;NSObject&gt; {
+    Class isa  OBJC_ISA_AVAILABILITY;
 }
 </code></pre>
 
-<pre class="line-numbers"><code class="language-text">void objc_destroyWeak(id *location)
-{
-    (void)storeWeak&lt;true/*old*/, false/*new*/, false/*crash*/&gt;
-        (location, nil);
-}
+<p>在 Objc2.0 之前,Objc_class 的源码如下:</p>
+
+<pre class="line-numbers"><code class="language-text">struct objc_class {
+    Class isa  OBJC_ISA_AVAILABILITY;
+    
+#if !__OBJC2__
+    Class super_class                                        OBJC2_UNAVAILABLE;
+    const char *name                                         OBJC2_UNAVAILABLE;
+    long version                                             OBJC2_UNAVAILABLE;
+    long info                                                OBJC2_UNAVAILABLE;
+    long instance_size                                       OBJC2_UNAVAILABLE;
+    struct objc_ivar_list *ivars                             OBJC2_UNAVAILABLE;
+    struct objc_method_list **methodLists                    OBJC2_UNAVAILABLE;
+    struct objc_cache *cache                                 OBJC2_UNAVAILABLE;
+    struct objc_protocol_list *protocols                     OBJC2_UNAVAILABLE;
+#endif
+    
+} OBJC2_UNAVAILABLE;
 </code></pre>
 
-<p>注意点:</p>
-
-<ol>
-<li>objc_initWeak 函数有一个前提条件,就是 object 必须是一个没有被注册为 weak 对象的有效指针,而 value 则可以是 null,或者指向一个有效的对象</li>
-<li>添加引用时,object_initWeak 函数会调用 object_storeWeak()函数,object_storeWeak()函数的作用是更新指针指向,创建对应的弱引用表</li>
-</ol>
-
-<p>从上面两个代码能看出来他们都调用了 storeWeak 这个函数,但是传入的参数确有点不一样<br/>
-init 方法中,第一个参数为 weak 的修饰变量,第二个参数为引用计数对象,但是在 destoryWeak 函数,第一参数依旧为 weak 修饰变量,第二个为 nil.参数不同到底代表了什么?下面继续分析 storeWeak 这个函数:</p>
-
-<pre class="line-numbers"><code class="language-text">// 更新一个弱引用变量
-// 如果 HaveOld 是 true, 变量是个有效值，需要被及时清理。变量可以为 nil。
-// 如果 HaveNew 是 true, 需要一个新的 value 来替换变量。变量可以为 nil
-// 如果crashifdeallocation 是 ture ，那么如果 newObj 是 deallocating，或者 newObj 的类不支持弱引用，则该进程就会停止。
-// 如果crashifdeallocation 是 false，那么 nil 会被存储。
-
-template &lt;bool HaveOld, bool HaveNew, bool CrashIfDeallocating&gt;
-static id storeWeak(id *location, objc_object *newObj)
-{
-    assert(HaveOld  ||  HaveNew);
-    if (!HaveNew) assert(newObj == nil);
-
-    Class previouslyInitializedClass = nil;
-    id oldObj;
-    
-    // 创建新旧散列表
-    SideTable *oldTable;
-    SideTable *newTable;
-
-    // Acquire locks for old and new values.
-    // 获得新值和旧值的锁存位置 (用地址作为唯一标示)
-    // Order by lock address to prevent lock ordering problems.
-    // 通过地址来建立索引标志，防止桶重复
-    // Retry if the old value changes underneath us.
-    // 下面指向的操作会改变旧值
- retry:
-    if (HaveOld) {
-    // 如果 HaveOld 为 true ，更改指针，获得以 oldObj 为索引所存储的值地址
-        oldObj = *location;
-        oldTable = &amp;SideTables()[oldObj];
-    } else {
-        oldTable = nil;
-    }
-    if (HaveNew) {
-    // 获得以 newObj 为索引所存储的值对象
-        newTable = &amp;SideTables()[newObj];
-    } else {
-        newTable = nil;
-    }
-    
-// 对两个 table 进行加锁操作，防止多线程中竞争冲突
-    SideTable::lockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
-
-//  location 应该与 oldObj 保持一致，如果不同，说明当前的 location 已经处理过 oldObj 可是又被其他线程所修改, 保证线程安全，这个判断用来避免线程冲突重处理问题
-    if (HaveOld  &amp;&amp;  *location != oldObj) {
-        SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
-        goto retry;
-    }
-
-    // Prevent a deadlock between the weak reference machinery
-    // and the +initialize machinery by ensuring that no 
-    // weakly-referenced object has an un-+initialized isa.
-    // 防止弱引用之间发生死锁，并且通过 +initialize 初始化构造器保证所有弱引用的 isa 非空指向
-    if (HaveNew  &amp;&amp;  newObj) {
-        // 获得新对象的 isa 指针
-        Class cls = newObj-&gt;getIsa();
-        // 判断 isa 非空且已经初始化
-        if (cls != previouslyInitializedClass  &amp;&amp;  
-            !((objc_class *)cls)-&gt;isInitialized()) 
-        {
-            // 对两个表解锁
-            SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
-            _class_initialize(_class_getNonMetaClass(cls, (id)newObj));
-
-            // If this class is finished with +initialize then we&#39;re good.
-            // If this class is still running +initialize on this thread 
-            // (i.e. +initialize called storeWeak on an instance of itself)
-            // then we may proceed but it will appear initializing and 
-            // not yet initialized to the check above.
-            // Instead set previouslyInitializedClass to recognize it on retry.
-            // 如果该类已经完成执行 +initialize 方法是最好的，如果该类 + initialize 在线程中，例如 +initialize 正在调用storeWeak 方法，那么则需要手动对其增加保护策略，并设置 previouslyInitializedClass 指针进行标记然后重新尝试
-            previouslyInitializedClass = cls;
-
-            goto retry;
-        }
-    }
-
-    // Clean up old value, if any. 清除旧值
-    if (HaveOld) {
-        weak_unregister_no_lock(&amp;oldTable-&gt;weak_table, oldObj, location);
-    }
-
-    // Assign new value, if any. 分配新值
-    if (HaveNew) {
-        newObj = (objc_object *)weak_register_no_lock(&amp;newTable-&gt;weak_table, 
-                                                      (id)newObj, location, 
-                                                      CrashIfDeallocating);
-        // weak_register_no_lock returns nil if weak store should be rejected
-        // 如果弱引用被释放则该方法返回 nil
-        // Set is-weakly-referenced bit in refcount table.
-        // 在引用计数表中设置弱引用标记位
-        if (newObj  &amp;&amp;  !newObj-&gt;isTaggedPointer()) {
-            newObj-&gt;setWeaklyReferenced_nolock();
-        }
-
-        // Do not set *location anywhere else. That would introduce a race.
-        *location = (id)newObj;
-    }
-    else {
-        // No new value. The storage is not changed.
-    }
-    
-    SideTable::unlockTwo&lt;HaveOld, HaveNew&gt;(oldTable, newTable);
-
-    return (id)newObj;
-}
-</code></pre>
-
-<p>以上就是 storeWeak 函数的实现,他做了几件事:</p>
+<p>在这里我们可以看到,在一个类中有超类的指针,类名,版本信息</p>
 
 <ul>
-<li>声明了新旧散列表指针,因为 weak 修饰的变量如果之前已经指向一个对象,然后其再次改变指向另一个对象,那么按理来说我们需要从 oldTable 删除 weak 变量的记录,也就是要释放该 weak 变量,然后再给 newTable 添加新记录(weak变量),这里的新旧散列表就是这个作用</li>
-<li>根据新旧变量地址获取响应的 SideTable</li>
-<li>对两个表进行加锁操作,防止多线程竞争冲突</li>
-<li>进行线程冲突重处理判断</li>
-<li>判断其 isa 指针是否为空,为空则需要初始化</li>
-<li>如果存在旧值,调用 weak_unregister_no_lock 函数清楚旧值</li>
-<li>调用weak_register_no_lock 函数分配新值</li>
-<li>解锁两个表,返回第二参数</li>
+<li>objc_ivar_list *ivars:    objc_ivar_list 成员变量的指针</li>
+<li>objc_method_list **methodLists:    指向 objc_method_list 指针的指针;</li>
+<li>*methodLists :     指向方法列表的指针(这里如果动态修改 methodLists的值来添加成员方法,这也是 Category 实现的原理.)</li>
 </ul>
 
-<p>tip:</p>
+<p>2006 年苹果发布了 Objc2.0 之后,objc_class 的定义就变成了下面的样子了:</p>
 
-<blockquote>
-<p>你可以把objc_storeWeak(id *location, objc_object *newObj)理解为：objc_storeWeak(value, key)，并且当key变nil，将value置nil。<br/>
-结合最开始的例子我们可以理解为objc_storeWeak(&amp;a, b)<br/>
-在b非nil时，a和b指向同一个内存地址，在b变nil时，a变nil。此时向a发送消息不会崩溃：在Objective-C中向nil发送消息是安全的。<br/>
-而如果a是由 assign 修饰的，则： 在 b 非 nil 时，a 和 b 指向同一个内存地址，在 b 变 nil 时，a 还是指向该内存地址，变野指针。此时向 a 发送消息<mark>极易崩溃</mark>,不是一定会奔溃,涉及到 assgin 的释放问题下面再说。</p>
-</blockquote>
+<pre class="line-numbers"><code class="language-text">typedef struct objc_class *Class;
+typedef struct objc_object *id;
 
-<p>初始化弱引用对象流程图:<br/>
-<img src="media/15820198947096/15820219239893.jpg" alt="" style="width:546px;"/></p>
+@interface Object { 
+    Class isa; 
+}
 
-<p><strong>数据结构分析(* SideTables、RefcountMap、weak_table_t*)</strong><br/>
-<img src="media/15820198947096/15820337143051.jpg" alt="" style="width:601px;"/></p>
+@interface NSObject &lt;NSObject&gt; {
+    Class isa  OBJC_ISA_AVAILABILITY;
+}
 
-<p><strong>SideTable</strong></p>
+struct objc_object {
+private:
+    isa_t isa;
+}
 
-<p>SideTable主要用于管理对象的引用计数和 weak 表为了管理所有对象的引用计数和 weak 指针,苹果创建了一个全局的 SideTables,是一个全局的 Hash 表,里面装的都是 SideTable结构体.他使用对象的内存地址当他的key.</p>
+struct objc_class : objc_object {
+    // Class ISA;
+    Class superclass;
+    cache_t cache;             // formerly cache pointer and vtable
+    class_data_bits_t bits;    // class_rw_t * plus custom rr/alloc flags
+}
 
-<pre class="line-numbers"><code class="language-text">struct SideTable {
-// 保证原子操作的自旋锁
-    spinlock_t slock;
-    // 引用计数的 hash 表
-    RefcountMap refcnts;
-    // weak 引用全局 hash 表
-    weak_table_t weak_table;
+union isa_t 
+{
+    isa_t() { }
+    isa_t(uintptr_t value) : bits(value) { }
+    Class cls;
+    uintptr_t bits;
 }
 </code></pre>
 
-<p><img src="media/15820198947096/15820337366643.jpg" alt="" style="width:469px;"/></p>
+<p>把源码转换成类图,就是下图的样子:<br/>
+<img src="media/15833975374504/15834030497124.jpg" alt="" style="width:841px;"/></p>
 
-<p>从声明中可以看出,SideTable内部包含了一个是防止多线程竞争的自旋锁(slock),第二个是协助对象的 isa 指针的 extra_rc 共同引用计数变量,这里主要看 weak_table_t 的结构和作用</p>
+<p>从上述源码中,我们可以看到 OC 对象都是C语言的结构体实现的,在 objc2.0中,所有对象都会包含一个 isa_t 类型的结构体</p>
 
-<p><strong>1,一把自旋锁。spinlock_t  slock;</strong></p>
+<ul>
+<li>objc_object: 被源码 typedef 成了 id 类型,这也就是我们平时用到的 id 类型,这个结构体中只包含了一个 isa_t 类型的结构体</li>
+<li>objc_class:   继承与 objc_object,所以 objc_class 中也会包含 isa_t 类型的结构体 isa.(因此我们也能得出一个结论:OC 中类也是一个对象),除了 isa 还包含了其他 3 个成员变量一个是父类的指针(superclass),一个是方法缓存(cathe),最后一个是这个类的实例方法链表(class_data_bits_t)</li>
+</ul>
+
+<p>当一个对象的实例方法被调用的时候,会通过 isa 找到相应的类 class,然后在类的 class_data_bits_t 中查找方法,class_data_bits_t 是指向了类对象的数据区域,在该数据区域内查找响应方法的对应实现.<br/>
+但是当我们调用类方法的时候,类对象的 isa 里面是什么?这里为了和实例对象查找方法的机制一致,引入了元类(meta-class)的概念.<br/>
+在引入了元类之后,类对象和实例对象查找方法的机制就完全统一了.</p>
+
+<p><strong>对象的实例方法调用时，通过对象的 isa 在类中获取方法的实现。<br/>
+类对象的类方法调用时，通过类的 isa 在元类中获取方法的实现。</strong></p>
+
+<p>元类之所以重要,是因为他存储着一个类所有的类方法.每个类都会有一个单独的 meta-class.<br/>
+接下来那张经典图又来了:<br/>
+<img src="media/15833975374504/15834058396646.jpg" alt="" style="width:620px;"/></p>
+
+<ul>
+<li>Root class (class)其实就是NSObject，NSObject是没有超类的，所以Root class(class)的superclass指向nil。</li>
+<li>每个Class都有一个isa指针指向唯一的Meta class</li>
+<li>Root class(meta)的superclass指向Root class(class)，也就是NSObject，形成一个回路。</li>
+<li>每个Meta class的isa指针都指向Root class (meta)。</li>
+</ul>
+
+<h3 id="toc_2">1, isa_t 结构体的具体实现</h3>
+
+<p>接下来我们就该研究研究isa的具体实现了。objc_object里面的isa是isa_t类型。通过查看源码，我们可以知道isa_t是一个union联合体。</p>
 
 <blockquote>
-<p>自旋锁比较适用于锁使用者保持锁时间比较短的情况。正是由于自旋锁使用者一般保持锁时间非常短，因此选择自旋而不是睡眠是非常必要的，自旋锁的效率远高于互斥锁。信号量和读写信号量适合于保持时间较长的情况，它们会导致调用者睡眠，因此只能在进程上下文使用，而自旋锁适合于保持时间非常短的情况，它可以在任何上下文使用。</p>
+<p>结构体和共用体的区别在于：结构体的各个成员会占用不同的内存，互相之间没有影响；而共用体    的所有成员占用同一段内存，修改一个成员会影响其余所有成员。</p>
+
+<p>结构体占用的内存大于等于所有成员占用的内存的总和（成员之间可能会存在缝隙），共用体占用的内存等于最长的成员占用的内存。共用体使用了内存覆盖技术，同一时刻只能保存一个成员的值，如果对新的成员赋值，就会把原来成员的值覆盖掉。</p>
 </blockquote>
 
-<p><strong>2,引用计数器 RefcountMap  refcnts;</strong><br/>
-对象的具体引用计数数量是记录在这里的<br/>
-这里的RefcountMap其实是个 C++的 Map.<br/>
-<img src="media/15820198947096/15820340809229.jpg" alt="" style="width:571px;"/></p>
+<pre class="line-numbers"><code class="language-text">struct objc_object {
+private:
+    isa_t isa;
+public:
+    // initIsa() should be used to init the isa of new objects only.
+    // If this object already has an isa, use changeIsa() for correctness.
+    // initInstanceIsa(): objects with no custom RR/AWZ
+    void initIsa(Class cls /*indexed=false*/);
+    void initInstanceIsa(Class cls, bool hasCxxDtor);
+private:
+    void initIsa(Class newCls, bool indexed, bool hasCxxDtor);
 
-<p><strong>weak_table_t</strong><br/>
-weak_table_t结构体存储了某个对象相关的所有弱引用信息</p>
+</code></pre>
 
-<pre class="line-numbers"><code class="language-text">/**
- * The global weak references table. Stores object ids as keys,
- * and weak_entry_t structs as their values.
- */
-struct weak_table_t {
-    // 保存了所有指向指定对象的 weak 指针
-    weak_entry_t *weak_entries;
-    // 存储空间
-    size_t    num_entries;
-    // 参与判断引用计数辅助量
-    uintptr_t mask;
-    // hash key 最大偏移值
-    uintptr_t max_hash_displacement;
+<p>接下来我们从 initIsa 方法研究</p>
+
+<pre class="line-numbers"><code class="language-text">inline void
+objc_object::initInstanceIsa(Class cls, bool hasCxxDtor)
+{
+    initIsa(cls, true, hasCxxDtor);
+}
+
+inline void
+objc_object::initIsa(Class cls, bool indexed, bool hasCxxDtor)
+{
+    if (!indexed) {
+        isa.cls = cls;
+    } else {
+        isa.bits = ISA_MAGIC_VALUE;
+        isa.has_cxx_dtor = hasCxxDtor;
+        isa.shiftcls = (uintptr_t)cls &gt;&gt; 3;
+    }
+}
+</code></pre>
+
+<p>initIsa 第二个参数传入了一个 true,所以 initIsa 就会执行 else 里面的语句</p>
+
+<pre class="line-numbers"><code class="language-text">
+# if __arm64__
+#   define ISA_MASK        0x0000000ffffffff8ULL
+#   define ISA_MAGIC_MASK  0x000003f000000001ULL
+#   define ISA_MAGIC_VALUE 0x000001a000000001ULL
+    struct {
+        uintptr_t indexed           : 1;
+        uintptr_t has_assoc         : 1;
+        uintptr_t has_cxx_dtor      : 1;
+        uintptr_t shiftcls          : 33; // MACH_VM_MAX_ADDRESS 0x1000000000
+        uintptr_t magic             : 6;
+        uintptr_t weakly_referenced : 1;
+        uintptr_t deallocating      : 1;
+        uintptr_t has_sidetable_rc  : 1;
+        uintptr_t extra_rc          : 19;
+#       define RC_ONE   (1ULL&lt;&lt;45)
+#       define RC_HALF  (1ULL&lt;&lt;18)
+    };
+
+# elif __x86_64__
+#   define ISA_MASK        0x00007ffffffffff8ULL
+#   define ISA_MAGIC_MASK  0x001f800000000001ULL
+#   define ISA_MAGIC_VALUE 0x001d800000000001ULL
+    struct {
+        uintptr_t indexed           : 1;
+        uintptr_t has_assoc         : 1;
+        uintptr_t has_cxx_dtor      : 1;
+        uintptr_t shiftcls          : 44; // MACH_VM_MAX_ADDRESS 0x7fffffe00000
+        uintptr_t magic             : 6;
+        uintptr_t weakly_referenced : 1;
+        uintptr_t deallocating      : 1;
+        uintptr_t has_sidetable_rc  : 1;
+        uintptr_t extra_rc          : 8;
+#       define RC_ONE   (1ULL&lt;&lt;56)
+#       define RC_HALF  (1ULL&lt;&lt;7)
+    };
+
+</code></pre>
+
+<p><img src="media/15833975374504/15834775093507.jpg" alt="" style="width:834px;"/><br/>
+<img src="media/15833975374504/15834775197834.jpg" alt="" style="width:829px;"/><br/>
+关于参数的说明:</p>
+
+<ul>
+<li>index,代表是否开启 isa 指针优化.index= 1,代表开启优化</li>
+</ul>
+
+<blockquote>
+<p>为了节省内存和提高执行效率,苹果提出了 TaggedPointer 概念,对于 64 位处理器,引入TaggedPointer之后,相关逻辑能较少一半的内存占用,以及 3 倍的访问速度提升,100 倍的创建销毁速度提升.</p>
+</blockquote>
+
+<ul>
+<li><p>has_assoc:<br/>
+是否含有关联引用,没有关联引用的可以更快速的释放内存</p></li>
+<li><p>has_cxx_dtor:<br/>
+表示改对象是否含有 C++或者 OC 的析构器</p></li>
+<li><p>shiftcls:<br/>
+类的指针,arm64 架构中有 33 位可以存储类的指针</p></li>
+</ul>
+
+<blockquote>
+<p>源码中 isa.shiftcls = (uintptr_t)cls &gt;&gt; 3<br/>
+   将当前地址右移三位的主要原因是用于将 class 指针中无用的后三位清除减小内存的消耗,因为类  的指针要按照字节(8bit)对齐内存,其指针后三位都是没有意义的 0</p>
+</blockquote>
+
+<ul>
+<li><p>magic<br/>
+判断对象是否初始化完成,在 arm64 中 0x16 是调试器判断当前对象是真的对象还是没有初始化的空间</p></li>
+<li><p>weakly_referenced:<br/>
+对象被指向或者曾经指向一个 ARC 的弱变量,没有弱引用的对象可以更快速的释放</p></li>
+<li><p>deallocating<br/>
+对象是否正在释放内存</p></li>
+<li><p>has_sidetable_rc<br/>
+判断该对象的引用计数是否过大,如果大则需要散列表来进行存储</p></li>
+<li><p>extra_rc<br/>
+存放该对象的引用计数值减一后的结果.对象的引用计数超过 1,会存在这个里面,如果引用计数为 10,extra_rc的值就为 9</p></li>
+</ul>
+
+<p>ISA_MAGIC_MASK 和 ISA_MASK 分别通过掩码的方式获取 MAGIC 值和 isa 类指针</p>
+
+<h3 id="toc_3">2, 下面来看看 cathe_t 的具体实现</h3>
+
+<p>源码:</p>
+
+<pre class="line-numbers"><code class="language-text">struct cache_t {
+    struct bucket_t *_buckets;
+    mask_t _mask;
+    mask_t _occupied;
+}
+
+typedef unsigned int uint32_t;
+typedef uint32_t mask_t;  // x86_64 &amp; arm64 asm are less efficient with 16-bits
+
+typedef unsigned long  uintptr_t;
+typedef uintptr_t cache_key_t;
+
+struct bucket_t {
+private:
+    cache_key_t _key;
+    IMP _imp;
+}
+</code></pre>
+
+<p><img src="media/15833975374504/15834792321946.jpg" alt="" style="width:783px;"/></p>
+
+<p>从源码里,我们可以看到,cache_t 中存储了一个 bucke_t 的结构体,以及两个 unsgined int 的变量</p>
+
+<ul>
+<li><p>mask:<br/>
+分配用来缓存 buckt 的总数</p></li>
+<li><p>occupied:<br/>
+表示目前实际占用的缓存 bucket 的个数</p></li>
+<li><p>bucket_t:<br/>
+这个结构体中存储了一个 unsigned long 和一个 IMP.IMP 是一个函数指针,指向了一个方法的具体实现</p>
+<p>cache_t 中的 bucket_t *_buckets 其实就是一个散列表,用来存储 Method 的链表</p></li>
+</ul>
+
+<p>cache 的主要作用是为了优化方法的调用性能,当对象 recever调用方法 message 时,首先根据对象 receiver的 isa 指针查找到他对应的类,然后在类的 methodLists 中搜索方法,如果没有找到就使用 super_class 指针到父类中的 methodLists 查找,一旦找到就调用方法,如果没有找到,就进行消息转发或者忽略,但是这样查找的效率太低,每次调用方法都查一遍表,效率很低,因此用 Cache 来缓存调用的方法,每次调用方法先去缓存中查找,提高效率.如果没有找到在去 methodLists 中查找.</p>
+
+<h3 id="toc_4">3, class_data_bits_t的具体实现</h3>
+
+<pre class="line-numbers"><code class="language-text">struct class_data_bits_t {
+
+    // Values are the FAST_ flags above.
+    uintptr_t bits;
+}
+
+struct class_rw_t {
+    uint32_t flags;
+    uint32_t version;
+
+    const class_ro_t *ro;
+
+    method_array_t methods;
+    property_array_t properties;
+    protocol_array_t protocols;
+
+    Class firstSubclass;
+    Class nextSiblingClass;
+
+    char *demangledName;
+}
+
+struct class_ro_t {
+    uint32_t flags;
+    uint32_t instanceStart;
+    uint32_t instanceSize;
+#ifdef __LP64__
+    uint32_t reserved;
+#endif
+
+    const uint8_t * ivarLayout;
+    
+    const char * name;
+    method_list_t * baseMethodList;
+    protocol_list_t * baseProtocols;
+    const ivar_list_t * ivars;
+
+    const uint8_t * weakIvarLayout;
+    property_list_t *baseProperties;
+
+    method_list_t *baseMethods() const {
+        return baseMethodList;
+    }
+};
+
+</code></pre>
+
+<p><img src="media/15833975374504/15834800056491.jpg" alt="" style="width:845px;"/></p>
+
+<p>在 objc_class 结构体中的注释写到 class_data_bits_t 相当于 class_rw_t 指针加上 rr/alloc 的标志<br/>
+它为我们提供了便捷方法返回其中的 class_rw_t *指针:</p>
+
+<pre class="line-numbers"><code class="language-text">class_rw_t *data() {
+    return bits.data();
+}
+</code></pre>
+
+<p>Objc 的类的属性,方法,以及遵循的协议在 objc2.0 的版本之后都是放在 class_rw_t 中,class_ro_t 是一个指向常量的指针,存储来编译器决定了的属性,方法和遵循协议.<br/>
+rw-readwrite,ro-readonly 在编译期类的结构体中的 class_data_bits_t *data 指向的是一个 class_ro_t *指针:<br/>
+<img src="media/15833975374504/15834805118036.jpg" alt="" style="width:704px;"/></p>
+
+<p>在运行时调用 realizeClass 方法,会做已下 3 件事情:</p>
+
+<ol>
+<li>从 class_data_bits_t 调用 data 方法,将结果从 class_rw_t 强制转换为 class_ro_t 指针</li>
+<li>初始化一个 class_rw_t 结构体</li>
+<li>设置结构体 ro 的值以及 flag</li>
+</ol>
+
+<p>最后调用 methodizeClass 方法,把类里面的属性,协议,方法都加载进来</p>
+
+<p>方法 method 的定义:</p>
+
+<pre class="line-numbers"><code class="language-text">struct method_t {
+    SEL name;
+    const char *types;
+    IMP imp;
+
+    struct SortBySELAddress :
+        public std::binary_function&lt;const method_t&amp;,
+                                    const method_t&amp;, bool&gt;
+    {
+        bool operator() (const method_t&amp; lhs,
+                         const method_t&amp; rhs)
+        { return lhs.name &lt; rhs.name; }
+    };
 };
 </code></pre>
 
-<p>使用 weak 指针指向的对象地址作为 key,用 weak_entry_t 类型结构体对象作为 value.其中的 weak_entries 成员,就是弱引用表入口;<br/>
-<strong>weak_entry_t</strong><br/>
-weak_entry_t负责维护和存储指向一个对象的所有弱引用 hash 表:</p>
+<p>里面包含 3 个成员变量<br/>
+SEL 是方法的名字name<br/>
+types 是 Type Encoding 类型编码<br/>
+IMP 是一个函数指针,指向的函数的具体实现,在 Runtime 中消息传递和转发的目的就是为了找到 IMP,并执行函数</p>
 
-<pre class="line-numbers"><code class="language-text">typedef objc_object ** weak_referrer_t;
-struct weak_entry_t {
-    DisguisedPtrobjc_object&gt; referent;
-    union {
-        struct {
-            weak_referrer_t *referrers;
-            uintptr_t        out_of_line : 1;
-            uintptr_t        num_refs : PTR_MINUS_1;
-            uintptr_t        mask;
-            uintptr_t        max_hash_displacement;
-        };
-        struct {// out_of_line=0 is LSB of one of these (don&#39;t care which)
-            weak_referrer_t  inline_referrers[WEAK_INLINE_COUNT];
-        };
-    }
-}
-</code></pre>
+<p>整个运行时过程可以描述为:<br/>
+<img src="media/15833975374504/15834809074943.jpg" alt="" style="width:901px;"/></p>
 
-<ul>
-<li>referent:被值对象的地址,前面循环遍历查找的时候就是判断目标地址是否和他相等</li>
-<li>referrers:可变数组,里面保存着所指向这个对象的弱引用的地址,当这个对象被释放的时候.referrers里面的所有指针都会被置为 nil</li>
-<li>inline_referrers:只有 4 个元素的数组,默认情况下,用它来存储弱引用的指针,当大于 4 个的时候使用referrers来存储指针<br/>
-用一张图来表示就是:
-<img src="media/15820198947096/15820227824222.jpg" alt="" style="width:894px;"/></li>
-</ul>
-
-<p><strong>weak_unregister_no_lock</strong><br/>
-下面来看一下weak_unregister_no_lock是怎么清除旧值的</p>
-
-<pre class="line-numbers"><code class="language-text">void weak_unregister_no_lock(weak_table_t *weak_table, id referent_id, 
-                        id *referrer_id)
-{
-    objc_object *referent = (objc_object *)referent_id;
-    objc_object **referrer = (objc_object **)referrer_id;
-
-    weak_entry_t *entry;
-
-    if (!referent) return;
-
-    if ((entry = weak_entry_for_referent(weak_table, referent))) {
-        remove_referrer(entry, referrer);
-        bool empty = true;
-        if (entry-&gt;out_of_line  &amp;&amp;  entry-&gt;num_refs != 0) {
-            empty = false;
-        }
-        else {
-            for (size_t i = 0; i &lt; WEAK_INLINE_COUNT; i++) {
-                if (entry-&gt;inline_referrers[i]) {
-                    empty = false; 
-                    break;
-                }
-            }
-        }
-
-        if (empty) {
-            weak_entry_remove(weak_table, entry);
-        }
-    }
-
-    // Do not set *referrer = nil. objc_storeWeak() requires that the 
-    // value not change.
-}
-</code></pre>
-
-<p>该方法主要作用是将旧对象在 weak_table 中解除 weak 指针的对应绑定,根据函数名称,我们称他为解除注册操作<br/>
-这个函数的逻辑:首先是 weak_table_t 表,键和值.声明 weak_entry_t 变量,如果 key(referent)为空,直接返回,根据全局入口表和键获取对应的 weak_entry_t 对象entry.获取到 entry 后,将 entry 以及 weak_table 作为参数传入 remove_referrer 函数中,这个函数就是解除操作,然后判断 entry 是否为空,若果为空,从全局记录表中清除相应的 entry.</p>
-
-<p><strong>weak_entry_for_referent</strong></p>
-
-<pre class="line-numbers"><code class="language-text">static weak_entry_t *weak_entry_for_referent(weak_table_t *weak_table, objc_object *referent)
-{
-    assert(referent);
-
-    weak_entry_t *weak_entries = weak_table-&gt;weak_entries;
-
-    if (!weak_entries) return nil;
-
-    size_t index = hash_pointer(referent) &amp; weak_table-&gt;mask;
-    size_t hash_displacement = 0;
-    while (weak_table-&gt;weak_entries[index].referent != referent) {
-        index = (index+1) &amp; weak_table-&gt;mask;
-        hash_displacement++;
-        if (hash_displacement &gt; weak_table-&gt;max_hash_displacement) {
-            return nil;
-        }
-    }
-
-    return &amp;weak_table-&gt;weak_entries[index];
-}
-</code></pre>
-
-<p>这个函数的逻辑就是先获取全局 weak 表入口,然后将引用计数的地址进行 hash 化后与 weak_table-&gt;mask 做与操作,作为下标,在全局 weak 表中查找,若找到,返回 entry,若没有,返回 nil</p>
-
-<p>参考:<br/>
-<a href="https://www.jianshu.com/p/10c0f49f4755">https://www.jianshu.com/p/10c0f49f4755</a><br/>
-<a href="https://www.jianshu.com/p/ef6d9bf8fe59">https://www.jianshu.com/p/ef6d9bf8fe59</a><br/>
-<a href="https://www.jianshu.com/p/8577286af88e">https://www.jianshu.com/p/8577286af88e</a><br/>
-<a href="https://juejin.im/entry/58a178060ce463005644ee4a">https://juejin.im/entry/58a178060ce463005644ee4a</a></p>
+<p>参考:<a href="https://halfrost.com/objc_runtime_isa_class/">https://halfrost.com/objc_runtime_isa_class/</a></p>
 
                         
                       </div>
@@ -476,7 +556,7 @@ struct weak_entry_t {
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/18</span>
+                    <span class="date">2020/03/05</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
@@ -583,6 +663,12 @@ struct weak_entry_t {
 	      
 		      
 			      <li class="post">
+			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
@@ -602,12 +688,6 @@ struct weak_entry_t {
 		      
 			      <li class="post">
 			        <a href="15857060089212.html">设计模式-听课笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  
