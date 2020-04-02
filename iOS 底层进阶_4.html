@@ -116,69 +116,135 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854675822663.html">
+                <a class="clearlink" href="15854826531787.html">
                 
-                  <h1>iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</h1>
+                  <h1>iOS 的内存管理(三) 引用计数管理</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">数据结构</h2>
+                        	<h3 id="toc_0">MRC</h3>
+
+<p><img src="media/15854826531787/15854837401174.jpg" alt="" style="width:538px;"/><br/>
+MRC：是通过手动引用计数来进行对象的内存管理，关于内存管理涉及到这么几个方法</p>
 
 <ul>
-<li>Spinlock_t (自旋锁)</li>
-<li>RefcountMap (引用计数表)</li>
-<li>weak_table_t(弱引用表)</li>
+<li>alloc：用来分配一个对象的内存空间</li>
+<li>retain：可以使一个对象的引用计数加一</li>
+<li>release：对一个对象的引用计数进行减一操作</li>
+<li>retainCount：这个函数可以获取当前对象的引用计数值</li>
+<li>autorelease：如果调用了一个对象的 autorelease 方法，那么当前这个对象会在 autorelease pool 结束的时候调用它的 release 操作进行计数减一</li>
+<li>dealloc：在 MRC 中调用 dealloc 的话，需要显示的调用 super dealloc 来释放或者说废弃父类的相关成员变量</li>
+<li>在 MRC 当中所使用的特有方法，就是标红的这四个方法，在 ARC 当中如果调用这个四个方法，会引起编译报错</li>
 </ul>
 
-<h3 id="toc_1">自旋锁(Spinlock_t)</h3>
+<h3 id="toc_1">ARC</h3>
 
-<blockquote>
-<p>自旋锁是计算机科学用于多线程同步的一种锁，线程反复检查锁变量是否可用。由于线程在这一过程中保持执行，因此是一种忙等待。一旦获取了自旋锁，线程会一直保持该锁，直至显式释放自旋锁。<br/>
-自旋锁避免了进程上下文的调度开销，因此对于线程只会阻塞很短时间的场合是有效的。因此操作系统的实现在很多地方往往用自旋锁。Windows操作系统提供的轻型读写锁 ----维基百科</p>
-</blockquote>
+<p><img src="media/15854826531787/15854838107212.jpg" alt="" style="width:546px;"/><br/>
+ARC：是自动引用计数管理内存</p>
+
+<p>实际上是由编译器自动为我们插入 retain release 之外，还需要 Runtime 的功能支持，然后由编译器和 Runtime 共同协作才能组成 ARC 的全部功能</p>
+
+<p>ARC 中禁止手动调用 MRC 当中独有的方法，比如 retain release retainCount dealloc，在 ARC 当中可以重写某个对象的 dealloc 方法，但是不能在 dealloc 方法当中显式调用 super dealloc 方法<br/>
+除此之外 ARC 当中增加了 weak 和 strong 属性关键字</p>
+
+<p>1.<strong>alloc 实现</strong></p>
+
+<p>进过一系列调用，最终调用了 C 函数 calloc</p>
+
+<p>此时并没有设置引用计数为 1</p>
+
+<p>alloc 比较简单，只是经过一系列的函数封装和调用最终调用了一个<strong>C 函数 calloc</strong></p>
+
+<p><strong>alloc 分配之后的对象它并没有设置引用计数为 1</strong>，但是通过 retainCount 获取它的引用计数时为 1，原因请往下看:<br/>
+2.<strong>retain 实现</strong></p>
+
+<p><img src="media/15854826531787/15854839454208.jpg" alt="" style="width:511px;"/></p>
 
 <ul>
-<li>忙等锁</li>
-<li>适用于轻型访问(简单的 int 值 +1/-1 操作（在引用计数方面应用）)</li>
+<li>这段代码表示通过当前对象的指针到 SideTables 当中去获取它所指的 SideTable ，当获取到这个对象引用计数相关的 SideTable 之后，再在这个 SideTable 的结构当中去获取引用计数 refcnts 成员变量（引用计数表），通过当前对象的指针在这个 SideTables 当中的引用计数表当中去获取当前对象的引用计数值</li>
+<li>在进行 retain 操作的时候是进行了两次哈希查找，最终查找到的结构是 size_t 类型的（无符号 long 型）值，然后再对引用计数值加一操作</li>
+<li>这里面所加的是一个 SIDE_TAVLE_RC_ONE 的宏定义，加的值不是实际的 1，因为我们在讲述 size_t 这个存储引用计数变量的时候，说明了它64个bit位前两个位置不是存储引用计数的，而是在后面的62位中存储的引用计数，这里的所谓加一操作实际上加上了对应的偏移量，这个偏移量实际上应该是 4，给我们反应出来的结果就是加一操作</li>
 </ul>
 
-<h3 id="toc_2">引用计数表(RefcountMap)</h3>
+<p>3.<strong>release 实现</strong></p>
 
-<p><img src="media/15854675822663/15854683584252.jpg" alt="" style="width:530px;"/></p>
-
-<blockquote>
-<p>size_t 代表的就是对应对象的引用计数值，实际上就是一个无符号 long 型的变量</p>
-</blockquote>
-
-<p><strong>引用计数表是哈希表，正如名字 Map，可以理解为是一个字典</strong>，也就是说通过一个指针可以找到对应对象的引用计数，这个查找过程也是哈希查找，这个哈希查找的哈希算法实际上是对传入对象的指针进行伪装的操作，然后获取对应的引用计数<br/>
-在这里再次明确一下哈希查找的过程，实际上之所以使用哈希查找就是为了提高查找效率，而查找效率的提高源于我们存储一个对象的引用计数是通过这个函数来计算存储位置的，而获取这个对象所代表的引用计数值的时候，也是通过这个函数来计算应该获取的索引位置，所以插入和获取都是通过同一函数来计算位置的，也就避免了一些循环遍历的操作，所以哈希查找可以提高查找效率</p>
-
-<h4 id="toc_3">size_t</h4>
-
-<p>假如 size_t 使用一个 64 位来表示<br/>
-<img src="media/15854675822663/15854703659468.jpg" alt="" style="width:996px;"/></p>
+<p><img src="media/15854826531787/15854840341775.jpg" alt="" style="width:522px;"/></p>
 
 <ul>
-<li>第一个二进制位 weakly_referenced 表示的是这个对象是否有弱引用，0没有，1有</li>
-<li>第二位表示当前对象是否正在进行 dealloc 操作</li>
-<li>后面的存储的就是这个对象实际的引用计数值<br/>
-那么在计算对象的具体引用计数值，需要对这个值（2-63）向右偏移两位，因为后面这两位要去掉才可以取到真实的引用计数值</li>
+<li>第一行代码和上面分析的一样，通过当前对象的指针经过哈希算法在 SideTables 当中去获取它所指的 SideTable</li>
+<li>然后再根据当前对象指针访问 table 当中的引用计数表去查找它对应的引用计数表</li>
+<li><p>查找到之后，把对应的值进行减一操作</p>
+<p>4.retainCount 实现</p>
+<p><img src="media/15854826531787/15854840872021.jpg" alt="" style="width:520px;"/></p></li>
+<li><p>第一句代码同上</p></li>
+<li><p>声明了一个局部变量，指定它的值是 1，然后通过当前对象到引用计数表当中去查找，把查找的结果做一个向右便宜的操作，然后再结合这个局部变量的 1 进行一个加的操作，再返回给调用方</p></li>
+<li><p>所以说，如果我们刚新 alloc 出来的对象，在引用计数表当中是没有这个对象相关联的一个 Key Value 的映射的，这个值读出来就是 0，然后由于局部变量是 1，所以此时只经过 alloc 调用产生的对象去调用它的 retainCount 就可以获取到它的值为 1</p></li>
 </ul>
 
-<h4 id="toc_4">弱引用表(weak_table_t)</h4>
+<p>5.<strong>dealloc 实现（重要）</strong></p>
 
-<p><img src="media/15854675822663/15854704667848.jpg" alt="" style="width:470px;"/></p>
+<p><img src="media/15854826531787/15854841670162.jpg" alt="" style="width:546px;"/></p>
 
 <ul>
-<li>weak_table_t 也是一张哈希表</li>
-<li>weak_entry_t 是一个结构体数组</li>
+<li>首先会调用 _ objc _rootDealloc() 私有函数</li>
+<li>这个函数又会调用 rootDealloc() 函数，然后会在这个函数内部判断当前对象是否可以直接释放</li>
+<li>如果这些条件都不满足就直接调用 C 函数的 free() 进行对象的内存释放</li>
+<li>否则就要再调用一个函数做后续的清理</li>
 </ul>
 
-<blockquote>
-<p>在 Runtime 源码当中，弱引用表系统是通过 weak_table t 来定义的，weak table t 实际上也是一张哈希表，同样的给以一个对象的指针作为 Key ，通过一个哈希函数就可以计算出对应的弱引用的对象它的存储位置，weak entryt 是一个结构体数组，这个结构体数组当中存储的每一个对象是弱引用指针，也就是在代码中定义的，比如说 _ weak id obj，那么 obj 这个内存地址或者说指针就存储到 weak_entry_t 这个结构体数组当中<br/>
-这就是弱引用表的数据结构的描述</p>
-</blockquote>
+<p>直接释放的判断条件</p>
+
+<ul>
+<li>nonpointer_isa：判断当前对象是否使用了非指针型的 isa</li>
+<li>weakly_referenced：当前对象是否有 weak 指针指向它</li>
+<li>has_assoc：当前对象是否有关联对象</li>
+<li>has_cxx_dtor：当期对象的内部实现是否有涉及到一些C++相关的内容，以及当前对象是否使用 ARC 管理内存，如果有涉及C++或者使用ARC管理内存返回YES</li>
+<li>has_sidetable_rc：当前对象的引用计数是否是在通过 sidetable 当中的引用计数表来维护的，因为在前面讲述关于 nonpointer_isa 的时候提到过如果说采用这中非指针型的 isa 指针的话，它当中存储了一部分引用计数的值，当超出上限的时候，再使用 sidetable 这种方式去存储</li>
+</ul>
+
+<p>只有当当前对象既不是非指针型的 isa ，同时没有弱引用，并且也没有关联对象，并且也没有涉及到 C++ 相关内容，并且没有涉及到 ARC，并且当前对象没有采用 sidetable 来存储引用计数，只有在这种条件下，才可以调用 C 函数直接释放，否则的话就要调用 object_dispose() 对象清除函数</p>
+
+<p>思考：为什么要进行这么多的判断才能进行后续的 object_dispose() 方法调用？</p>
+
+<ul>
+<li>如果对象有弱引用的话，那么在这个对象释放废弃的时候需要对它的引用对象进行处理</li>
+<li>如果有关联对象需要对关联对象进行处理</li>
+<li>包括C++、引用计数相关的处理</li>
+</ul>
+
+<p><strong>object_dispose() 实现</strong><br/>
+<img src="media/15854826531787/15854844199890.jpg" alt="" style="width:354px;"/></p>
+
+<ul>
+<li>首先这个函数内部会调用一个 objc_destructInstance() 函数，看这名字就可以得出是销毁实例的含义</li>
+<li>然后这个方法调用之后再调用 C 函数的 free()</li>
+<li>然后结束 dealloc 实现</li>
+</ul>
+
+<p><strong>objc_destructInstance() 实现</strong><br/>
+<img src="media/15854826531787/15854844674550.jpg" alt="" style="width:550px;"/></p>
+
+<ul>
+<li>在这个函数当中首先会判断当前还有是否有 C++ 相关的内容或者当前对象是否采用的是 ARC</li>
+<li>如果有的话会调用 objec_cxxDestruct() 这个方法，如果没有的话会判断当前对象是否有关联对象</li>
+<li>如果当前对象有关联对象的话在 dealloc 内部实现会调用 _object_remove_assocations() ,通过名称可以看出是做了对象的相关关联对象的移除</li>
+<li>关联对象的判断过了之后会调用一个叫 clearDeallocating() 函数，然后结束 dealloc 流程</li>
+</ul>
+
+<p>思考：我通过关联对象的技术为一个类添加了一些实例变量，那么在对象的 dealloc 方法方法当中是否有必要对它的关联对象进行移除操作？<br/>
+<strong>不需要</strong><br/>
+在系统的 dealloc 内部实现当中，会自动判断当前对象是否有关联对象，<strong>如果有的话系统内部就帮助我们把相关的关联对象移除掉</strong></p>
+
+<p><strong>clearDeallocating() 实现</strong><br/>
+<img src="media/15854826531787/15854845474639.jpg" alt="" style="width:552px;"/></p>
+
+<ul>
+<li>首先需要调用 sidetable_clearDeallocating() 函数</li>
+<li>之后会调用 weak_clear_no_lock() 函数，这个函数做的就是将指向该对象的弱引用指针置为 nil</li>
+<li>之后会调用 table.refcnts.erase() ,table 的引用计数的擦除操作，实际上就是将当前对象在引用计数表当中的一些存储数据给清除掉</li>
+<li>然后结束调用流程</li>
+</ul>
 
                         
                       </div>
@@ -231,7 +297,7 @@
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -294,31 +360,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

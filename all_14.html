@@ -116,115 +116,61 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15851010269707.html">
+                <a class="clearlink" href="15851144136539.html">
                 
-                  <h1>多线程 01</h1>
+                  <h1>RunLoop 总结</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15851010269707/15851011219392.jpg" alt="" style="width:490px;"/></p>
+                        	<p><img src="media/15851144136539/15851144387632.jpg" alt="" style="width:935px;"/></p>
 
-<p><img src="media/15851010269707/15851058456651.jpg" alt="" style="width:1057px;"/></p>
+<p><img src="media/15851144136539/15851145412477.jpg" alt="" style="width:1211px;"/></p>
 
-<p><img src="media/15851010269707/15851069438172.jpg" alt="" style="width:873px;"/></p>
+<p><img src="media/15851144136539/15851146078217.jpg" alt="" style="width:1161px;"/></p>
 
-<p><img src="media/15851010269707/15851070411432.jpg" alt="" style="width:968px;"/></p>
+<p><img src="media/15851144136539/15851148964885.jpg" alt="" style="width:1114px;"/></p>
 
-<h2 id="toc_0">同步异步的嵌套情况</h2>
+<p><img src="media/15851144136539/15852300277502.jpg" alt="" style="width:997px;"/></p>
+
+<p><img src="media/15851144136539/15851151794985.jpg" alt="" style="width:1192px;"/></p>
+
+<p><img src="media/15851144136539/15851153719616.jpg" alt="" style="width:1221px;"/></p>
+
+<h2 id="toc_0">这里有一个问题,子线程有没有自动释放池? 程序里有几个自动释放池?</h2>
+
+<p>在子线程你手动创建了 Pool 的话，产生的 Autorelease 对象就会交给 pool 去管理。如果你没有创建 Pool ，但是产生了 Autorelease 对象，就会调用 <strong>autoreleaseNoPage</strong> 方法。在这个方法中，会自动帮你创建一个 hotpage（hotPage 可以理解为当前正在使用的 AutoreleasePoolPage，如果你还是不理解，可以先看看 Autoreleasepool 的源代码，再来看这个问题 ），并调用page-&gt;add(obj)将对象添加到 AutoreleasePoolPage 的栈中，也就是说你不进行手动的内存管理，也不会内存泄漏啦！</p>
+
+<p><img src="media/15851144136539/15851154799167.jpg" alt="" style="width:1229px;"/></p>
+
+<p><img src="media/15851144136539/15851155283402.jpg" alt="" style="width:859px;"/></p>
+
+<p><img src="media/15851144136539/15851155475362.jpg" alt="" style="width:1061px;"/></p>
+
+<p><img src="media/15851144136539/15851156383244.jpg" alt="" style="width:1098px;"/></p>
+
+<p><img src="media/15851144136539/15851158254408.jpg" alt="" style="width:1205px;"/></p>
+
+<p><img src="media/15851144136539/15851158715819.jpg" alt="" style="width:1118px;"/></p>
+
+<p><img src="media/15851144136539/15851160599323.jpg" alt="" style="width:1111px;"/></p>
+
+<p><img src="media/15851144136539/15851161669058.jpg" alt="" style="width:1129px;"/></p>
+
+<p><img src="media/15851144136539/15851163007850.jpg" alt="" style="width:1137px;"/></p>
+
+<p><img src="media/15851144136539/15851164026503.jpg" alt="" style="width:960px;"/></p>
+
+<p><img src="media/15851144136539/15851173090330.jpg" alt="" style="width:1193px;"/></p>
 
 <ol>
-<li>同一个串行队列不能嵌套同步任务</li>
+<li>开启一个常驻线程（让一个子线程不进入消亡状态，等待其他线程发来消息，处理其他事件）</li>
+<li>在子线程中开启一个定时器<br/>
+在子线程中进行一些长期监控</li>
+<li>可以控制定时器在特定模式下执行</li>
+<li>可以让某些事件（行为、任务）在特定模式下执行<br/>
+可以添加Observer监听Runloop的状态，比如监听点击事件的处理（在所有点击事件之前做一些事情）</li>
 </ol>
-
-<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad {
-    [super viewDidLoad];
-    dispatch_queue_t serialQueue = dispatch_queue_create(&quot;com.test.serial&quot;, DISPATCH_QUEUE_SERIAL);
-    dispatch_sync(serialQueue, ^{
-        NSLog(@&quot;outside -- %@&quot;,[NSThread currentThread]);
-        dispatch_sync(serialQueue, ^{
-            NSLog(@&quot;inside -- %@&quot;,[NSThread currentThread]);
-        });
-    });
-}
-</code></pre>
-
-<p>如果outside的那个NSLog写在当前任务的最后，也就是放在第二个同步任务的后面，运行结果是什么都不会打印。<br/>
-好，现在使用刚才讲的队列和任务的特点分析一下。<br/>
-首先外层的任务是一个<strong>同步任务，会阻塞当前线程</strong>，这里的当前线程就是主线程了，因为是在viewDidLoad里面嘛。那就执行这个同步任务呗，由于该任务是添加在serialQueue队列中，所以从这个队列里面取出这个同步任务并执行，执行到outside的那个log时打印出了当前线程，结果是主线程，因为阻塞了主线程嘛，自然就在主线程中运行了。<br/>
-接着往下执行，又往serialQueue中添加一个任务，这又是个同步任务，阻塞当前线程，要执行完了这个任务才能接着往下执行。那就把这个任务取出来，赶快执行掉好往下走啊。很遗憾，serialQueue是一个串行队列，现在正在执行第一个同步任务，就是有outside打印的那个同步任务，所以serialQueue取不出inside那个任务。所以，inside这个任务要等outside执行完才能执行。另一方面，由于第二个任务(inside)是同步任务，一定要执行完这个同步任务才能往下走，所以outside要等inside这个任务执行完了，才能往下走，才能走完，这个任务才得以结束。所以outside要等inside执行完才能执行完。这两个任务就这样互相掐着，永远不能执行或者执行完毕。更悲惨的是，这两个任务阻塞的是主线程，那主线程就没办法再继续走下去了。解决的方法，可以将两个任务添加到不同的队列中，两个队列取任务互不干扰，就不会出现“互掐”的情况了。或者将队列改成并行队列，或者将第二个任务改成异步任务，这些都会在下面的组合情况中看到。<br/>
-这也就解释了，为什么在主队列上只能添加异步任务。首先主队列是一个串行队列，其次程序启动后，主队列中一直有一个任务，不断地监听用户输入及各种事件。所以如果在主线程中，往主队列中添加同步任务，则这个同步任务会阻塞主线程，而且永远取不出来，应用中断不能进行下去。如果是在其他线程向主队列添加同步任务，则主线程不会影响，但这个同步任务是永远不会执行到了。</p>
-
-<h3 id="toc_1">小结:同一个串行队列不能嵌套同步任务，注意是同一个哦。</h3>
-
-<p>总结:</p>
-
-<ol>
-<li>同一串行队列下，任务的嵌套，内部只能嵌套异步任务，这也就是主队列中只能添加异步任务的原因；</li>
-<li>同一串行队列中的任务运行结果总是可预测但可能造成“互掐”的情况，导致某些任务不能正确执行；</li>
-<li>并行队列中的任务，不管如何组合都不会造成“互掐”的情况，但某些运行结果不可预测；</li>
-</ol>
-
-<p><img src="media/15851010269707/15851075862036.jpg" alt="" style="width:820px;"/></p>
-
-<p><img src="media/15851010269707/15851090585252.jpg" alt="" style="width:838px;"/></p>
-
-<p><img src="media/15851010269707/15851017111972.jpg" alt="" style="width:836px;"/></p>
-
-<p><img src="media/15851010269707/15851017567172.jpg" alt="" style="width:879px;"/></p>
-
-<p><img src="media/15851010269707/15851018121080.jpg" alt="" style="width:848px;"/><br/>
-<img src="media/15851010269707/15851020176877.jpg" alt="" style="width:884px;"/></p>
-
-<p><img src="media/15851010269707/15851020960997.jpg" alt="" style="width:822px;"/><br/>
-<img src="media/15851010269707/15851023213655.jpg" alt="" style="width:897px;"/></p>
-
-<p>同步提交队列,都会在当前线程执行</p>
-
-<p><img src="media/15851010269707/15851027199062.jpg" alt="" style="width:899px;"/></p>
-
-<p><img src="media/15851010269707/15851030188745.jpg" alt="" style="width:904px;"/></p>
-
-<p><img src="media/15851010269707/15851031442106.jpg" alt="" style="width:881px;"/></p>
-
-<p><img src="media/15851010269707/15851031777487.jpg" alt="" style="width:869px;"/></p>
-
-<p><img src="media/15851010269707/15851032063949.jpg" alt="" style="width:876px;"/></p>
-
-<p><img src="media/15851010269707/15851040806193.jpg" alt="" style="width:844px;"/></p>
-
-<p><img src="media/15851010269707/15851041160345.jpg" alt="" style="width:704px;"/></p>
-
-<p><img src="media/15851010269707/15851041534668.jpg" alt="" style="width:865px;"/><br/>
-<img src="media/15851010269707/15851043842920.jpg" alt="" style="width:854px;"/></p>
-
-<p><img src="media/15851010269707/15851045388676.jpg" alt="" style="width:866px;"/></p>
-
-<p><img src="media/15851010269707/15851047722705.jpg" alt="" style="width:845px;"/><br/>
-<img src="media/15851010269707/15851047827469.jpg" alt="" style="width:794px;"/></p>
-
-<p><img src="media/15851010269707/15851048287042.jpg" alt="" style="width:637px;"/></p>
-
-<p><img src="media/15851010269707/15851048435496.jpg" alt="" style="width:708px;"/></p>
-
-<p><img src="media/15851010269707/15851048607668.jpg" alt="" style="width:692px;"/></p>
-
-<p><img src="media/15851010269707/15851050042189.jpg" alt="" style="width:892px;"/></p>
-
-<p><img src="media/15851010269707/15851050789988.jpg" alt="" style="width:887px;"/></p>
-
-<p><img src="media/15851010269707/15851051160079.jpg" alt="" style="width:897px;"/></p>
-
-<p><img src="media/15851010269707/15851051994795.jpg" alt="" style="width:877px;"/></p>
-
-<p><img src="media/15851010269707/15851053149191.jpg" alt="" style="width:741px;"/></p>
-
-<p><img src="media/15851010269707/15851053527547.jpg" alt="" style="width:826px;"/></p>
-
-<p><img src="media/15851010269707/15851053908129.jpg" alt="" style="width:818px;"/></p>
-
-<p>参考:<br/>
-链接：<a href="https://www.jianshu.com/p/de406582131e">https://www.jianshu.com/p/de406582131e</a></p>
 
                         
                       </div>
@@ -236,7 +182,7 @@
                     <span class="date">2020/03/25</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
+          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
           				   
                     
 
@@ -277,7 +223,7 @@
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -340,31 +286,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

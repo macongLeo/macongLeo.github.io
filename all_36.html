@@ -116,59 +116,14 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15833788745389.html">
+                <a class="clearlink" href="15833971022587.html">
                 
-                  <h1>UITextView 行间距调整</h1>
+                  <h1>网络框架的构建(TODO)</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>在我们创建 UITextView 的时候,有可能默认的行间距并不合适,调整行间距也比较简单,方法也比较多,今天介绍一直比较常见的,简单的方法:<br/>
-<strong>textView.typingAttributes</strong> 属性设置<br/>
-关于 <strong>textView.typingAttributes</strong>的官方文档介绍就是:<br/>
-用于用户输入的新文本的属性,<br/>
-该字典包含用于输入文本的属性键值对,当文本视图的选择发生变化时,字典的内容自动被清除</p>
-
-<pre class="line-numbers"><code class="language-text">UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(20, 10, 100, 200)];
-
-textView.delegate = self;
-
-[self.view addSubview:textView];
-
-NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
-
-paragraphStyle.lineSpacing = 20;// 字体的行间距
-
-NSDictionary *attributes = @{
-                             NSFontAttributeName:[UIFont systemFontOfSize:17],
-                             NSParagraphStyleAttributeName:paragraphStyle
-                             };
-textView.typingAttributes = attributes;
-</code></pre>
-
-<p><img src="media/15833788745389/15833792273218.jpg" alt="" style="width:602px;"/><br/>
-但是这样设置会有一个问题 就是光标会变大<br/>
-<img src="media/15833788745389/15833792578456.jpg" alt="" style="width:311px;"/><br/>
- 解决光标变大的问题 目前只有自定义 TextView ,<br/>
- UITextView遵循了UITextInput协议，其中有返回光标frame的方法</p>
-
-<ul>
-<li>(CGRect)caretRectForPosition:(UITextPosition *)position，所以我们可以使用自定义的TextView，重写返回光标frame的方法避免光标扩大问题。</li>
-</ul>
-
-<pre class="line-numbers"><code class="language-text">- (CGRect)caretRectForPosition:(UITextPosition *)position {
-    CGRect originalRect = [super caretRectForPosition:position];
-    originalRect.size.height = self.font.lineHeight + 1;
-    originalRect.size.width = 1.5;
-
-    return originalRect;
-}
-</code></pre>
-
-<p><img src="media/15833788745389/15833794042367.jpg" alt="" style="width:704px;"/></p>
-
-<p>参考：<a href="https://www.jianshu.com/p/085ee268b43a">https://www.jianshu.com/p/085ee268b43a</a></p>
-
+                        	
                         
                       </div>
                   </div>
@@ -179,7 +134,7 @@ textView.typingAttributes = attributes;
                     <span class="date">2020/03/05</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html'>iOS 开发技巧整理</a></span>
+          					    <span class="posted-in"><a href='%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html'>网络进阶</a></span>
           				   
                     
 
@@ -220,7 +175,7 @@ textView.typingAttributes = attributes;
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -283,31 +238,31 @@ textView.typingAttributes = attributes;
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

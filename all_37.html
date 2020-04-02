@@ -116,36 +116,14 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15825371776074.html">
+                <a class="clearlink" href="15833950883527.html">
                 
-                  <h1>mmap 内存映射</h1>
+                  <h1>iOS 知识树</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15825371776074/15825373318908.jpg" alt="" style="width:943px;"/></p>
-
-<p><strong>什么是内存映射?</strong><br/>
-所谓内存映射,就是将<strong>文件的磁盘扇区映射到进程的虚拟内存空间</strong>的过程.</p>
-
-<p><strong>操作系统读写文件流程</strong><br/>
-<strong>读写操作流程:</strong></p>
-
-<ol>
-<li>进程发起一个读文件请求</li>
-<li>内核通过查找<strong>进程文件符表</strong>,定位到内核已打开的文件集上的文件信息,从而找到对应文件的 inode;</li>
-<li>inode 在地址空间上查找要请求的文件是否已经缓存在内核页的高速缓存中,如果存在,则直接放回该文件的内容</li>
-<li>如果文件不存在高速缓存中,则通过 inode 定位到文件的磁盘地址,将数据从磁盘复制到内核页高速缓存.之后再次读页面的过程,将内核高速缓存中的数据发送给用户进程</li>
-</ol>
-
-<blockquote>
-<p><strong>什么是 inode?</strong><br/>
-全程为 index node,即为存储文件元信息的区域,中文译名&quot;索引节点&quot;.<br/>
-例如包含:文件权限,文件拥有者的 UID,文件的大小等等</p>
-</blockquote>
-
-<p>参考:<br/>
-<a href="https://juejin.im/post/5caaf564f265da24d60e9c8d">https://juejin.im/post/5caaf564f265da24d60e9c8d</a></p>
+                        	<p><img src="media/15833950883527/WechatIMG6.png" alt="WechatIMG6"/></p>
 
                         
                       </div>
@@ -154,7 +132,7 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/24</span>
+                    <span class="date">2020/03/05</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
@@ -198,7 +176,7 @@
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -261,31 +239,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

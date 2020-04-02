@@ -116,44 +116,135 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854850504833.html">
+                <a class="clearlink" href="15854861330491.html">
                 
-                  <h1>iOS 的内存管理(四) 弱引用管理</h1>
+                  <h1>iOS 的内存管理(五) 自动释放池</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>思考：一个 weak 变量是怎么样被添加到弱引用表当中的？<br/>
-<img src="media/15854850504833/15854858551940.jpg" alt="" style="width:558px;"/></p>
+                        	<p>先看一段代码</p>
+
+<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad
+{
+   [super viewDidLoad];
+   
+   NSMutableArray *array = [NSMutableArray array];
+   NSLog(@&quot;%@&quot;,array);
+}
+
+</code></pre>
+
+<p>在 viewDidLoad 方法中通过 [NSMutableArray array] 创建了一个数组对象，然后在控制台打印它的值</p>
+
+<p><strong>思考：这个 array 对应的内存是在什么时机释放的？</strong></p>
+
+<p><strong>思考：AutoreleasePool 的实现原理是怎样的？</strong></p>
+
+<p><strong>思考：AutoreleasePool 为何可以嵌套使用？</strong></p>
+
+<h2 id="toc_0">自动释放池</h2>
+
+<p>@autoreleasepool{} 经过编译器编译后会变成什么?</p>
+
+<pre class="line-numbers"><code class="language-text">编译器会将 @autoreleasepool{} 改写为：
+
+void *ctx = objc_autoreleasePoolPush();
+
+{}中的代码
+
+objc_autoreleasePoolPop(ctx)
+
+</code></pre>
+
+<p>第一段是 objc_autoreleasePoolPush 这个函数调用，是没有参数的，返回值是一个无类型的指针<br/>
+中间是花括号中所添加的代码<br/>
+之后会调用 objc_autoreleasePoolPop 函数，这个函数的入参就是前一个函数 objc_autoreleasePoolPush 返回结果</p>
+
+<p><strong>objc_autoreleasePoolPush 的内部实现</strong><br/>
+<img src="media/15854861330491/15854863797428.jpg" alt="" style="width:569px;"/></p>
+
+<p><strong>objc_autoreleasePoolPop 的内部实现</strong><br/>
+<img src="media/15854861330491/15854864294078.jpg" alt="" style="width:537px;"/></p>
+
+<h3 id="toc_1">自动释放池的数据结构</h3>
+
+<p><img src="media/15854861330491/15854866906727.jpg" alt="" style="width:536px;"/></p>
+
+<p><img src="media/15854861330491/15854865388343.jpg" alt="" style="width:576px;"/></p>
+
+<h3 id="toc_2">AutoreleasePoolPage (C++的类)</h3>
+
+<p><img src="media/15854861330491/15854867368624.jpg" alt="" style="width:534px;"/><br/>
+这个类的组成结构主要有四个成员变量</p>
 
 <ul>
-<li>在这个代码块当中是使用了一个 杠杠weak 关键字修饰的 obj1 这个变量来指向一个通过 alloc 分配的一个对象 obj，此时就产生了一个 杠杠weak 弱引用指针</li>
-<li>这个代码块经过编译之后会变成后者的代码块，这里面实际是调用了 objc_initWeak 函数，传递的两个参数，第一个参数是 obj1 这个弱引用变量的地址，第二个是传递了被修饰的对象</li>
+<li>第一个是 id* 类型的 next，实际上就是指向栈当中下一个可填充位置</li>
+<li>之后是两个 AutoreleasePoolPage 类型的成员变量，分别为 parent 和 child，也就是双向链表中的父指针和孩子指针</li>
+<li>还有一个成员变量 pthread_t 类型的，所以说 autoreleasepool 是和线程一一对应的，就是从这个结构当中的 Thread 成员变量体现出来的</li>
 </ul>
 
-<p>在这个过程中都发生了什么？来看一下 objc_initWeak 的调用栈：<br/>
-<img src="media/15854850504833/15854858902773.jpg" alt="" style="width:531px;"/><br/>
-首先 objc_initWeak 这个函数会调用一个叫 storeWeak 的函数，然后会调用 weak-register-no-lock 函数，通过名称可以得知，这个 weak 指针被添加到弱引用表的具体实现就在这个函数当中（register注册）</p>
+<p><strong>AutoreleasePoolPage 的结构</strong><br/>
+<img src="media/15854861330491/15854868085779.jpg" alt="" style="width:529px;"/></p>
 
-<p>代码的讲解：<br/>
-通过原对象的指针地址进行哈希算法的计算获取到这个对象在弱引用表当中一个对应索引位置，然后通过所查找的这个索引位置返回给调用放相应的这个对象的所对应的弱引用的数组<br/>
-获取到的 entry 可以理解为是一个数组，实际上是一个比数组复杂一点的结构，如果获取到了这个结构，就把新产生的弱引用指针添加到数组当中，如果没有获取到被修饰对象的弱引用数组的话，就需要重新创建一个弱引用数组，初始化全是 nil，创建的这个数组的个数大小是为4的限制，之后会把弱引用的数组插入弱引用表的对应位置当中</p>
+<p>最下边是 AutoreleasePoolPage 自身所占有的内存，上面这些可以用来存储花括号中填充的 autorelease 对象，同样的这个栈是向下增长的，所以下面是高地址，上面是低地址，有一个 next 指针也就是 AutoreleasePoolPage 这个结构当中的一个成员变量，指向当前栈的一个空的位置，比如说现在在进行一个入栈操作，就可以添加到 next 指针所指向的位置</p>
 
-<p><strong>添加 weak 变量总结：</strong></p>
+<p><strong>AutoreleasePoolPage::push 方法实现</strong><br/>
+<img src="media/15854861330491/15854868523600.jpg" alt="" style="width:524px;"/></p>
+
+<p>如果发生了一个 AutoreleasePoolPage::push 操作，会把当前 next 位置置为 nil ，称他为哨兵对象，然后将 next 指针指向下一个可入栈的位置，这就是 AutoreleasePoolPage 的 push 方法的实现过程<br/>
+实际上每次进行一个 AutoreleasePool 的代码块的创建，相当于是不断的在栈当中去插入哨兵对象</p>
+
+<p><strong>[ obj autorelease ] 方法系统内部实现</strong><br/>
+<img src="media/15854861330491/15854868804913.jpg" alt="" style="width:543px;"/><br/>
+比如说调用了一个对象的 autorelease 方法<br/>
+首先会判断当前 next 指针是否指向了栈顶，如果没有指向栈顶就直接把这个对象添加到当前这个栈的 next 位置，结束流程，假如当前 next 已经指向了栈顶，这个时候当前这个 AutoreleasePoolPage 就没有办法再装新的 autorelease 对象了，于是就需要增加一个栈节点拼接到到链表上，之后在新的栈上面去添加对象最终结束流程</p>
+
+<p><strong>AutoreleasePoolPage::pop 方法实现</strong></p>
 
 <ul>
-<li>一个被声明为 - -weak 的对象指针经过编译器的编译后，会调用相应的 objc_initWeak 方法，然后经过一系列的函数调用栈，最终在<strong>weak-register-no-lock</strong> 函数当中进行弱引用变量的添加，具体添加的位置是通过一个哈希算法来进行位置查找的</li>
-<li>如果说我们查找对应位置当中已经有了当前对象所对应的一个弱引用数组，就把新的弱引用变量添加到数组当中</li>
-<li>如果没有的话，会重新创建一个弱引用数组，然后把第 0 个位置添加上最新的 weak 指针后面的都初始化为 0 或者为 nil</li>
+<li>根据传入的哨兵对象找到对应的位置</li>
+<li>给上次push操作之后添加的对应一次发送release消息</li>
+<li>回退next指针到正确位置</li>
 </ul>
 
-<p><strong>思考：当一个对象被释放后者废弃之后 weak 变量是怎么处理的？</strong><br/>
-<img src="media/15854850504833/15854860775667.jpg" alt="" style="width:519px;"/><br/>
-在调 dealloc 方法之后，进过一系列的调用，在他内部当中最终会调用 weak_chear_no_lock 方法</p>
+<p>首先对 pop 流程做一个简单的说明：</p>
 
-<p>源码分析系统是如何实现把一个废弃的对象的弱引用指针自动置为 nil 的</p>
+<ul>
+<li>在进行 pop 操作的时候会根据传入的哨兵对象来找到 pop 的最终位置，这个所谓的哨兵对象就是前面提到的 objc_autoreleasePoolPush 函数的返回值，实际上返回的就是栈当中对应的哨兵地址，pop 操作和 push 操作是一一对应的，那么要 pop 回哪个位置实际上是 pop 回它所指向的前一个哨兵对象</li>
+<li>然后给上次 push 操作之后所添加的对象依次发送 release 消息</li>
+<li>之后回退 next 指针到正确的位置</li>
+</ul>
 
-<p>总结：当一个对象被 dealloc 之后，在 dealloc 的内部实现当中会去调用它弱引用清楚的相关函数，然后在这个函数的内部实现当中会根据当前对象的指针查找弱引用表，把当前对象相对应的弱引用都拿出来，是一个数组，然后遍历这个数组当中所有的弱引用指针，分别置为 nil .</p>
+<p><img src="media/15854861330491/15854869764048.jpg" alt="" style="width:548px;"/><br/>
+假如说 next 指针指向这个位置，然后此时调用了 AutoreleasePoolPage::pop 操作，那么实际上要给这个红括号包含的这些对象依次发送 release 消息<br/>
+<img src="media/15854861330491/15854870031497.jpg" alt="" style="width:533px;"/></p>
+
+<p>发送 release 之后，这些对象就会从当前栈中被清除掉<br/>
+<img src="media/15854861330491/15854870216150.jpg" alt="" style="width:533px;"/><br/>
+清除之后会把 next 指针指向一个正确的位置，这个就是 pop 的整个过程</p>
+
+<h3 id="toc_3">自动释放池总结</h3>
+
+<p><img src="media/15854861330491/15854870566083.jpg" alt="" style="width:530px;"/><br/>
+在每一 RunLoop 的循环过程当中，都会在它将要结束的时候对前一次创建的 autoreleasepool 进行 pop 操作，同时会 push 进来一个新的 autoreleasePool，所以说在 viewDidLoad 方法中通过 [NSMutableArray array] 所创建的这个数组对象是在当次 RunLoop 将要结束的时候，然后调用 AutoreleasePoolPage::pop () 方法的时候，把对应的 array 对象调用它的 release 方法，然后对它进行释放</p>
+
+<p>关于AutoreleasePool 为何可以嵌套使用，实际上多次嵌套调用就是多次插入哨兵对象，比如说我们每次进行一个 @autoreleasepool{} 代码块的创建的时候，系统就会为我们进行哨兵对象的插入，然后完成新的 autoreleasepool 的创建，这个 autoreleasepool 的创建实际上创建了一个新的 page，假如说当前 page 还没有满的话就不用创建这个 page ，所以说我们所说的先创建的一个 autoreleasepool 对应的在底层实现就是插入了一个哨兵对象，所以当然是可以直接多次嵌套调用的</p>
+
+<p>autoreleasePool 使用场景的问题：在什么场景下需要手动创建 autoreleasePool，比如说在 for 循坏当中 alloc 出大量的图片数据，图片数据对内存消耗非常大，需要在 for 循环内部创建一个 autoreleasepool ，每一次 for 循环都进行一次内存的释放来降低内存的峰值，防止一些内存消耗过大所导致的一些问题</p>
+
+<p>实现原理：autoreleasePool实现原理就是以栈为节点，通过双向链接形式组合而成的一个数据结构</p>
+
+<p>补充<br/>
+ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的消息循环机制，当一个runloop结束时系统才会一次性清理掉被autorelease处理过的对象，其实本质上说是在本次runloop迭代结束时清理掉被本次迭代期间被放到autorelease pool中的对象的。至于何时runloop结束并没有固定的duration。</p>
+
+<p>方便是方便了，但是有些情况下，我们还是需要手动创建自动释放池，那么，什么时候呢？</p>
+
+<p>如果你正在编写不基于UI 框架的程序，比如命令行工具。<br/>
+如果你编写的循环创建了很多临时对象。<br/>
+你可以在循环中使用自动释放池block，在下次迭代前处理这些对象。在循环中使用自动释放池block，有助于减少应用程序的内存占用。<br/>
+你生成了一个辅助线程。<br/>
+一旦线程开始执行你必须自己创建自动释放池。否则，应用将泄漏对象。</p>
 
                         
                       </div>
@@ -206,7 +297,7 @@
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -269,31 +360,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

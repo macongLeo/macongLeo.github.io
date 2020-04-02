@@ -144,6 +144,19 @@
 <li>weak_table_t(弱引用表)</li>
 </ul>
 
+<p>在runtime内存空间中，SideTables是一个64个元素长度的hash数组，里面存储了SideTable。SideTables的hash键值就是一个对象obj的address。<br/>
+因此可以说，一个obj，对应了一个SideTable。但是一个SideTable，会对应多个obj。<strong>因为SideTable的数量只有64个</strong>，所以会有很多obj共用同一个SideTable。<br/>
+<strong>SideTables可以理解为一个全局的hash数组</strong>，里面存储了SideTable类型的数据，其长度为64。</p>
+
+<p>SideTabls可以通过全局的静态函数获取：</p>
+
+<pre class="line-numbers"><code class="language-text">static StripedMap&lt;SideTable&gt;&amp; SideTables() {
+    return *reinterpret_cast&lt;StripedMap&lt;SideTable&gt;*&gt;(SideTableBuf);
+}
+</code></pre>
+
+<p><img src="media/15854675822663/20180920175152461.png" alt="20180920175152461"/></p>
+
 <h3 id="toc_1">自旋锁(Spinlock_t)</h3>
 
 <blockquote>
@@ -193,6 +206,9 @@
 这就是弱引用表的数据结构的描述</p>
 </blockquote>
 
+<p>参考:<br/>
+<a href="https://blog.csdn.net/u013378438/java/article/details/82790332">https://blog.csdn.net/u013378438/java/article/details/82790332</a></p>
+
 
     
 
@@ -202,16 +218,16 @@
         <div class="large-6 columns">
         <p class="text-left" style="padding:15px 0px;">
       
-          <a href="15854826531787.html" 
-          title="Previous Post: iOS 的内存管理(三) 引用计数管理">&laquo; iOS 的内存管理(三) 引用计数管理</a>
+          <a href="15833971627503.html" 
+          title="Previous Post: 启动优化">&laquo; 启动优化</a>
       
         </p>
         </div>
         <div class="large-6 columns">
       <p class="text-right" style="padding:15px 0px;">
       
-          <a  href="15850184530012.html" 
-          title="Next Post: iOS 的内存管理(一) 内存管理方案">iOS 的内存管理(一) 内存管理方案 &raquo;</a>
+          <a  href="15857097341147.html" 
+          title="Next Post: 架构框架-听课笔记">架构框架-听课笔记 &raquo;</a>
       
       </p>
         </div>
@@ -239,7 +255,7 @@
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -302,31 +318,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  
@@ -396,6 +412,8 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
+
+<script src="asset/prism.js"></script>
 
 
 <style type="text/css">

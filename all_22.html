@@ -116,32 +116,56 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15841930756133.html">
+                <a class="clearlink" href="15846246156341.html">
                 
-                  <h1>layoutIfNeeded和setNeedsLayout的区别</h1>
+                  <h1>两数之和问题</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">layoutIfNeeded</h2>
+                        	<p>给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。</p>
 
-<p><code>layoutIfNeeded</code>：<strong>强制视图立即更新其布局，即同步执行</strong>。当使用Auto Layout时，布局引擎根据约束的变化更新视图的位置。该方法的接收者将作为根视图，布局时也将从视图树的根视图开始。如果没有待处理的布局更新，则此方法将直接退出，而不会修改布局，或调用任何与布局有关的方法。</p>
+<p>你可以假设每种输入只会对应一个答案。但是，你不能重复利用这个数组中同样的元素。</p>
 
-<h2 id="toc_1">setNeedsLayout</h2>
+<p>示例:<br/>
+ 给定 nums = [2, 7, 11, 15], target = 9<br/>
+ 因为 nums[0] + nums[1] = 2 + 7 = 9<br/>
+ 所以返回 [0, 1]</p>
 
-<p><code>setNeedsLayout</code>：当需要调整UIView子视图布局时，需要在主线程调用该方法。该方法记录请求并立即返回(即异步执行)，<strong>等待下一个更新周期更新视图(runloop 迭代)</strong>。因此，可以将多个视图布局更新合并到一个update cycle，这样有助于提高性能。需要注意的是，我们无法知道下个update cycle在何时发生。</p>
+<p>这个题目的在 OC 里的解法就是用字典,<br/>
+首先创建一个字典,value 为数组的 index,key 为数组元素,<br/>
+例如:数组[2,7,11,15];<br/>
+那么这个字典就是<br/>
+ @{@(0):@&quot;2&quot;,<br/>
+                                  @(1):@&quot;7&quot;,<br/>
+                                  @(2):@&quot;11&quot;,<br/>
+                                  @(3):@&quot;15&quot;,<br/>
+                                    }<br/>
+比如目标和为 9, 那么组合的话,第一个为 2,那么 &quot;9-2&quot; 作为 key,去字典里查找,看能否找到目标值,如果这个字典里有符合的 肯定能找到 value,反之就是没有            </p>
 
-<p><a href="https://developer.apple.com/documentation/uikit/uiview?language=objc">Apple 官方文档</a>已经明确说明,开发者不要直接调用 <code>layoutSubViews</code>与<code>drawRect</code>,应该在你认为系统默认的布局和重绘不能带给你想要的效果时,在之类中重写这些方法,然后分别通过 <code>setNeedsLayout</code>和 <code>setNeedsDisPlayInRectangle:</code> 来进行调用</p>
+<p>代码如下:</p>
 
-<h3 id="toc_2">哪些操作会出触发 layoutSubViews?</h3>
-
-<ul>
-<li>init 初始化不会触发layoutSubViews</li>
-<li>addSubviews 会触发layoutSubViews</li>
-<li>设置 view的frame 会触发layoutSubViews(前提是 frame 发生了变化)</li>
-<li>滑动一个 UIScrollView 会触发layoutSubViews</li>
-<li>改变一个 view 的大小也会触发父 View 的layoutSubViews事件</li>
-</ul>
+<pre class="line-numbers"><code class="language-text">
+- (NSArray *)getTwoNumSum:(int)targetSum array:(NSArray *)arr {
+    NSMutableDictionary *tmpDic = [NSMutableDictionary dictionary];
+    NSMutableArray *tmpA = [NSMutableArray array];
+    for (int i = 0; i &lt; arr.count; i++) {
+        [tmpDic setValue:@(i) forKey:arr[i]];
+    }
+    
+    [arr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSString *keyString = [NSString stringWithFormat:@&quot;%d&quot;,targetSum - ((NSString *)obj).intValue];
+        NSNumber *lastIndex = tmpDic[keyString];
+        if (lastIndex &amp;&amp; idx &lt; lastIndex.integerValue) {
+            [tmpA addObject:@([lastIndex integerValue])];
+            [tmpA addObject:@(idx)];
+        }
+    }];
+    
+    return tmpA;
+    
+}
+</code></pre>
 
                         
                       </div>
@@ -150,10 +174,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/14</span>
+                    <span class="date">2020/03/19</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
+          					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
           				   
                     
 
@@ -194,7 +218,7 @@
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -257,31 +281,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

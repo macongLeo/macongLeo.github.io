@@ -116,141 +116,135 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15853864599373.html">
+                <a class="clearlink" href="15854861330491.html">
                 
-                  <h1>iOS 网络总结</h1>
+                  <h1>iOS 的内存管理(五) 自动释放池</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15853864599373/15853864948484.jpg" alt="" style="width:1108px;"/></p>
+                        	<p>先看一段代码</p>
 
-<p><img src="media/15853864599373/15853865257665.jpg" alt="" style="width:1211px;"/></p>
+<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad
+{
+   [super viewDidLoad];
+   
+   NSMutableArray *array = [NSMutableArray array];
+   NSLog(@&quot;%@&quot;,array);
+}
 
-<p><img src="media/15853864599373/15853866765062.jpg" alt="" style="width:1228px;"/></p>
+</code></pre>
 
-<p><img src="media/15853864599373/15853868250082.jpg" alt="" style="width:1218px;"/></p>
+<p>在 viewDidLoad 方法中通过 [NSMutableArray array] 创建了一个数组对象，然后在控制台打印它的值</p>
 
-<p><img src="media/15853864599373/15853869340461.jpg" alt="" style="width:1190px;"/></p>
+<p><strong>思考：这个 array 对应的内存是在什么时机释放的？</strong></p>
 
-<p><img src="media/15853864599373/15853869932347.jpg" alt="" style="width:1202px;"/></p>
+<p><strong>思考：AutoreleasePool 的实现原理是怎样的？</strong></p>
 
-<p><img src="media/15853864599373/15853870331071.jpg" alt="" style="width:1038px;"/></p>
+<p><strong>思考：AutoreleasePool 为何可以嵌套使用？</strong></p>
 
-<p><img src="media/15853864599373/15853870649657.jpg" alt="" style="width:1209px;"/></p>
+<h2 id="toc_0">自动释放池</h2>
 
-<p><img src="media/15853864599373/15853870945147.jpg" alt="" style="width:1135px;"/></p>
+<p>@autoreleasepool{} 经过编译器编译后会变成什么?</p>
 
-<p><img src="media/15853864599373/15853874218495.jpg" alt="" style="width:1245px;"/></p>
+<pre class="line-numbers"><code class="language-text">编译器会将 @autoreleasepool{} 改写为：
 
-<p><img src="media/15853864599373/15853873959386.jpg" alt="" style="width:1185px;"/></p>
+void *ctx = objc_autoreleasePoolPush();
 
-<p>在浏览器发送HTTP请求之前，需要在浏览器和服务器之间建立一条TCP/IP连接。<strong>每一条TCP连接唯一地被通信两端的两个端点(即两个套接字)所确定，TCP连接的端点叫做套接字(socket)。</strong>根据RFC 793的定义，端口号拼接到IP地址即构成了套接字。而一次TCP连接主要分为<strong>建立连接(三次握手)，数据传输，断开连接(四次挥手)</strong>，下图给出了TCP的通信过程</p>
+{}中的代码
 
-<p><img src="media/15853864599373/15854634720977.jpg" alt="" style="width:608px;"/></p>
+objc_autoreleasePoolPop(ctx)
 
-<h3 id="toc_0">TCP报文段首部中的几个概念</h3>
+</code></pre>
 
-<p><img src="media/15853864599373/15854636636753.jpg" alt="" style="width:608px;"/></p>
+<p>第一段是 objc_autoreleasePoolPush 这个函数调用，是没有参数的，返回值是一个无类型的指针<br/>
+中间是花括号中所添加的代码<br/>
+之后会调用 objc_autoreleasePoolPop 函数，这个函数的入参就是前一个函数 objc_autoreleasePoolPush 返回结果</p>
 
-<ul>
-<li>确认号</li>
-</ul>
+<p><strong>objc_autoreleasePoolPush 的内部实现</strong><br/>
+<img src="media/15854861330491/15854863797428.jpg" alt="" style="width:569px;"/></p>
 
-<blockquote>
-<p>确认号是期望收到对方下一个报文段的第一个数据字节的序号。例如，B正确收到A发送过来的一个报文段，其序号字段值为501，而数据长度是200字节(序号501 ~ 700)，这表明B正确收到了A发送的到序号为 700 为止的数据。所以，B期望收到A的下一个数据序号是 701 ，于是B将确认号置为 701，表示为 ACK = 701。总之，**若确认号 = N，则表明 N - 1 为止的所有数据都已正确收到</p>
-</blockquote>
+<p><strong>objc_autoreleasePoolPop 的内部实现</strong><br/>
+<img src="media/15854861330491/15854864294078.jpg" alt="" style="width:537px;"/></p>
 
-<ul>
-<li>确认 ACK</li>
-</ul>
+<h3 id="toc_1">自动释放池的数据结构</h3>
 
-<blockquote>
-<p>ACK标志位用于确认收到</p>
-</blockquote>
+<p><img src="media/15854861330491/15854866906727.jpg" alt="" style="width:536px;"/></p>
 
-<ul>
-<li>同步 SYN</li>
-</ul>
+<p><img src="media/15854861330491/15854865388343.jpg" alt="" style="width:576px;"/></p>
 
-<blockquote>
-<p>用来初始化一个连接的同步序列号，当建立一个新连接时，从客户机发送到服务器的第一个报文段的SYN位字段被启用。</p>
-</blockquote>
+<h3 id="toc_2">AutoreleasePoolPage (C++的类)</h3>
 
-<ul>
-<li>终止 FIN</li>
-</ul>
-
-<blockquote>
-<p>用来释放一个连接，当FIN = 1时，表明此报文段的发送方的数据已发送完毕，并要求释放运输连接。</p>
-</blockquote>
+<p><img src="media/15854861330491/15854867368624.jpg" alt="" style="width:534px;"/><br/>
+这个类的组成结构主要有四个成员变量</p>
 
 <ul>
-<li>序列号</li>
+<li>第一个是 id* 类型的 next，实际上就是指向栈当中下一个可填充位置</li>
+<li>之后是两个 AutoreleasePoolPage 类型的成员变量，分别为 parent 和 child，也就是双向链表中的父指针和孩子指针</li>
+<li>还有一个成员变量 pthread_t 类型的，所以说 autoreleasepool 是和线程一一对应的，就是从这个结构当中的 Thread 成员变量体现出来的</li>
 </ul>
 
-<blockquote>
-<p>TCP是面向字节流的，在一个TCP连接中传送的字节流中的每一个字节都按顺序编号，整个要传送的字节流的起始序号必须在连接建立时设置，这里的起始序号就是TCP三次握手过程中的初始序列号(Initial Sequence Number，ISN)。在《TCP/IP详解 卷1:协议》中谈到，在一个连接中，TCP报文段在经过网络路后可能会存在延迟抵达与排序混乱的情况，为了解决这一问题，需要仔细选择初始序列号，现代系统通常采用半随机的方法选择初始序列号，保证一定的安全性。</p>
-</blockquote>
+<p><strong>AutoreleasePoolPage 的结构</strong><br/>
+<img src="media/15854861330491/15854868085779.jpg" alt="" style="width:529px;"/></p>
 
-<p><img src="media/15853864599373/15854638724312.jpg" alt="" style="width:606px;"/></p>
+<p>最下边是 AutoreleasePoolPage 自身所占有的内存，上面这些可以用来存储花括号中填充的 autorelease 对象，同样的这个栈是向下增长的，所以下面是高地址，上面是低地址，有一个 next 指针也就是 AutoreleasePoolPage 这个结构当中的一个成员变量，指向当前栈的一个空的位置，比如说现在在进行一个入栈操作，就可以添加到 next 指针所指向的位置</p>
 
-<h4 id="toc_1">第一次握手</h4>
+<p><strong>AutoreleasePoolPage::push 方法实现</strong><br/>
+<img src="media/15854861330491/15854868523600.jpg" alt="" style="width:524px;"/></p>
 
-<p>客户端在打算建立TCP连接时，向服务端发出 <strong>连接请求报文段(也就是SYN报文段，其SYN标志被置位)</strong> 设置首部中的同步位 SYN = 1 ,同时随机选择一个<strong>初始序号</strong> seq = x。<strong>TCP规定，SYN 报文段(即 SYN = 1 的报文段) 不能携带数据，但要消耗掉一个序号</strong>，这时，TCP客户进程进入 SYN-SENT (同步已发送) 状态</p>
+<p>如果发生了一个 AutoreleasePoolPage::push 操作，会把当前 next 位置置为 nil ，称他为哨兵对象，然后将 next 指针指向下一个可入栈的位置，这就是 AutoreleasePoolPage 的 push 方法的实现过程<br/>
+实际上每次进行一个 AutoreleasePool 的代码块的创建，相当于是不断的在栈当中去插入哨兵对象</p>
 
-<h4 id="toc_2">第二次握手</h4>
+<p><strong>[ obj autorelease ] 方法系统内部实现</strong><br/>
+<img src="media/15854861330491/15854868804913.jpg" alt="" style="width:543px;"/><br/>
+比如说调用了一个对象的 autorelease 方法<br/>
+首先会判断当前 next 指针是否指向了栈顶，如果没有指向栈顶就直接把这个对象添加到当前这个栈的 next 位置，结束流程，假如当前 next 已经指向了栈顶，这个时候当前这个 AutoreleasePoolPage 就没有办法再装新的 autorelease 对象了，于是就需要增加一个栈节点拼接到到链表上，之后在新的栈上面去添加对象最终结束流程</p>
 
-<p>服务器收到连接请求报文段后，如同意建立连接，则向客户端发送确认，在确认报文段（SYN+ACK段）中应把 SYN 位和 ACK 位都置1，确认号是 <strong>ack = x + 1</strong>，表示服务端希望从客户端这边接收数据的序列号。同时也为自己随机选择一个初始序号 seq = y。<strong>请注意，这个报文段也不能携带数据，但同样要消耗掉一个序号</strong>。这时 TCP 服务器进程进入 SYN-RCVD(同步收到)状态</p>
+<p><strong>AutoreleasePoolPage::pop 方法实现</strong></p>
 
-<h4 id="toc_3">第三次握手</h4>
+<ul>
+<li>根据传入的哨兵对象找到对应的位置</li>
+<li>给上次push操作之后添加的对应一次发送release消息</li>
+<li>回退next指针到正确位置</li>
+</ul>
 
-<p>客户端收到服务器发送的确认后，还要再次向服务端给出确认。确认报文段的ACK置1，确认号 ack = y + 1.而自己的序号 seq = x + 1,TCP的标准规定，ACK报文段可以携带数据，但如果不携带数据则不消息序号，在这种情况下，下一个数据报文段的序号仍是seq = x + 1。这是TCP连接已经建立，客户端进入ESTABLISHED(已建立连接)状态，服务端收到确认后，也进入 ESTABLISHED 状态。</p>
+<p>首先对 pop 流程做一个简单的说明：</p>
 
-<p><img src="media/15853864599373/15854641448315.jpg" alt="" style="width:605px;"/></p>
+<ul>
+<li>在进行 pop 操作的时候会根据传入的哨兵对象来找到 pop 的最终位置，这个所谓的哨兵对象就是前面提到的 objc_autoreleasePoolPush 函数的返回值，实际上返回的就是栈当中对应的哨兵地址，pop 操作和 push 操作是一一对应的，那么要 pop 回哪个位置实际上是 pop 回它所指向的前一个哨兵对象</li>
+<li>然后给上次 push 操作之后所添加的对象依次发送 release 消息</li>
+<li>之后回退 next 指针到正确的位置</li>
+</ul>
 
-<h4 id="toc_4">第一次挥手</h4>
+<p><img src="media/15854861330491/15854869764048.jpg" alt="" style="width:548px;"/><br/>
+假如说 next 指针指向这个位置，然后此时调用了 AutoreleasePoolPage::pop 操作，那么实际上要给这个红括号包含的这些对象依次发送 release 消息<br/>
+<img src="media/15854861330491/15854870031497.jpg" alt="" style="width:533px;"/></p>
 
-<p>客户端向服务端<strong>发出连接释放报文段(即FIN标志置为1的报文段)，</strong>并停止再发送数据，客户端把连接释放的报文段首部的终止控制位FIN置1，其序号为 seq = u ,它等于前面已传送过的数据的最后一个字节的序号加1.这时客户端进入<strong>FIN-WAIT-1 (终止等待 1)状态</strong>，等待 B 的确认，请注意，TCP 规定，FIN 报文段即使不携带数据，它也消耗掉一个序号。</p>
+<p>发送 release 之后，这些对象就会从当前栈中被清除掉<br/>
+<img src="media/15854861330491/15854870216150.jpg" alt="" style="width:533px;"/><br/>
+清除之后会把 next 指针指向一个正确的位置，这个就是 pop 的整个过程</p>
 
-<h4 id="toc_5">第二次挥手</h4>
+<h3 id="toc_3">自动释放池总结</h3>
 
-<p>服务器端收到连接释放报文段后即发出确认，确认号是 ack = u + 1,而这个报文段自己的序号是 v ，等于服务端前面已传送过的数据的最后一个字节的序号加1.然后服务端进入CLOSE-WAIT(关闭等待)状态。这时的TCP连接处于 <strong>半关闭</strong>状态，即客户端已经没有数据要发送了，但服务端若发送数据，客户端仍要接收。服务端到客户端这个方向的连接并没有关闭，这个状态可能要持续一段时间。<br/>
-客户端收到来自服务端的确认后，就进入 <strong>FIN-WAIT-2(终止等待 2) 状态</strong>，等待 服务端发出的连接释放报文段</p>
+<p><img src="media/15854861330491/15854870566083.jpg" alt="" style="width:530px;"/><br/>
+在每一 RunLoop 的循环过程当中，都会在它将要结束的时候对前一次创建的 autoreleasepool 进行 pop 操作，同时会 push 进来一个新的 autoreleasePool，所以说在 viewDidLoad 方法中通过 [NSMutableArray array] 所创建的这个数组对象是在当次 RunLoop 将要结束的时候，然后调用 AutoreleasePoolPage::pop () 方法的时候，把对应的 array 对象调用它的 release 方法，然后对它进行释放</p>
 
-<h4 id="toc_6">第三次挥手</h4>
+<p>关于AutoreleasePool 为何可以嵌套使用，实际上多次嵌套调用就是多次插入哨兵对象，比如说我们每次进行一个 @autoreleasepool{} 代码块的创建的时候，系统就会为我们进行哨兵对象的插入，然后完成新的 autoreleasepool 的创建，这个 autoreleasepool 的创建实际上创建了一个新的 page，假如说当前 page 还没有满的话就不用创建这个 page ，所以说我们所说的先创建的一个 autoreleasepool 对应的在底层实现就是插入了一个哨兵对象，所以当然是可以直接多次嵌套调用的</p>
 
-<p>如果服务端已经没有向客户端发送的数据了，其应用进程就通知服务端释放连接。这时服务端发出的连接释放报文段必须使 FIN = 1。现假定服务端的序号为 w (在半关闭状态 B 可能又发送了一些数据)。服务端还必须重复上次已经发送过的确认号 ack = u + 1。这时 B 就进入 LAST-ACK (最后确认) 状态，等待 A 的确认。</p>
+<p>autoreleasePool 使用场景的问题：在什么场景下需要手动创建 autoreleasePool，比如说在 for 循坏当中 alloc 出大量的图片数据，图片数据对内存消耗非常大，需要在 for 循环内部创建一个 autoreleasepool ，每一次 for 循环都进行一次内存的释放来降低内存的峰值，防止一些内存消耗过大所导致的一些问题</p>
 
-<h4 id="toc_7">第四次挥手</h4>
+<p>实现原理：autoreleasePool实现原理就是以栈为节点，通过双向链接形式组合而成的一个数据结构</p>
 
-<p>客户端收到服务端的连接释放报文后，必须对此发出确认。在确认报文段中把 ACK 置为 1，确认号 ack = w + 1。而自己的序号是 seq = u + 1 (根据TCP标准，前面已经发送过的 FIN 报文段要消耗一个序号)。然后进入TIME-WAIT(时间等待)状态。这时，TCP连接还没有释放掉，等待时间计数器设置的时间 2MSL后，客户端才进入到CLOSED状态</p>
+<p>补充<br/>
+ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的消息循环机制，当一个runloop结束时系统才会一次性清理掉被autorelease处理过的对象，其实本质上说是在本次runloop迭代结束时清理掉被本次迭代期间被放到autorelease pool中的对象的。至于何时runloop结束并没有固定的duration。</p>
 
-<p><img src="media/15853864599373/15854643157795.jpg" alt="" style="width:615px;"/></p>
+<p>方便是方便了，但是有些情况下，我们还是需要手动创建自动释放池，那么，什么时候呢？</p>
 
-<p><img src="media/15853864599373/15854643510874.jpg" alt="" style="width:613px;"/></p>
-
-<p><img src="media/15853864599373/15853877664437.jpg" alt="" style="width:1036px;"/></p>
-
-<p><img src="media/15853864599373/15854020442601.jpg" alt="" style="width:1216px;"/></p>
-
-<p><img src="media/15853864599373/15854021432556.jpg" alt="" style="width:1155px;"/></p>
-
-<p><img src="media/15853864599373/15854022338597.jpg" alt="" style="width:1204px;"/></p>
-
-<p><img src="media/15853864599373/15854023191361.jpg" alt="" style="width:1197px;"/></p>
-
-<p><img src="media/15853864599373/15854025339222.jpg" alt="" style="width:1241px;"/></p>
-
-<p><img src="media/15853864599373/15854026766709.jpg" alt="" style="width:1044px;"/></p>
-
-<p><img src="media/15853864599373/15854026965034.jpg" alt="" style="width:1138px;"/></p>
-
-<p><img src="media/15853864599373/15854028346466.jpg" alt="" style="width:1190px;"/></p>
-
-<p><img src="media/15853864599373/15854028839824.jpg" alt="" style="width:1203px;"/></p>
-
-<h2 id="toc_8">为什么是 3 次握手,不是 2 次?为什么断开需要 4 次挥手</h2>
+<p>如果你正在编写不基于UI 框架的程序，比如命令行工具。<br/>
+如果你编写的循环创建了很多临时对象。<br/>
+你可以在循环中使用自动释放池block，在下次迭代前处理这些对象。在循环中使用自动释放池block，有助于减少应用程序的内存占用。<br/>
+你生成了一个辅助线程。<br/>
+一旦线程开始执行你必须自己创建自动释放池。否则，应用将泄漏对象。</p>
 
                         
                       </div>
@@ -259,10 +253,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/28</span>
+                    <span class="date">2020/03/29</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html'>网络进阶</a></span>
+          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
           				   
                     
 
@@ -303,7 +297,7 @@
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -366,31 +360,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  

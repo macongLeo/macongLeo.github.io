@@ -116,49 +116,85 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854871989163.html">
+                <a class="clearlink" href="15854675822663.html">
                 
-                  <h1>iOS 的内存管理(六) 循环引用</h1>
+                  <h1>iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">循环引用的介绍</h2>
-
-<p>循环引用主要可以分为三种类型</p>
+                        	<h2 id="toc_0">数据结构</h2>
 
 <ul>
-<li>自循环引用</li>
-<li>相互循环引用</li>
-<li>多循环引用</li>
+<li>Spinlock_t (自旋锁)</li>
+<li>RefcountMap (引用计数表)</li>
+<li>weak_table_t(弱引用表)</li>
 </ul>
 
-<p><img src="media/15854871989163/15854872705391.jpg" alt="" style="width:539px;"/><br/>
-假如有一个对象，对象当中有一个成员变量 obj，这个对象是强持有他的成员变量，如果此时给这个成员变量 obj 赋值原对象的话，就造成自循环引用</p>
+<p>在runtime内存空间中，SideTables是一个64个元素长度的hash数组，里面存储了SideTable。SideTables的hash键值就是一个对象obj的address。<br/>
+因此可以说，一个obj，对应了一个SideTable。但是一个SideTable，会对应多个obj。<strong>因为SideTable的数量只有64个</strong>，所以会有很多obj共用同一个SideTable。<br/>
+<strong>SideTables可以理解为一个全局的hash数组</strong>，里面存储了SideTable类型的数据，其长度为64。</p>
 
-<p><strong>相互循环引用</strong><br/>
-<img src="media/15854871989163/15854873014377.jpg" alt="" style="width:521px;"/><br/>
-比如说有一个对象 A ，其中有一个 id 类型的 obj，还有一个对象 B 它当中也有一个 id 类型的 obj，如果此时对象 A 中的 obj 指向对象 B，同时对象 B 中的 obj 指向对象 A，此时就造成相互循坏引用</p>
+<p>SideTabls可以通过全局的静态函数获取：</p>
 
-<p><strong>多循环引用</strong><br/>
-<img src="media/15854871989163/15854873378510.jpg" alt="" style="width:547px;"/><br/>
-假如在某一个类当中，有对象 1，对象 2，对象 n，每一个对象当中都一个 id 类型的 obj，假如说此时每一个对象的 obj 都指向下一个对象，就产生了一个多循环引用</p>
+<pre class="line-numbers"><code class="language-text">static StripedMap&lt;SideTable&gt;&amp; SideTables() {
+    return *reinterpret_cast&lt;StripedMap&lt;SideTable&gt;*&gt;(SideTableBuf);
+}
+</code></pre>
 
-<h3 id="toc_1">循环引用的解决方案</h3>
+<p><img src="media/15854675822663/20180920175152461.png" alt="20180920175152461"/></p>
 
-<p><strong>_ _weak破解</strong><br/>
-<img src="media/15854871989163/15854874246559.jpg" alt="" style="width:506px;"/><br/>
-假如说左侧的对象 A 和 右侧的对象 B 都有一个成员变量 id 类型的 obj，当把 对象 A 中的成员变量声明为 _ _weak 的时候，就可以破除相互循环引用<br/>
-对象 B 强持有 A ，而 A 弱引用 B，此时规避了循环引用.</p>
+<h3 id="toc_1">自旋锁(Spinlock_t)</h3>
 
-<p><strong>NSTimer的循环引用问题</strong><br/>
-<img src="media/15854871989163/15854874775275.jpg" alt="" style="width:545px;"/><br/>
-假如一个实际的场景：比如有一个页面，在这个页面当中有一个 banner 广告栏，需要在每一秒钟滚动一次，一般情况下会把 banner 广告栏的 UI 对象作为 VC 的一个成员变量，由 VC 对它进行强持有，那么由于 banner 需要每个一秒钟进行一个滚动播放，又涉及到定会器的使用，所以需要在这个对象当中去添加一个成员变量 NSTimer，当添加了 NSTimer 之后，在为它分配了一个相应的定时回调事件之后，NSTimer 会对他的 target 进行强引用，这个时候就产生了一个相互循环引用</p>
+<blockquote>
+<p>自旋锁是计算机科学用于多线程同步的一种锁，线程反复检查锁变量是否可用。由于线程在这一过程中保持执行，因此是一种忙等待。一旦获取了自旋锁，线程会一直保持该锁，直至显式释放自旋锁。<br/>
+自旋锁避免了进程上下文的调度开销，因此对于线程只会阻塞很短时间的场合是有效的。因此操作系统的实现在很多地方往往用自旋锁。Windows操作系统提供的轻型读写锁 ----维基百科</p>
+</blockquote>
 
-<p><img src="media/15854871989163/15854875265652.jpg" alt="" style="width:562px;"/><br/>
-因为 NSTimer 刚被分派之后，会被当前线程的 RunLoop 强引用，如果说我们这个对象后者说 NSTimer 是在主线程中创建的，那么就由主线程的 RunLoop 持有这个 NSTimer，所以即使这个对象弱引用了 NSTimer，但是由于主线程的 RunLoop 常住内存 通过对 NSTimer 的强引用，再通过 NSTimer 对对象的强引用，仍然对这个对象产生了一个强引用，那么此时，即使 VC 页面退出，对对象的引用去掉的话，这个当前 banner 广告栏由于被 RunLoop 间接的持有，这个对象也不会被释放，此时就产生了内存泄露.<br/>
-<img src="media/15854871989163/15854875550481.jpg" alt="" style="width:545px;"/><br/>
-在左侧是 RunLoop 对 NSTimer 的强引用，在右侧是 VC 对 对象的强引用，我们可以在 NSTimer 和对象中间添加一个中间对象，然后由 NSTimer 对中间对象执行一个强引用，同时中间对象分别对 NSTimer 和 banner广告栏的对象做一个弱引用，此时对于一个重复的定时器而言，当当前 VC 或者说页面退出之后，VC 就释放了对 banner 广告栏这个对象强引用，当下次 NSTimer 的回调事件回来的时候，我们可以在中间对象当中 NSTimer 的回调方法里面去判断当前中间对象所持有的弱引用对象是否被废弃掉了，实际上就是判断中间对象所持有的 weak 变量是否为 nil，如果为 nil 的话，在定时器的回调方法当中调用 invalidate 和做 timer 置 nil 的操作，这样的话就可以释放 RunLoop 对 NSTimer 的强引用，NSTimer 对中间对象的强引用，NSTimer和中间对象都可以得到内存的释放达到破除循环引用的目的</p>
+<ul>
+<li>忙等锁</li>
+<li>适用于轻型访问(简单的 int 值 +1/-1 操作（在引用计数方面应用）)</li>
+</ul>
+
+<h3 id="toc_2">引用计数表(RefcountMap)</h3>
+
+<p><img src="media/15854675822663/15854683584252.jpg" alt="" style="width:530px;"/></p>
+
+<blockquote>
+<p>size_t 代表的就是对应对象的引用计数值，实际上就是一个无符号 long 型的变量</p>
+</blockquote>
+
+<p><strong>引用计数表是哈希表，正如名字 Map，可以理解为是一个字典</strong>，也就是说通过一个指针可以找到对应对象的引用计数，这个查找过程也是哈希查找，这个哈希查找的哈希算法实际上是对传入对象的指针进行伪装的操作，然后获取对应的引用计数<br/>
+在这里再次明确一下哈希查找的过程，实际上之所以使用哈希查找就是为了提高查找效率，而查找效率的提高源于我们存储一个对象的引用计数是通过这个函数来计算存储位置的，而获取这个对象所代表的引用计数值的时候，也是通过这个函数来计算应该获取的索引位置，所以插入和获取都是通过同一函数来计算位置的，也就避免了一些循环遍历的操作，所以哈希查找可以提高查找效率</p>
+
+<h4 id="toc_3">size_t</h4>
+
+<p>假如 size_t 使用一个 64 位来表示<br/>
+<img src="media/15854675822663/15854703659468.jpg" alt="" style="width:996px;"/></p>
+
+<ul>
+<li>第一个二进制位 weakly_referenced 表示的是这个对象是否有弱引用，0没有，1有</li>
+<li>第二位表示当前对象是否正在进行 dealloc 操作</li>
+<li>后面的存储的就是这个对象实际的引用计数值<br/>
+那么在计算对象的具体引用计数值，需要对这个值（2-63）向右偏移两位，因为后面这两位要去掉才可以取到真实的引用计数值</li>
+</ul>
+
+<h4 id="toc_4">弱引用表(weak_table_t)</h4>
+
+<p><img src="media/15854675822663/15854704667848.jpg" alt="" style="width:470px;"/></p>
+
+<ul>
+<li>weak_table_t 也是一张哈希表</li>
+<li>weak_entry_t 是一个结构体数组</li>
+</ul>
+
+<blockquote>
+<p>在 Runtime 源码当中，弱引用表系统是通过 weak_table t 来定义的，weak table t 实际上也是一张哈希表，同样的给以一个对象的指针作为 Key ，通过一个哈希函数就可以计算出对应的弱引用的对象它的存储位置，weak entryt 是一个结构体数组，这个结构体数组当中存储的每一个对象是弱引用指针，也就是在代码中定义的，比如说 _ weak id obj，那么 obj 这个内存地址或者说指针就存储到 weak_entry_t 这个结构体数组当中<br/>
+这就是弱引用表的数据结构的描述</p>
+</blockquote>
+
+<p>参考:<br/>
+<a href="https://blog.csdn.net/u013378438/java/article/details/82790332">https://blog.csdn.net/u013378438/java/article/details/82790332</a></p>
 
                         
                       </div>
@@ -211,7 +247,7 @@
                 <div class="site-a-logo"><img src="img/icon.jpg" /></div>
             
                 <h1>路漫漫其修远兮</h1>
-                <div class="site-des">中国加油!武汉加油!</div>
+                <div class="site-des">2020 加油 奋斗 !</div>
                 <div class="social">
 
 
@@ -274,31 +310,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15854871989163.html">iOS 的内存管理(六) 循环引用</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854861330491.html">iOS 的内存管理(五) 自动释放池</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854850504833.html">iOS 的内存管理(四) 弱引用管理</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854826531787.html">iOS 的内存管理(三) 引用计数管理</a>
+			        <a href="15833971627503.html">启动优化</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
 			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857097341147.html">架构框架-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15857060089212.html">设计模式-听课笔记</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15852304585575.html">冷启动优化</a>
 			      </li>
 		     
 		  
