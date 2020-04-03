@@ -116,49 +116,252 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854871989163.html">
+                <a class="clearlink" href="15852304585575.html">
                 
-                  <h1>iOS 的内存管理(六) 循环引用</h1>
+                  <h1>冷启动优化</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">循环引用的介绍</h2>
+                        	<h2 id="toc_0">时间统计方案耗时统计</h2>
 
-<p>循环引用主要可以分为三种类型</p>
+<h2 id="toc_1">冷启动的常规方案</h2>
+
+<h2 id="toc_2">影响冷启动的原因</h2>
+
+<p>T1<br/>
+加载系统dylib和可执行文件的时间。<br/>
+<strong>pre-main</strong><br/>
+<img src="media/15852304585575/15855417037045.jpg" alt="" style="width:640px;"/></p>
+
+<p>T2<br/>
+从main到applicationWillFinishLaunching结束的时间。</p>
+
+<p><img src="media/15852304585575/15854889131342.jpg" alt="" style="width:583px;"/></p>
+
+<p>该阶段各个时期的任务以及优化方法：</p>
+
+<p><img src="media/15852304585575/15855421992699.jpg" alt="" style="width:859px;"/></p>
+
+<p>1）解析Info.plist</p>
+
+<p>加载相关信息，例如如闪屏<br/>
+沙箱建立、权限检查<br/>
+2）Mach-O加载</p>
+
+<p>如果是胖二进制文件，寻找合适当前CPU类别的部分<br/>
+加载所有依赖的Mach-O文件（递归调用Mach-O加载的方法）<br/>
+定位内部、外部指针引用，例如字符串、函数等<br/>
+执行声明为__attribute__((constructor))的C函数<br/>
+加载类扩展（Category）中的方法<br/>
+C++静态对象加载、调用ObjC的 +load 函数<br/>
+3）程序执行</p>
+
+<p>调用main()<br/>
+调用UIApplicationMain()<br/>
+调用applicationWillFinishLaunching</p>
+
+<h3 id="toc_3">Mach-O</h3>
+
+<p>Mach-O 是针对不同运行时可执行文件的文件类型。<br/>
+<img src="media/15852304585575/15855404362587.jpg" alt="" style="width:373px;"/></p>
+
+<p>文件类型：<br/>
+Executable： 应用的主要二进制<br/>
+Dylib： 动态链接库（又称 DSO 或 DLL）<br/>
+Bundle： 不能被链接的 Dylib，只能在运行时使用 dlopen() 加载，可当做 macOS 的插件。<br/>
+Image： executable，dylib 或 bundle<br/>
+Framework： 包含 Dylib 以及资源文件和头文件的文件夹</p>
+
+<p><strong>Mach-O 镜像文件</strong></p>
+
+<p>Mach-O 被划分成一些 segement，每个 segement 又被划分成一些 section。</p>
+
+<p>segment 的名字都是大写的，且空间大小为页的整数。页的大小跟硬件有关，在 arm64 架构一页是 16KB，其余为 4KB。</p>
+
+<p>section 虽然没有整数倍页大小的限制，但是 section 之间不会有重叠。</p>
+
+<p>几乎所有 Mach-O 都包含这三个段（segment）： <strong><strong>TEXT,</strong>DATA 和 __LINKEDIT</strong>：</p>
+
+<p>__TEXT 包含 Mach header，被执行的代码和只读常量（如C 字符串）。只读可执行（r-x）。</p>
+
+<p>__DATA 包含全局变量，静态变量等。可读写（rw-）。</p>
+
+<p>__LINKEDIT 包含了加载程序的『元数据』，比如函数的名称和地址。只读（r–）。</p>
+
+<p>Mach-O Universal 文件<br/>
+FAT 二进制文件，将多种架构的 Mach-O 文件合并而成。它通过 Fat Header 来记录不同架构在文件中的偏移量，Fat Header 占一页的空间。</p>
+
+<p>按分页来存储这些 segement 和 header 会浪费空间，但这有利于虚拟内存的实现。</p>
+
+<p><strong>什么是image</strong><br/>
+1.executable可执行文件 比如.o文件。<br/>
+2.dylib 动态链接库 framework就是动态链接库和相应资源包含在一起的一个文件夹结构。<br/>
+3.bundle 资源文件 只能用dlopen加载，不推荐使用这种方式加载。</p>
+
+<p>除了我们App本身的可行性文件，系统中所有的framework比如UIKit、Foundation等都是以动态链接库的方式集成进App中的。</p>
+
+<p><strong>什么是ImageLoader</strong><br/>
+image 表示一个二进制文件(可执行文件或 so 文件)，里面是被编译过的符号、代码等，所以 ImageLoader 作用是将这些文件加载进内存，且每一个文件对应一个ImageLoader实例来负责加载。</p>
+
+<p>两步走：在程序运行时它先将动态链接的 image 递归加载 (也就是上面测试栈中一串的递归调用的时刻)。 再从可执行文件 image 递归加载所有符号。</p>
+
+<p>冷启动和热启动<br/>
+冷启动<br/>
+应用首次启动。即后台线程中未有当前打开的应用，所有的资源都需要加载并初始化。</p>
+
+<p>热启动<br/>
+应用非首次启动。即后台线程中保留有当前应用，应用的资源在内存中有保存。</p>
+
+<p>启动时间分析<br/>
+1）开启时间分析功能</p>
+
+<p>在Xcode的菜单中选择Project→Scheme→Edit Scheme...，然后找到 Run → Environment Variables →+，添加name为DYLD_PRINT_STATISTICS value为1的环境变量。</p>
+
+<p><img src="media/15852304585575/15855405887650.jpg" alt="" style="width:866px;"/></p>
+
+<h3 id="toc_4">1. load dylibs image</h3>
+
+<p>通常的，一个App需要加载100到400个dylibs， 但是其中的系统库被优化，可以很快的加载。 针对这一步骤的优化有：</p>
+
+<ol>
+<li>减少非系统库的依赖</li>
+<li>合并非系统库</li>
+<li>使用静态资源，比如把代码加入主程序</li>
+</ol>
+
+<h3 id="toc_5">2. rebase/bind</h3>
+
+<p>优化该阶段的关键在于减少__DATA segment中的指针数量。我们可以优化的点有：</p>
+
+<ol>
+<li>减少Objc类数量， 减少selector数量</li>
+<li>减少C++虚函数数量</li>
+<li>转而使用swift stuct（其实本质上就是为了减少符号的数量）</li>
+</ol>
+
+<h3 id="toc_6">3. main()调用之前的耗时我们可以优化的点</h3>
+
+<ol>
+<li>减少不必要的framework，因为动态链接比较耗时</li>
+<li>check framework应当设为optional和required，如果该framework在当前App支持的所有iOS系统版本都存在，那么就设为required，否则就设为optional，因为optional会有些额外的检查</li>
+<li>合并或者删减一些OC类，关于清理项目中没用到的类，使用工具AppCode代码检查功能，查到当前项目中没有用到的类如下：
+<ul>
+<li>删减一些无用的静态变量</li>
+<li>删减没有被调用到或者已经废弃的方法</li>
+<li>将不必须在+load方法中做的事情延迟到+initialize中</li>
+<li>尽量不要用C++虚函数(创建虚函数表有开销)</li>
+</ul></li>
+</ol>
+
+<h3 id="toc_7">4. main()调用之后的加载时间</h3>
+
+<p>在main()被调用之后，App的主要工作就是初始化必要的服务，显示首页内容等。而我们的优化也是围绕如何能够快速展现首页来开展。 App通常在AppDelegate类中的</p>
+
+<pre class="line-numbers"><code class="language-text">- (BOOL)Application:(UIApplication *)Application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+</code></pre>
+
+<p>方法中创建首页需要展示的view，然后在当前runloop的末尾，主动调用</p>
+
+<pre class="line-numbers"><code class="language-text">- CA::Transaction::commit
+</code></pre>
 
 <ul>
-<li>自循环引用</li>
-<li>相互循环引用</li>
-<li>多循环引用</li>
+<li>完成视图的渲染。</li>
 </ul>
 
-<p><img src="media/15854871989163/15854872705391.jpg" alt="" style="width:539px;"/><br/>
-假如有一个对象，对象当中有一个成员变量 obj，这个对象是强持有他的成员变量，如果此时给这个成员变量 obj 赋值原对象的话，就造成自循环引用</p>
+<p>而视图的渲染主要涉及三个阶段：</p>
 
-<p><strong>相互循环引用</strong><br/>
-<img src="media/15854871989163/15854873014377.jpg" alt="" style="width:521px;"/><br/>
-比如说有一个对象 A ，其中有一个 id 类型的 obj，还有一个对象 B 它当中也有一个 id 类型的 obj，如果此时对象 A 中的 obj 指向对象 B，同时对象 B 中的 obj 指向对象 A，此时就造成相互循坏引用</p>
+<ol>
+<li>准备阶段 这里主要是图片的解码</li>
+<li>布局阶段 首页所有UIView的 - (void)layoutSubViews( ) 运行</li>
+<li>绘制阶段 首页所有UIView的 - (void)drawRect:(CGRect)rect 运行再加上启动之后必要服务的启动、必要数据的创建和读取，这些就是我们可以尝试优化的地方</li>
+</ol>
 
-<p><strong>多循环引用</strong><br/>
-<img src="media/15854871989163/15854873378510.jpg" alt="" style="width:547px;"/><br/>
-假如在某一个类当中，有对象 1，对象 2，对象 n，每一个对象当中都一个 id 类型的 obj，假如说此时每一个对象的 obj 都指向下一个对象，就产生了一个多循环引用</p>
+<p>因此，对于main()函数调用之前我们可以优化的点有：</p>
 
-<h3 id="toc_1">循环引用的解决方案</h3>
+<ol>
+<li>不使用xib，直接视用代码加载首页视图</li>
+<li>NSUserDefaults实际上是在Library文件夹下会生产一个plist文件，如果文件太大的话一次能读取到内存中可能很耗时，这个影响需要评估，如果耗时很大的话需要拆分(需考虑老版本覆盖安装兼容问题)</li>
+<li>每次用NSLog方式打印会隐式的创建一个Calendar，因此需要删减启动时各业务方打的log，或者仅仅针对内测版输出log</li>
+<li>应用启动时发送的所有网络请求，是否可以统一在异步线程请求</li>
+<li>具体优化点</li>
+</ol>
 
-<p><strong>_ _weak破解</strong><br/>
-<img src="media/15854871989163/15854874246559.jpg" alt="" style="width:506px;"/><br/>
-假如说左侧的对象 A 和 右侧的对象 B 都有一个成员变量 id 类型的 obj，当把 对象 A 中的成员变量声明为 _ _weak 的时候，就可以破除相互循环引用<br/>
-对象 B 强持有 A ，而 A 弱引用 B，此时规避了循环引用.</p>
+<p>因此，针对于今日头条这个App我们可以优化的点如下：</p>
 
-<p><strong>NSTimer的循环引用问题</strong><br/>
-<img src="media/15854871989163/15854874775275.jpg" alt="" style="width:545px;"/><br/>
-假如一个实际的场景：比如有一个页面，在这个页面当中有一个 banner 广告栏，需要在每一秒钟滚动一次，一般情况下会把 banner 广告栏的 UI 对象作为 VC 的一个成员变量，由 VC 对它进行强持有，那么由于 banner 需要每个一秒钟进行一个滚动播放，又涉及到定会器的使用，所以需要在这个对象当中去添加一个成员变量 NSTimer，当添加了 NSTimer 之后，在为它分配了一个相应的定时回调事件之后，NSTimer 会对他的 target 进行强引用，这个时候就产生了一个相互循环引用</p>
+<ol>
+<li>纯代码方式而不是storyboard加载首页UI。</li>
+<li>对<strong>didFinishLaunching</strong>里的函数考虑能否挖掘可以<strong>延迟加载或者懒加载</strong>，需要与各个业务方pm和rd共同check 对于一些已经下线的业务，删减冗余代码。</li>
+<li>对于一些与UI展示无关的业务，如书城礼包,单本书礼包的获取、图片最大缓存空间设置等做延迟加载，对实现了+load() 方法的类进行分析，尽量将load里的代码延后调用。</li>
+</ol>
 
-<p><img src="media/15854871989163/15854875265652.jpg" alt="" style="width:562px;"/><br/>
-因为 NSTimer 刚被分派之后，会被当前线程的 RunLoop 强引用，如果说我们这个对象后者说 NSTimer 是在主线程中创建的，那么就由主线程的 RunLoop 持有这个 NSTimer，所以即使这个对象弱引用了 NSTimer，但是由于主线程的 RunLoop 常住内存 通过对 NSTimer 的强引用，再通过 NSTimer 对对象的强引用，仍然对这个对象产生了一个强引用，那么此时，即使 VC 页面退出，对对象的引用去掉的话，这个当前 banner 广告栏由于被 RunLoop 间接的持有，这个对象也不会被释放，此时就产生了内存泄露.<br/>
-<img src="media/15854871989163/15854875550481.jpg" alt="" style="width:545px;"/><br/>
-在左侧是 RunLoop 对 NSTimer 的强引用，在右侧是 VC 对 对象的强引用，我们可以在 NSTimer 和对象中间添加一个中间对象，然后由 NSTimer 对中间对象执行一个强引用，同时中间对象分别对 NSTimer 和 banner广告栏的对象做一个弱引用，此时对于一个重复的定时器而言，当当前 VC 或者说页面退出之后，VC 就释放了对 banner 广告栏这个对象强引用，当下次 NSTimer 的回调事件回来的时候，我们可以在中间对象当中 NSTimer 的回调方法里面去判断当前中间对象所持有的弱引用对象是否被废弃掉了，实际上就是判断中间对象所持有的 weak 变量是否为 nil，如果为 nil 的话，在定时器的回调方法当中调用 invalidate 和做 timer 置 nil 的操作，这样的话就可以释放 RunLoop 对 NSTimer 的强引用，NSTimer 对中间对象的强引用，NSTimer和中间对象都可以得到内存的释放达到破除循环引用的目的</p>
+<p>6.iOS App启动过程</p>
+
+<p>参考 <a href="http://blog.csdn.net/justinjing0612/article/details/43969681">http://blog.csdn.net/justinjing0612/article/details/43969681</a></p>
+
+<p>(1) 链接并加载Framework和static lib</p>
+
+<p>(2) UIKit初始化</p>
+
+<p>(3) 应用程序callback</p>
+
+<p>(4) 第一个Core Animation transaction</p>
+
+<p>6.1 链接并加载Framework及static lib时需要注意：</p>
+
+<p>1.每个Framework都会增加启动时间和占用的内存<br/>
+2.不必要的Framework，不要链接<br/>
+3.必要的Framework，不要设置为Optional<br/>
+4.只在使用在Deployment Target之后发布的Framework时，才使用Optional（比如你的Deployment Target是iOS 3.0，需要链接StoreKit的时候）避免创建全局的C++对象</p>
+
+<p>6.2 初始化UIKit时需要注意：</p>
+
+<p>1.字体、状态栏、user defaults、main nib会被初始化<br/>
+2.保持main nib尽可能的小<br/>
+3.User defaults本质上是一个plist文件，保存的数据是同时被反序列化的，不要在user defaults里面保存图片等大数据</p>
+
+<p>6.3 应用程序的回调</p>
+
+<p>1.application:willFinishLaunchingWithOptions:<br/>
+2.恢复应用程序的状态<br/>
+3.application:didFinishLaunchingWithOptions:</p>
+
+<ol>
+<li>WWDC 之优化 App 启动速度</li>
+</ol>
+
+<p>参考 <a href="https://juejin.im/entry/57c3d611a633bd005d7b3b62">https://juejin.im/entry/57c3d611a633bd005d7b3b62</a></p>
+
+<p>7.1 对动态库加载的时间优化</p>
+
+<p>每个App都进行动态库加载,其中系统级别的动态库占据了绝大数,而针对系统级别的动态库都是经过系统高度优化的,不用担心时间的花费.开发者应该关注于自己集成到App的那些动态库,这也是最能消耗加载时间的地方.对此Apple建议减少在App里开发者的动态库集成或者有可能地将其多个动态库最终集成一个动态库后进行导入, 尽量保证将App现有的非系统级的动态库个数保证在6个以内.</p>
+
+<p>7.2 减少Appp的Objective-C类,分类和的唯一Selector的个数</p>
+
+<p>这样做主要是为了加快程序的整个动态链接, 在进行动态库的重定位和绑定(Rebase/binding)过程中减少指针修正的使用,加快程序机器码的生成.</p>
+
+<p>7.3 减少Objc运行初始化的时间花费</p>
+
+<p>主要是类的注册,分类的注册,唯一选择器的存在,以及涉及子父类内存布局的Non Fragile ivars偏移的更新,都会影响Objective-C运行时初始化的时间消耗.</p>
+
+<p>7.4 使用initialize方法进行必要的初始化工作</p>
+
+<p>用+initialize方法替换调用原先在OC的+load方法中执行初始代码工作,从而加快所有类文件的加载速度.</p>
+
+<p>结尾</p>
+
+<p>1.使用DYLD_PRINT_STATISTICS测试启动加载时间<br/>
+2.减少自定义的动态库集成<br/>
+3.精简原有的Objective-C类和代码<br/>
+4.移除静态的初始化操作<br/>
+5.使用更多的Swift代码</p>
+
+<ol>
+<li>Facebook iOS App如何优化启动时间</li>
+</ol>
+
+<p>参考 <a href="http://www.cocoachina.com/ios/20160105/14870.html">http://www.cocoachina.com/ios/20160105/14870.html</a></p>
 
                         
                       </div>
@@ -167,10 +370,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/29</span>
+                    <span class="date">2020/03/26</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
+          					    <span class="posted-in"><a href='%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html'>性能优化</a></span>
           				   
                     
 
@@ -274,6 +477,12 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
 			      </li>
 		     
@@ -293,12 +502,6 @@
 		      
 			      <li class="post">
 			        <a href="15857097341147.html">架构框架-听课笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857060089212.html">设计模式-听课笔记</a>
 			      </li>
 		     
 		  

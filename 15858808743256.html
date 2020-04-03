@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  路漫漫其修远兮
+  GCD之dispatch_barrier_async 解决多线程读写问题 - 路漫漫其修远兮
   
   </title>
   
@@ -107,65 +107,134 @@
        
 
  <script type="text/javascript">
-	$(function(){
-		$('#menu_item_index').addClass('is_active');
-	});
+  $(function(){
+    $('#menu_item_index').addClass('is_active');
+  });
 </script>
 <div class="row">
-	<div class="large-8 medium-8 columns">
-		<div class="markdown-body home-categories">
-		
-			<div class="article">
-                <a class="clearlink" href="15833971971986.html">
-                
-                  <h1>设计模式-创建型模式</h1>
-                  <div class="a-content">
-                      
-                      <div class="a-content-text">
-                        
-                        	
-                        
-                      </div>
-                  </div>
-                </a>
-                <div class="read-more clearfix">
-                  <div class="more-left left">
-                  
-                    <span class="date">2020/03/05</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html'>设计模式(架构)</a></span>
-          				   
-                    
+  <div class="large-8 medium-8 columns">
+      <div class="markdown-body article-wrap">
+       <div class="article">
+          
+          <h1>GCD之dispatch_barrier_async 解决多线程读写问题</h1>
+     
+        <div class="read-more clearfix">
+          <span class="date">2020/04/03</span>
 
-                  </div>
-                  <div class="more-right right">
-                  <span class="comments">
-                      
+          <span>posted in&nbsp;</span> 
+          
+              <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
+           
+         
+          <span class="comments">
+            
 
-                       
-                  </span>
-                  </div>
-                </div>
-              </div><!-- article -->
+            
+          </span>
+
+        </div>
+      </div><!-- article -->
+
+      <div class="article-content">
+      <p><code>dispatch_barrier_async</code> 函数可以方便的实现多读单写的需求,多线程同时读,但是只能一个线程写操作,并且在写操作完成之后才能继续读.</p>
+
+<p>直接上代码:</p>
+
+<pre class="line-numbers"><code class="language-text">#import &quot;ViewController.h&quot;
+
+@interface ViewController ()
+@property (nonatomic, strong) NSMutableArray *dataArray;
+@end
+
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    self.dataArray = [NSMutableArray array];
+    [self.dataArray addObjectsFromArray:@[@&quot;1&quot;,@&quot;2&quot;]];
+    [self testBarrierAsync];
+}
+
+- (void)testBarrierAsync
+{
+    //创建一个并行队列
+    dispatch_queue_t concurrentQueue = dispatch_queue_create(&quot;com.gcd.barrier.concurrentQueue&quot;, DISPATCH_QUEUE_CONCURRENT);
+    
+    //并行操作
+    void (^blk1)(void) = ^{
+        NSLog(@&quot;当前的数据====%@&quot;,self.dataArray);
+    };
+    void (^blk2)(void) = ^{
+        NSLog(@&quot;当前的数据====%@&quot;,self.dataArray);
+    };
+    void (^blk3)(void) = ^{
+        NSLog(@&quot;当前的数据====%@&quot;,self.dataArray);
+    };
+    
+    //栅栏函数执行操作
+    void (^barrierBlk)(void) = ^{
+        [self.dataArray addObject:@&quot;9&quot;];
+        [self.dataArray addObject:@&quot;8&quot;];
         
-              
+    };
+    
+    //执行所有操作
+    dispatch_async(concurrentQueue, blk1);
+    dispatch_async(concurrentQueue, blk3);
+    dispatch_barrier_async(concurrentQueue, barrierBlk);
+    dispatch_async(concurrentQueue, blk2);
+}
 
 
-			<div class="row">
-			  <div class="large-6 columns">
-			  <p class="text-left" style="padding-top:25px;">
-			   <a href="all_35.html">&laquo; Prev Page</a>  
-			  </p>
-			  </div>
-			  <div class="large-6 columns">
-			<p class="text-right" style="padding-top:25px;">
-			 <a href="all_37.html">&raquo; Next Page</a> 
-			</p>
-			  </div>
-			</div>
-		</div>
-	</div><!-- large 8 -->
+@end
+
+</code></pre>
+
+<p><img src="media/15858808743256/15858817346984.jpg" alt="" style="width:960px;"/><br/>
+ 从代码里可以看到 前面读取的两次数据是未写入的数据,数组里只是 1,2 两个,当经过写操作的时候,新增了两个数据,后面再次打印这个数组就是最新的数据了</p>
+
+<h3 id="toc_0">注意点</h3>
+
+<p><code>dispatch_barrier_async</code> <br/>
+栅栏函数中传入的参数队列必须是由 dispatch_queue_create 方法创建的队列，否则，与dispatch_async无异，起不到“栅栏”的作用了，对于dispatch_barrier_sync也是同理。</p>
+
+<p>其次,读和写要在同一个队列中</p>
+
+
+    
+
+      </div>
+
+      <div class="row">
+        <div class="large-6 columns">
+        <p class="text-left" style="padding:15px 0px;">
+      
+        </p>
+        </div>
+        <div class="large-6 columns">
+      <p class="text-right" style="padding:15px 0px;">
+      
+          <a  href="15858220091653.html" 
+          title="Next Post: NSNotification 使用注意细节">NSNotification 使用注意细节 &raquo;</a>
+      
+      </p>
+        </div>
+      </div>
+      <div class="comments-wrap">
+        <div class="share-comments">
+          
+
+          
+
+          
+        </div>
+      </div>
+    </div><!-- article-wrap -->
+  </div><!-- large 8 -->
+
+
+
 
  <div class="large-4 medium-4 columns">
   <div class="hide-for-small">
@@ -332,6 +401,8 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
+
+<script src="asset/prism.js"></script>
 
 
 <style type="text/css">

@@ -116,25 +116,55 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15845005873890.html">
+                <a class="clearlink" href="15846246156341.html">
                 
-                  <h1>1-100 数字求和 (递归算法)</h1>
+                  <h1>两数之和问题</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>使用递归函数的时候,最重要的一点就是要有一个<strong>函数的出口</strong>,然后递归调用</p>
+                        	<p>给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。</p>
 
-<p>题目:递归调用:计算 1+2 ... 100 的和</p>
+<p>你可以假设每种输入只会对应一个答案。但是，你不能重复利用这个数组中同样的元素。</p>
+
+<p>示例:<br/>
+ 给定 nums = [2, 7, 11, 15], target = 9<br/>
+ 因为 nums[0] + nums[1] = 2 + 7 = 9<br/>
+ 所以返回 [0, 1]</p>
+
+<p>这个题目的在 OC 里的解法就是用字典,<br/>
+首先创建一个字典,value 为数组的 index,key 为数组元素,<br/>
+例如:数组[2,7,11,15];<br/>
+那么这个字典就是<br/>
+ @{@(0):@&quot;2&quot;,<br/>
+                                  @(1):@&quot;7&quot;,<br/>
+                                  @(2):@&quot;11&quot;,<br/>
+                                  @(3):@&quot;15&quot;,<br/>
+                                    }<br/>
+比如目标和为 9, 那么组合的话,第一个为 2,那么 &quot;9-2&quot; 作为 key,去字典里查找,看能否找到目标值,如果这个字典里有符合的 肯定能找到 value,反之就是没有            </p>
+
+<p>代码如下:</p>
 
 <pre class="line-numbers"><code class="language-text">
-- (int)caculateSumform1ToN:(int)n {
-    if (n &lt; 1) {
-        return 0;
+- (NSArray *)getTwoNumSum:(int)targetSum array:(NSArray *)arr {
+    NSMutableDictionary *tmpDic = [NSMutableDictionary dictionary];
+    NSMutableArray *tmpA = [NSMutableArray array];
+    for (int i = 0; i &lt; arr.count; i++) {
+        [tmpDic setValue:@(i) forKey:arr[i]];
     }
-    return n + [self caculateSumform1ToN:n-1];
+    
+    [arr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSString *keyString = [NSString stringWithFormat:@&quot;%d&quot;,targetSum - ((NSString *)obj).intValue];
+        NSNumber *lastIndex = tmpDic[keyString];
+        if (lastIndex &amp;&amp; idx &lt; lastIndex.integerValue) {
+            [tmpA addObject:@([lastIndex integerValue])];
+            [tmpA addObject:@(idx)];
+        }
+    }];
+    
+    return tmpA;
+    
 }
-
 </code></pre>
 
                         
@@ -144,7 +174,7 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/18</span>
+                    <span class="date">2020/03/19</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
@@ -251,6 +281,12 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
 			      </li>
 		     
@@ -270,12 +306,6 @@
 		      
 			      <li class="post">
 			        <a href="15857097341147.html">架构框架-听课笔记</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857060089212.html">设计模式-听课笔记</a>
 			      </li>
 		     
 		  
