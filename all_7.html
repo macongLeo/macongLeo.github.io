@@ -116,49 +116,91 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854871989163.html">
+                <a class="clearlink" href="15857060089212.html">
                 
-                  <h1>iOS 的内存管理(六) 循环引用</h1>
+                  <h1>设计模式-听课笔记</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">循环引用的介绍</h2>
+                        	<p><img src="media/15857060089212/15857060704879.jpg" alt="" style="width:934px;"/><br/>
+ <img src="media/15857060089212/15857061083809.jpg" alt="" style="width:732px;"/></p>
 
-<p>循环引用主要可以分为三种类型</p>
+<h2 id="toc_0">单一职责原则</h2>
+
+<p><strong>: 一个类只负责一件事</strong></p>
+
+<p>比如 UIView 和 CALayer<br/>
+UIView 只负责事件传递和事件响应<br/>
+CALayer只负责有关动画,视图的显示等</p>
+
+<h2 id="toc_1">开闭原则</h2>
+
+<p><strong>:对修改关闭,对拓展开发</strong></p>
+
+<h2 id="toc_2">接口隔离原则</h2>
+
+<p><strong>:使用多个专门的协议,而不是一个庞大臃肿的协议</strong></p>
+
+<h2 id="toc_3">依赖倒置原则</h2>
+
+<p><strong>:抽象不应该依赖具体实现,具体实现可以依赖抽象</strong></p>
+
+<h2 id="toc_4">里是替换原则</h2>
+
+<p><strong>:父类可以被子类无缝替换,且原有功能不受影响</strong></p>
+
+<h2 id="toc_5">迪米特法则</h2>
+
+<p><strong>:一个对象应该尽可能少的对其他对象的了解<br/>
+    高内聚,低耦合</strong></p>
+
+<h1 id="toc_6">责任链</h1>
+
+<p><img src="media/15857060089212/15857074075053.jpg" alt="" style="width:981px;"/></p>
+
+<p><img src="media/15857060089212/15857074394284.jpg" alt="" style="width:1037px;"/></p>
+
+<p>责任链的构成: 有一个和原类同样类型的成员变量</p>
+
+<h1 id="toc_7">桥接</h1>
+
+<h1 id="toc_8">适配器</h1>
+
+<p><img src="media/15857060089212/15857088591557.jpg" alt="" style="width:940px;"/></p>
+
+<p><img src="media/15857060089212/15857088717278.jpg" alt="" style="width:988px;"/></p>
+
+<p><img src="media/15857060089212/15857088827664.jpg" alt="" style="width:523px;"/></p>
+
+<p>比如有一个类叫 Tagrget 需要适配<br/>
+<img src="media/15857060089212/15857089449473.jpg" alt="" style="width:548px;"/></p>
+
+<p>Target 中有一个原有的方法 operation,有可能因为年代久远,或者逻辑比较复杂,无法在原有的基础上修改<br/>
+ <img src="media/15857060089212/15857089690332.jpg" alt="" style="width:491px;"/></p>
+
+<p>应对这样的情况,我们新建一个 CoolTarget 类,并且持有原有的 target<br/>
+<img src="media/15857060089212/15857090944165.jpg" alt="" style="width:722px;"/></p>
+
+<p>然后通过一个方法对原有逻辑修改<br/>
+<img src="media/15857060089212/15857091622643.jpg" alt="" style="width:451px;"/><br/>
+这样就完成了一个适配器</p>
+
+<h1 id="toc_9">单例模式</h1>
+
+<p><img src="media/15857060089212/15857092621968.jpg" alt="" style="width:883px;"/><br/>
+<img src="media/15857060089212/15857092896116.jpg" alt="" style="width:651px;"/></p>
+
+<p><strong>重写 allocWithZone  copyWithZone 这两个方法,保证单例永远只调用一次</strong></p>
+
+<h1 id="toc_10">命令模式</h1>
 
 <ul>
-<li>自循环引用</li>
-<li>相互循环引用</li>
-<li>多循环引用</li>
+<li><strong>行为参数化</strong></li>
+<li><strong>降低代码重合度</strong></li>
 </ul>
 
-<p><img src="media/15854871989163/15854872705391.jpg" alt="" style="width:539px;"/><br/>
-假如有一个对象，对象当中有一个成员变量 obj，这个对象是强持有他的成员变量，如果此时给这个成员变量 obj 赋值原对象的话，就造成自循环引用</p>
-
-<p><strong>相互循环引用</strong><br/>
-<img src="media/15854871989163/15854873014377.jpg" alt="" style="width:521px;"/><br/>
-比如说有一个对象 A ，其中有一个 id 类型的 obj，还有一个对象 B 它当中也有一个 id 类型的 obj，如果此时对象 A 中的 obj 指向对象 B，同时对象 B 中的 obj 指向对象 A，此时就造成相互循坏引用</p>
-
-<p><strong>多循环引用</strong><br/>
-<img src="media/15854871989163/15854873378510.jpg" alt="" style="width:547px;"/><br/>
-假如在某一个类当中，有对象 1，对象 2，对象 n，每一个对象当中都一个 id 类型的 obj，假如说此时每一个对象的 obj 都指向下一个对象，就产生了一个多循环引用</p>
-
-<h3 id="toc_1">循环引用的解决方案</h3>
-
-<p><strong>_ _weak破解</strong><br/>
-<img src="media/15854871989163/15854874246559.jpg" alt="" style="width:506px;"/><br/>
-假如说左侧的对象 A 和 右侧的对象 B 都有一个成员变量 id 类型的 obj，当把 对象 A 中的成员变量声明为 _ _weak 的时候，就可以破除相互循环引用<br/>
-对象 B 强持有 A ，而 A 弱引用 B，此时规避了循环引用.</p>
-
-<p><strong>NSTimer的循环引用问题</strong><br/>
-<img src="media/15854871989163/15854874775275.jpg" alt="" style="width:545px;"/><br/>
-假如一个实际的场景：比如有一个页面，在这个页面当中有一个 banner 广告栏，需要在每一秒钟滚动一次，一般情况下会把 banner 广告栏的 UI 对象作为 VC 的一个成员变量，由 VC 对它进行强持有，那么由于 banner 需要每个一秒钟进行一个滚动播放，又涉及到定会器的使用，所以需要在这个对象当中去添加一个成员变量 NSTimer，当添加了 NSTimer 之后，在为它分配了一个相应的定时回调事件之后，NSTimer 会对他的 target 进行强引用，这个时候就产生了一个相互循环引用</p>
-
-<p><img src="media/15854871989163/15854875265652.jpg" alt="" style="width:562px;"/><br/>
-因为 NSTimer 刚被分派之后，会被当前线程的 RunLoop 强引用，如果说我们这个对象后者说 NSTimer 是在主线程中创建的，那么就由主线程的 RunLoop 持有这个 NSTimer，所以即使这个对象弱引用了 NSTimer，但是由于主线程的 RunLoop 常住内存 通过对 NSTimer 的强引用，再通过 NSTimer 对对象的强引用，仍然对这个对象产生了一个强引用，那么此时，即使 VC 页面退出，对对象的引用去掉的话，这个当前 banner 广告栏由于被 RunLoop 间接的持有，这个对象也不会被释放，此时就产生了内存泄露.<br/>
-<img src="media/15854871989163/15854875550481.jpg" alt="" style="width:545px;"/><br/>
-在左侧是 RunLoop 对 NSTimer 的强引用，在右侧是 VC 对 对象的强引用，我们可以在 NSTimer 和对象中间添加一个中间对象，然后由 NSTimer 对中间对象执行一个强引用，同时中间对象分别对 NSTimer 和 banner广告栏的对象做一个弱引用，此时对于一个重复的定时器而言，当当前 VC 或者说页面退出之后，VC 就释放了对 banner 广告栏这个对象强引用，当下次 NSTimer 的回调事件回来的时候，我们可以在中间对象当中 NSTimer 的回调方法里面去判断当前中间对象所持有的弱引用对象是否被废弃掉了，实际上就是判断中间对象所持有的 weak 变量是否为 nil，如果为 nil 的话，在定时器的回调方法当中调用 invalidate 和做 timer 置 nil 的操作，这样的话就可以释放 RunLoop 对 NSTimer 的强引用，NSTimer 对中间对象的强引用，NSTimer和中间对象都可以得到内存的释放达到破除循环引用的目的</p>
+<p><img src="media/15857060089212/15857096914244.jpg" alt="" style="width:1213px;"/></p>
 
                         
                       </div>
@@ -167,10 +209,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/29</span>
+                    <span class="date">2020/04/01</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
+          					    <span class="posted-in"><a href='%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html'>设计模式(架构)</a></span>
           				   
                     
 
@@ -274,6 +316,18 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15859202199650.html">Block 的深度探究</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
 			      </li>
 		     
@@ -287,18 +341,6 @@
 		      
 			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857097341147.html">架构框架-听课笔记</a>
 			      </li>
 		     
 		  

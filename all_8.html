@@ -116,135 +116,252 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854861330491.html">
+                <a class="clearlink" href="15852304585575.html">
                 
-                  <h1>iOS 的内存管理(五) 自动释放池</h1>
+                  <h1>冷启动优化</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>先看一段代码</p>
+                        	<h2 id="toc_0">时间统计方案耗时统计</h2>
 
-<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad
-{
-   [super viewDidLoad];
-   
-   NSMutableArray *array = [NSMutableArray array];
-   NSLog(@&quot;%@&quot;,array);
-}
+<h2 id="toc_1">冷启动的常规方案</h2>
 
+<h2 id="toc_2">影响冷启动的原因</h2>
+
+<p>T1<br/>
+加载系统dylib和可执行文件的时间。<br/>
+<strong>pre-main</strong><br/>
+<img src="media/15852304585575/15855417037045.jpg" alt="" style="width:640px;"/></p>
+
+<p>T2<br/>
+从main到applicationWillFinishLaunching结束的时间。</p>
+
+<p><img src="media/15852304585575/15854889131342.jpg" alt="" style="width:583px;"/></p>
+
+<p>该阶段各个时期的任务以及优化方法：</p>
+
+<p><img src="media/15852304585575/15855421992699.jpg" alt="" style="width:859px;"/></p>
+
+<p>1）解析Info.plist</p>
+
+<p>加载相关信息，例如如闪屏<br/>
+沙箱建立、权限检查<br/>
+2）Mach-O加载</p>
+
+<p>如果是胖二进制文件，寻找合适当前CPU类别的部分<br/>
+加载所有依赖的Mach-O文件（递归调用Mach-O加载的方法）<br/>
+定位内部、外部指针引用，例如字符串、函数等<br/>
+执行声明为__attribute__((constructor))的C函数<br/>
+加载类扩展（Category）中的方法<br/>
+C++静态对象加载、调用ObjC的 +load 函数<br/>
+3）程序执行</p>
+
+<p>调用main()<br/>
+调用UIApplicationMain()<br/>
+调用applicationWillFinishLaunching</p>
+
+<h3 id="toc_3">Mach-O</h3>
+
+<p>Mach-O 是针对不同运行时可执行文件的文件类型。<br/>
+<img src="media/15852304585575/15855404362587.jpg" alt="" style="width:373px;"/></p>
+
+<p>文件类型：<br/>
+Executable： 应用的主要二进制<br/>
+Dylib： 动态链接库（又称 DSO 或 DLL）<br/>
+Bundle： 不能被链接的 Dylib，只能在运行时使用 dlopen() 加载，可当做 macOS 的插件。<br/>
+Image： executable，dylib 或 bundle<br/>
+Framework： 包含 Dylib 以及资源文件和头文件的文件夹</p>
+
+<p><strong>Mach-O 镜像文件</strong></p>
+
+<p>Mach-O 被划分成一些 segement，每个 segement 又被划分成一些 section。</p>
+
+<p>segment 的名字都是大写的，且空间大小为页的整数。页的大小跟硬件有关，在 arm64 架构一页是 16KB，其余为 4KB。</p>
+
+<p>section 虽然没有整数倍页大小的限制，但是 section 之间不会有重叠。</p>
+
+<p>几乎所有 Mach-O 都包含这三个段（segment）： <strong><strong>TEXT,</strong>DATA 和 __LINKEDIT</strong>：</p>
+
+<p>__TEXT 包含 Mach header，被执行的代码和只读常量（如C 字符串）。只读可执行（r-x）。</p>
+
+<p>__DATA 包含全局变量，静态变量等。可读写（rw-）。</p>
+
+<p>__LINKEDIT 包含了加载程序的『元数据』，比如函数的名称和地址。只读（r–）。</p>
+
+<p>Mach-O Universal 文件<br/>
+FAT 二进制文件，将多种架构的 Mach-O 文件合并而成。它通过 Fat Header 来记录不同架构在文件中的偏移量，Fat Header 占一页的空间。</p>
+
+<p>按分页来存储这些 segement 和 header 会浪费空间，但这有利于虚拟内存的实现。</p>
+
+<p><strong>什么是image</strong><br/>
+1.executable可执行文件 比如.o文件。<br/>
+2.dylib 动态链接库 framework就是动态链接库和相应资源包含在一起的一个文件夹结构。<br/>
+3.bundle 资源文件 只能用dlopen加载，不推荐使用这种方式加载。</p>
+
+<p>除了我们App本身的可行性文件，系统中所有的framework比如UIKit、Foundation等都是以动态链接库的方式集成进App中的。</p>
+
+<p><strong>什么是ImageLoader</strong><br/>
+image 表示一个二进制文件(可执行文件或 so 文件)，里面是被编译过的符号、代码等，所以 ImageLoader 作用是将这些文件加载进内存，且每一个文件对应一个ImageLoader实例来负责加载。</p>
+
+<p>两步走：在程序运行时它先将动态链接的 image 递归加载 (也就是上面测试栈中一串的递归调用的时刻)。 再从可执行文件 image 递归加载所有符号。</p>
+
+<p>冷启动和热启动<br/>
+冷启动<br/>
+应用首次启动。即后台线程中未有当前打开的应用，所有的资源都需要加载并初始化。</p>
+
+<p>热启动<br/>
+应用非首次启动。即后台线程中保留有当前应用，应用的资源在内存中有保存。</p>
+
+<p>启动时间分析<br/>
+1）开启时间分析功能</p>
+
+<p>在Xcode的菜单中选择Project→Scheme→Edit Scheme...，然后找到 Run → Environment Variables →+，添加name为DYLD_PRINT_STATISTICS value为1的环境变量。</p>
+
+<p><img src="media/15852304585575/15855405887650.jpg" alt="" style="width:866px;"/></p>
+
+<h3 id="toc_4">1. load dylibs image</h3>
+
+<p>通常的，一个App需要加载100到400个dylibs， 但是其中的系统库被优化，可以很快的加载。 针对这一步骤的优化有：</p>
+
+<ol>
+<li>减少非系统库的依赖</li>
+<li>合并非系统库</li>
+<li>使用静态资源，比如把代码加入主程序</li>
+</ol>
+
+<h3 id="toc_5">2. rebase/bind</h3>
+
+<p>优化该阶段的关键在于减少__DATA segment中的指针数量。我们可以优化的点有：</p>
+
+<ol>
+<li>减少Objc类数量， 减少selector数量</li>
+<li>减少C++虚函数数量</li>
+<li>转而使用swift stuct（其实本质上就是为了减少符号的数量）</li>
+</ol>
+
+<h3 id="toc_6">3. main()调用之前的耗时我们可以优化的点</h3>
+
+<ol>
+<li>减少不必要的framework，因为动态链接比较耗时</li>
+<li>check framework应当设为optional和required，如果该framework在当前App支持的所有iOS系统版本都存在，那么就设为required，否则就设为optional，因为optional会有些额外的检查</li>
+<li>合并或者删减一些OC类，关于清理项目中没用到的类，使用工具AppCode代码检查功能，查到当前项目中没有用到的类如下：
+<ul>
+<li>删减一些无用的静态变量</li>
+<li>删减没有被调用到或者已经废弃的方法</li>
+<li>将不必须在+load方法中做的事情延迟到+initialize中</li>
+<li>尽量不要用C++虚函数(创建虚函数表有开销)</li>
+</ul></li>
+</ol>
+
+<h3 id="toc_7">4. main()调用之后的加载时间</h3>
+
+<p>在main()被调用之后，App的主要工作就是初始化必要的服务，显示首页内容等。而我们的优化也是围绕如何能够快速展现首页来开展。 App通常在AppDelegate类中的</p>
+
+<pre class="line-numbers"><code class="language-text">- (BOOL)Application:(UIApplication *)Application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 </code></pre>
 
-<p>在 viewDidLoad 方法中通过 [NSMutableArray array] 创建了一个数组对象，然后在控制台打印它的值</p>
+<p>方法中创建首页需要展示的view，然后在当前runloop的末尾，主动调用</p>
 
-<p><strong>思考：这个 array 对应的内存是在什么时机释放的？</strong></p>
-
-<p><strong>思考：AutoreleasePool 的实现原理是怎样的？</strong></p>
-
-<p><strong>思考：AutoreleasePool 为何可以嵌套使用？</strong></p>
-
-<h2 id="toc_0">自动释放池</h2>
-
-<p>@autoreleasepool{} 经过编译器编译后会变成什么?</p>
-
-<pre class="line-numbers"><code class="language-text">编译器会将 @autoreleasepool{} 改写为：
-
-void *ctx = objc_autoreleasePoolPush();
-
-{}中的代码
-
-objc_autoreleasePoolPop(ctx)
-
+<pre class="line-numbers"><code class="language-text">- CA::Transaction::commit
 </code></pre>
 
-<p>第一段是 objc_autoreleasePoolPush 这个函数调用，是没有参数的，返回值是一个无类型的指针<br/>
-中间是花括号中所添加的代码<br/>
-之后会调用 objc_autoreleasePoolPop 函数，这个函数的入参就是前一个函数 objc_autoreleasePoolPush 返回结果</p>
-
-<p><strong>objc_autoreleasePoolPush 的内部实现</strong><br/>
-<img src="media/15854861330491/15854863797428.jpg" alt="" style="width:569px;"/></p>
-
-<p><strong>objc_autoreleasePoolPop 的内部实现</strong><br/>
-<img src="media/15854861330491/15854864294078.jpg" alt="" style="width:537px;"/></p>
-
-<h3 id="toc_1">自动释放池的数据结构</h3>
-
-<p><img src="media/15854861330491/15854866906727.jpg" alt="" style="width:536px;"/></p>
-
-<p><img src="media/15854861330491/15854865388343.jpg" alt="" style="width:576px;"/></p>
-
-<h3 id="toc_2">AutoreleasePoolPage (C++的类)</h3>
-
-<p><img src="media/15854861330491/15854867368624.jpg" alt="" style="width:534px;"/><br/>
-这个类的组成结构主要有四个成员变量</p>
-
 <ul>
-<li>第一个是 id* 类型的 next，实际上就是指向栈当中下一个可填充位置</li>
-<li>之后是两个 AutoreleasePoolPage 类型的成员变量，分别为 parent 和 child，也就是双向链表中的父指针和孩子指针</li>
-<li>还有一个成员变量 pthread_t 类型的，所以说 autoreleasepool 是和线程一一对应的，就是从这个结构当中的 Thread 成员变量体现出来的</li>
+<li>完成视图的渲染。</li>
 </ul>
 
-<p><strong>AutoreleasePoolPage 的结构</strong><br/>
-<img src="media/15854861330491/15854868085779.jpg" alt="" style="width:529px;"/></p>
+<p>而视图的渲染主要涉及三个阶段：</p>
 
-<p>最下边是 AutoreleasePoolPage 自身所占有的内存，上面这些可以用来存储花括号中填充的 autorelease 对象，同样的这个栈是向下增长的，所以下面是高地址，上面是低地址，有一个 next 指针也就是 AutoreleasePoolPage 这个结构当中的一个成员变量，指向当前栈的一个空的位置，比如说现在在进行一个入栈操作，就可以添加到 next 指针所指向的位置</p>
+<ol>
+<li>准备阶段 这里主要是图片的解码</li>
+<li>布局阶段 首页所有UIView的 - (void)layoutSubViews( ) 运行</li>
+<li>绘制阶段 首页所有UIView的 - (void)drawRect:(CGRect)rect 运行再加上启动之后必要服务的启动、必要数据的创建和读取，这些就是我们可以尝试优化的地方</li>
+</ol>
 
-<p><strong>AutoreleasePoolPage::push 方法实现</strong><br/>
-<img src="media/15854861330491/15854868523600.jpg" alt="" style="width:524px;"/></p>
+<p>因此，对于main()函数调用之前我们可以优化的点有：</p>
 
-<p>如果发生了一个 AutoreleasePoolPage::push 操作，会把当前 next 位置置为 nil ，称他为哨兵对象，然后将 next 指针指向下一个可入栈的位置，这就是 AutoreleasePoolPage 的 push 方法的实现过程<br/>
-实际上每次进行一个 AutoreleasePool 的代码块的创建，相当于是不断的在栈当中去插入哨兵对象</p>
+<ol>
+<li>不使用xib，直接视用代码加载首页视图</li>
+<li>NSUserDefaults实际上是在Library文件夹下会生产一个plist文件，如果文件太大的话一次能读取到内存中可能很耗时，这个影响需要评估，如果耗时很大的话需要拆分(需考虑老版本覆盖安装兼容问题)</li>
+<li>每次用NSLog方式打印会隐式的创建一个Calendar，因此需要删减启动时各业务方打的log，或者仅仅针对内测版输出log</li>
+<li>应用启动时发送的所有网络请求，是否可以统一在异步线程请求</li>
+<li>具体优化点</li>
+</ol>
 
-<p><strong>[ obj autorelease ] 方法系统内部实现</strong><br/>
-<img src="media/15854861330491/15854868804913.jpg" alt="" style="width:543px;"/><br/>
-比如说调用了一个对象的 autorelease 方法<br/>
-首先会判断当前 next 指针是否指向了栈顶，如果没有指向栈顶就直接把这个对象添加到当前这个栈的 next 位置，结束流程，假如当前 next 已经指向了栈顶，这个时候当前这个 AutoreleasePoolPage 就没有办法再装新的 autorelease 对象了，于是就需要增加一个栈节点拼接到到链表上，之后在新的栈上面去添加对象最终结束流程</p>
+<p>因此，针对于今日头条这个App我们可以优化的点如下：</p>
 
-<p><strong>AutoreleasePoolPage::pop 方法实现</strong></p>
+<ol>
+<li>纯代码方式而不是storyboard加载首页UI。</li>
+<li>对<strong>didFinishLaunching</strong>里的函数考虑能否挖掘可以<strong>延迟加载或者懒加载</strong>，需要与各个业务方pm和rd共同check 对于一些已经下线的业务，删减冗余代码。</li>
+<li>对于一些与UI展示无关的业务，如书城礼包,单本书礼包的获取、图片最大缓存空间设置等做延迟加载，对实现了+load() 方法的类进行分析，尽量将load里的代码延后调用。</li>
+</ol>
 
-<ul>
-<li>根据传入的哨兵对象找到对应的位置</li>
-<li>给上次push操作之后添加的对应一次发送release消息</li>
-<li>回退next指针到正确位置</li>
-</ul>
+<p>6.iOS App启动过程</p>
 
-<p>首先对 pop 流程做一个简单的说明：</p>
+<p>参考 <a href="http://blog.csdn.net/justinjing0612/article/details/43969681">http://blog.csdn.net/justinjing0612/article/details/43969681</a></p>
 
-<ul>
-<li>在进行 pop 操作的时候会根据传入的哨兵对象来找到 pop 的最终位置，这个所谓的哨兵对象就是前面提到的 objc_autoreleasePoolPush 函数的返回值，实际上返回的就是栈当中对应的哨兵地址，pop 操作和 push 操作是一一对应的，那么要 pop 回哪个位置实际上是 pop 回它所指向的前一个哨兵对象</li>
-<li>然后给上次 push 操作之后所添加的对象依次发送 release 消息</li>
-<li>之后回退 next 指针到正确的位置</li>
-</ul>
+<p>(1) 链接并加载Framework和static lib</p>
 
-<p><img src="media/15854861330491/15854869764048.jpg" alt="" style="width:548px;"/><br/>
-假如说 next 指针指向这个位置，然后此时调用了 AutoreleasePoolPage::pop 操作，那么实际上要给这个红括号包含的这些对象依次发送 release 消息<br/>
-<img src="media/15854861330491/15854870031497.jpg" alt="" style="width:533px;"/></p>
+<p>(2) UIKit初始化</p>
 
-<p>发送 release 之后，这些对象就会从当前栈中被清除掉<br/>
-<img src="media/15854861330491/15854870216150.jpg" alt="" style="width:533px;"/><br/>
-清除之后会把 next 指针指向一个正确的位置，这个就是 pop 的整个过程</p>
+<p>(3) 应用程序callback</p>
 
-<h3 id="toc_3">自动释放池总结</h3>
+<p>(4) 第一个Core Animation transaction</p>
 
-<p><img src="media/15854861330491/15854870566083.jpg" alt="" style="width:530px;"/><br/>
-在每一 RunLoop 的循环过程当中，都会在它将要结束的时候对前一次创建的 autoreleasepool 进行 pop 操作，同时会 push 进来一个新的 autoreleasePool，所以说在 viewDidLoad 方法中通过 [NSMutableArray array] 所创建的这个数组对象是在当次 RunLoop 将要结束的时候，然后调用 AutoreleasePoolPage::pop () 方法的时候，把对应的 array 对象调用它的 release 方法，然后对它进行释放</p>
+<p>6.1 链接并加载Framework及static lib时需要注意：</p>
 
-<p>关于AutoreleasePool 为何可以嵌套使用，实际上多次嵌套调用就是多次插入哨兵对象，比如说我们每次进行一个 @autoreleasepool{} 代码块的创建的时候，系统就会为我们进行哨兵对象的插入，然后完成新的 autoreleasepool 的创建，这个 autoreleasepool 的创建实际上创建了一个新的 page，假如说当前 page 还没有满的话就不用创建这个 page ，所以说我们所说的先创建的一个 autoreleasepool 对应的在底层实现就是插入了一个哨兵对象，所以当然是可以直接多次嵌套调用的</p>
+<p>1.每个Framework都会增加启动时间和占用的内存<br/>
+2.不必要的Framework，不要链接<br/>
+3.必要的Framework，不要设置为Optional<br/>
+4.只在使用在Deployment Target之后发布的Framework时，才使用Optional（比如你的Deployment Target是iOS 3.0，需要链接StoreKit的时候）避免创建全局的C++对象</p>
 
-<p>autoreleasePool 使用场景的问题：在什么场景下需要手动创建 autoreleasePool，比如说在 for 循坏当中 alloc 出大量的图片数据，图片数据对内存消耗非常大，需要在 for 循环内部创建一个 autoreleasepool ，每一次 for 循环都进行一次内存的释放来降低内存的峰值，防止一些内存消耗过大所导致的一些问题</p>
+<p>6.2 初始化UIKit时需要注意：</p>
 
-<p>实现原理：autoreleasePool实现原理就是以栈为节点，通过双向链接形式组合而成的一个数据结构</p>
+<p>1.字体、状态栏、user defaults、main nib会被初始化<br/>
+2.保持main nib尽可能的小<br/>
+3.User defaults本质上是一个plist文件，保存的数据是同时被反序列化的，不要在user defaults里面保存图片等大数据</p>
 
-<p>补充<br/>
-ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的消息循环机制，当一个runloop结束时系统才会一次性清理掉被autorelease处理过的对象，其实本质上说是在本次runloop迭代结束时清理掉被本次迭代期间被放到autorelease pool中的对象的。至于何时runloop结束并没有固定的duration。</p>
+<p>6.3 应用程序的回调</p>
 
-<p>方便是方便了，但是有些情况下，我们还是需要手动创建自动释放池，那么，什么时候呢？</p>
+<p>1.application:willFinishLaunchingWithOptions:<br/>
+2.恢复应用程序的状态<br/>
+3.application:didFinishLaunchingWithOptions:</p>
 
-<p>如果你正在编写不基于UI 框架的程序，比如命令行工具。<br/>
-如果你编写的循环创建了很多临时对象。<br/>
-你可以在循环中使用自动释放池block，在下次迭代前处理这些对象。在循环中使用自动释放池block，有助于减少应用程序的内存占用。<br/>
-你生成了一个辅助线程。<br/>
-一旦线程开始执行你必须自己创建自动释放池。否则，应用将泄漏对象。</p>
+<ol>
+<li>WWDC 之优化 App 启动速度</li>
+</ol>
+
+<p>参考 <a href="https://juejin.im/entry/57c3d611a633bd005d7b3b62">https://juejin.im/entry/57c3d611a633bd005d7b3b62</a></p>
+
+<p>7.1 对动态库加载的时间优化</p>
+
+<p>每个App都进行动态库加载,其中系统级别的动态库占据了绝大数,而针对系统级别的动态库都是经过系统高度优化的,不用担心时间的花费.开发者应该关注于自己集成到App的那些动态库,这也是最能消耗加载时间的地方.对此Apple建议减少在App里开发者的动态库集成或者有可能地将其多个动态库最终集成一个动态库后进行导入, 尽量保证将App现有的非系统级的动态库个数保证在6个以内.</p>
+
+<p>7.2 减少Appp的Objective-C类,分类和的唯一Selector的个数</p>
+
+<p>这样做主要是为了加快程序的整个动态链接, 在进行动态库的重定位和绑定(Rebase/binding)过程中减少指针修正的使用,加快程序机器码的生成.</p>
+
+<p>7.3 减少Objc运行初始化的时间花费</p>
+
+<p>主要是类的注册,分类的注册,唯一选择器的存在,以及涉及子父类内存布局的Non Fragile ivars偏移的更新,都会影响Objective-C运行时初始化的时间消耗.</p>
+
+<p>7.4 使用initialize方法进行必要的初始化工作</p>
+
+<p>用+initialize方法替换调用原先在OC的+load方法中执行初始代码工作,从而加快所有类文件的加载速度.</p>
+
+<p>结尾</p>
+
+<p>1.使用DYLD_PRINT_STATISTICS测试启动加载时间<br/>
+2.减少自定义的动态库集成<br/>
+3.精简原有的Objective-C类和代码<br/>
+4.移除静态的初始化操作<br/>
+5.使用更多的Swift代码</p>
+
+<ol>
+<li>Facebook iOS App如何优化启动时间</li>
+</ol>
+
+<p>参考 <a href="http://www.cocoachina.com/ios/20160105/14870.html">http://www.cocoachina.com/ios/20160105/14870.html</a></p>
 
                         
                       </div>
@@ -253,10 +370,10 @@ ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/29</span>
+                    <span class="date">2020/03/26</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
+          					    <span class="posted-in"><a href='%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html'>性能优化</a></span>
           				   
                     
 
@@ -360,6 +477,18 @@ ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的�
 	      
 		      
 			      <li class="post">
+			        <a href="15859202199650.html">Block 的深度探究</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
 			      </li>
 		     
@@ -373,18 +502,6 @@ ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的�
 		      
 			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857097341147.html">架构框架-听课笔记</a>
 			      </li>
 		     
 		  

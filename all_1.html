@@ -116,129 +116,14 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15858220091653.html">
+                <a class="clearlink" href="15859201393931.html">
                 
-                  <h1>NSNotification 使用注意细节</h1>
+                  <h1>BLOCK 深入浅出的讲解</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h3 id="toc_0">关于观察者的移除</h3>
-
-<p>iOS9 以后的版本,不需要在 <code>- dealloc</code> 方法对观察者手动的移除了,因为在对象或者 ViewController 在释放 <code>-dealloc</code> 的时候,会自动的调用 <code>[[NSNotificationCenter defaultCenter]removeObserver:self]</code> 方法.<br/>
-在 iOS9 之前的版本需要我们在 <code>dealloc</code> 方法中手动的调用移除观察者的方法,因为在 iOS9 之前的版本中,在注册观察者的时候,通知中心并不会对观察者做 retain 操作,而是对观察者进行 <code>unsafe_unretained</code> 的引用,这里需要说明为什么是 unsafe_unretained 而不是 weak 的引用,因为 Cocoa 和 Cocoa Touch 中的一些类还没有支持 ARC,也就是不支持 weak,为了兼容之前的版本,所以这里使用了unsafe_unretained的引用,因为unsafe_unretained在释放的时候并不会自动置为 nil,所以有可能造成野指针,因此需要我们手动移除观察者.</p>
-
-<p>需要注意的是,通过 <code>[NSNotificationCenter addObserverForName:object:queue:usingBlock]</code> 方法注册的观察者,即使在 iOS9 之后,依然需要我们手动移除观察者,因为通知中心对他们的持有是强引用</p>
-
-<h3 id="toc_1">通知与线程</h3>
-
-<p>NSNotification在多线程下的转发问题,官方文档的说法:</p>
-
-<blockquote>
-<p>In a multithreaded application, notifications are always delivered in the thread in which the notification was posted, which may not be the same thread in which an observer registered itself.</p>
-</blockquote>
-
-<p>翻译过来就是:</p>
-
-<blockquote>
-<p>在多线程应用中，Notification在哪个线程中post，就在哪个线程中被转发，而不一定是在注册观察者的那个线程中。</p>
-</blockquote>
-
-<p><strong>这也就是说 Notification 的发送和接收处理是在同一个线程中.</strong></p>
-
-<p>那么问题来了,假如我们在异步线程 POST 了一个通知,但是我们希望是在主线程中处理(比如是网络回调结束之后,刷新 UI),这个时候怎么办?<br/>
- 看下官方文档的描述:</p>
-
-<blockquote>
-<p>For example, if an object running in a background thread is listening for notifications from the user interface, such as a window closing, you would like to receive the notifications in the background thread instead of the main thread. In these cases, you must capture the notifications as they are delivered on the default thread and redirect them to the appropriate thread.</p>
-</blockquote>
-
-<p>这里讲到了“重定向”，就是我们在Notification所在的默认线程中捕获这些分发的通知，然后将其重定向到指定的线程中。</p>
-
-<p>一种重定向的实现思路是自定义一个通知队列(注意，不是NSNotificationQueue对象，而是一个数组)，让这个队列去维护那些我们需要重定向的Notification。我们仍然是像平常一样去注册一个通知的观察者，当Notification来了时，先看看post这个Notification的线程是不是我们所期望的线程，如果不是，则将这个Notification存储到我们的队列中，并发送一个信号(signal)到期望的线程中，来告诉这个线程需要处理一个Notification。指定的线程在收到信号后，将Notification从队列中移除，并进行处理<br/>
-<a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Notifications/Articles/Threading.html">官方文档</a> 给出了代码,我们测试一下</p>
-
-<pre class="line-numbers"><code class="language-text">@interface ViewController () &lt;NSMachPortDelegate&gt;
-
-@property (nonatomic) NSMutableArray    *notifications;         // 通知队列
-@property (nonatomic) NSThread          *notificationThread;    // 期望线程
-@property (nonatomic) NSLock            *notificationLock;      // 用于对通知队列加锁的锁对象，避免线程冲突
-@property (nonatomic) NSMachPort        *notificationPort;
-
-@end
-
-@implementation ViewController
-
-- (void)viewDidLoad {
-    [super viewDidLoad];
-    
-    NSLog(@&quot;current thread = %@&quot;, [NSThread currentThread]);
-    
-    // 初始化
-    self.notifications = [[NSMutableArray alloc] init];
-    self.notificationLock = [[NSLock alloc] init];
-    
-    self.notificationThread = [NSThread currentThread];
-    self.notificationPort = [[NSMachPort alloc] init];
-    self.notificationPort.delegate = self;
-    
-    // 往当前线程的runloop添加端口源
-    // 当Mach消息到达而接收线程的run loop没有运行时，则内核会保存这条消息，直到下一次进入run loop
-    [[NSRunLoop currentRunLoop] addPort:self.notificationPort
-                                forMode:(__bridge NSString *)kCFRunLoopCommonModes];
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(processNotification:) name:@&quot;TestNotification&quot; object:nil];
-    
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        
-        [[NSNotificationCenter defaultCenter] postNotificationName:@&quot;TestNotification&quot; object:nil userInfo:nil];
-    
-    });
-}
-
-// MachPort 的代理方法
-- (void)handleMachMessage:(void *)msg {
-    
-    [self.notificationLock lock];
-    
-    while ([self.notifications count]) {
-        NSNotification *notification = [self.notifications objectAtIndex:0];
-        [self.notifications removeObjectAtIndex:0];
-        [self.notificationLock unlock];
-        [self processNotification:notification];
-        [self.notificationLock lock];
-    };
-    
-    [self.notificationLock unlock];
-}
-
-- (void)processNotification:(NSNotification *)notification {
-    
-    if ([NSThread currentThread] != _notificationThread) {
-        [self.notificationLock lock];
-        [self.notifications addObject:notification];
-        [self.notificationLock unlock];
-        [self.notificationPort sendBeforeDate:[NSDate date]
-                                   components:nil
-                                         from:nil
-                                     reserved:0];
-        NSLog(@&quot; 111111current thread = %@&quot;, [NSThread currentThread]);
-        NSLog(@&quot;接收和注册线程不在一个线程&quot;);
-    }
-    else {
-        // Process the notification here;
-        NSLog(@&quot;current thread = %@&quot;, [NSThread currentThread]);
-        NSLog(@&quot;process notification&quot;);
-    }
-}
-@end
-
-</code></pre>
-
-<p>运行之后我们看下打印结果:<br/>
-<img src="media/15858220091653/15858408835782.jpg" alt="" style="width:955px;"/><br/>
- 一开始接收到通知的时候,确实不在一个线程,所以添加到了数组中,并且发送了一个端口消息,然后在 MachPort 的代理方法中处理这个消息,最终在主线程接收到了这个通知.<br/>
- 当然，更好的方法可能是我们自己去子类化一个NSNotificationCenter，或者单独写一个类来处理这种转发。</p>
+                        	<p><img src="media/15859201393931/Block%20%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA.jpg" alt="Block 深入浅出"/></p>
 
                         
                       </div>
@@ -247,10 +132,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/04/02</span>
+                    <span class="date">2020/04/03</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
+          					    <span class="posted-in"><a href='Block%20%E7%9B%B8%E5%85%B3.html'>Block 相关</a></span>
           				   
                     
 
@@ -354,6 +239,18 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15859202199650.html">Block 的深度探究</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
 			      </li>
 		     
@@ -367,18 +264,6 @@
 		      
 			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857097341147.html">架构框架-听课笔记</a>
 			      </li>
 		     
 		  

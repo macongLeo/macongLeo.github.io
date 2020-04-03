@@ -116,194 +116,115 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15788827057157.html">
+                <a class="clearlink" href="15815876783958.html">
                 
-                  <h1>Runtime</h1>
+                  <h1>iOS 中的锁</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15788827057157/15788999942773.jpg" alt="" style="width:939px;"/><br/>
-Runtime 的特性主要是消息（方法）传递，如果消息（方法）在对象中找不到，就会进行消息转发。</p>
+                        	<ul>
+<li>自旋锁(OSSpinLock)</li>
+<li>互斥锁</li>
+<li>pthread_mutex</li>
+<li>信号量(dispatch_semaphore)</li>
+<li>NSLock</li>
+<li>递归锁(NSRecursiveLock)</li>
+<li>条件锁(NSConditionLock)</li>
+<li>@synchronized</li>
+</ul>
 
-<h2 id="toc_0">Runtime 介绍</h2>
+<p><strong>自旋锁(OSSpinLock)</strong></p>
 
 <blockquote>
-<p>Objective-C 拓展了 C语言，并且加入了面向对象特性和 SmallTalk 式的消息传递机制，而这个拓展的核心就是用 C 和编译语言写的Runtime库。Runtime是面向对象的基础。</p>
+<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
 </blockquote>
 
-<p><img src="media/15788827057157/15789003887697.jpg" alt="" style="width:684px;"/></p>
+<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
+自旋锁的问题:<br/>
+    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
+    2. 递归调用有可能引起死锁<br/>
+    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
 
-<h2 id="toc_1">Runtime 消息传递</h2>
+<p><strong>互斥锁</strong><br/>
+互斥锁属于 sleep-waiting 类型的锁.</p>
 
-<p>一个对象的方法[obj foo]，编译器转成消息转发：<strong>objc_msgSend(obj, foo)</strong><br/>
-Runtime 执行的流程如下：</p>
+<blockquote>
+<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
+</blockquote>
 
-<ul>
-<li>首先通过 obj 的 isa 指针， 找到他的 Class</li>
-<li>在 class 的 methodlist（方法列表） 列表中找方法： foo</li>
-<li>如果 class 中没有找到 foo，就向上去父类的方法列表中继续查找；</li>
-<li>如果找到了就执行，去实现 IMP。</li>
-</ul>
+<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
+自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
 
-<p><img src="media/15788827057157/15789011491768.jpg" alt="" style="width:687px;"/><br/>
-<img src="media/15788827057157/15789013576022.jpg" alt="" style="width:664px;"/></p>
-
-<ol>
-<li>系统首先找到消息的接收对象,然后通过对象的 isa 找到他的类 class.</li>
-<li>然后在他的类中查找 method_list,是否有 selector 方法</li>
-<li>没有找到则继续查找父类的 method_list.</li>
-<li>找到对应的 method,执行他的 IMP</li>
-<li>转发 IMP 的 return 值.</li>
-</ol>
-
-<p>下面讲一下消息传递中用到的概念:</p>
+<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
+互斥锁适用:</p>
 
 <ul>
-<li>类对象(objc_class)</li>
-<li>实例对象(objc_object)</li>
-<li>元类(Meta Class)</li>
-<li>Method(objc_method)</li>
-<li>SEL(objc_selector)</li>
-<li>IMP</li>
-<li>类缓存(objc_cache)</li>
-<li>Category(objc_category)</li>
+<li>临界区有 IO 操作</li>
+<li>临界区代码复制或者循环量大</li>
+<li>临界区竞争非常激烈</li>
+<li>单核处理器</li>
 </ul>
 
-<h3 id="toc_2">类对象(objc_class)</h3>
+<p>自旋锁适用:<br/>
+临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
 
-<p>在 OC 中类是有 Class 类型表示的,它实际上是一个指向 objc_class 的结构体指针<br/>
-<img src="media/15788827057157/15789018290104.jpg" alt="" style="width:295px;"/><br/>
-<img src="media/15788827057157/15789018799631.jpg" alt="" style="width:960px;"/><br/>
-struct objc_class结构体定义了很多变量，通过命名不难发现，<br/>
-结构体里保存了指向父类的指针、类的名字、版本、实例大小、实例变量列表、方法列表、缓存、遵守的协议列表等，<br/>
-一个类包含的信息也不就正是这些吗？没错，类对象就是一个结构体struct objc_class，这个结构体存放的数据称为元数据(metadata)，<br/>
-该结构体的第一个成员变量也是isa指针，这就说明了Class本身其实也是一个对象，因此我们称之为类对象，类对象在编译期产生用于创建实例对象，是单例。</p>
+<blockquote>
+<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
+优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
+</blockquote>
 
-<h3 id="toc_3">实例(objc_object)</h3>
+<p><strong>os_unfair_lock</strong></p>
 
-<p><img src="media/15788827057157/15789019974820.jpg" alt="" style="width:420px;"/></p>
+<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
 
-<p>类对象中的元数据存储的都是如何创建一个实例相关的信息,那么类对象和类方法应该从哪里创建呢? 就是 isa 指针指向的结构体创建,类对象的 isa 指针指向的我们称为元类,元类中保存了创建类对象及类方法所需的所有信息,所以经典的那张图又来了:<br/>
-<img src="media/15788827057157/15789021597096.jpg" alt="" style="width:934px;"/></p>
+<p><strong>pthread_mutex</strong><br/>
+mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
 
-<h3 id="toc_4">元类(Meta Class)</h3>
+<p><strong>NSLock</strong><br/>
+NSLock是对 mutex 的普通锁的封装<br/>
+NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
+trylock 是尝试加锁,如果失败的话就返回 NO</p>
 
-<p>通过上图我们可以发现整个体系构成了一个自闭环, <strong>struct objc_object</strong> 的结构体实例, 它的 isa 指向类对象,类对象的 isa 指向元类,super_class 指针指向父类的类对象,而元类的 super_class 的指针指向了父类的元类,那元类的指针又指向了自己.<br/>
-元类是一个类对象的类,在上面我们提到所有的类自身也是一个对象,我们可以像这个对象发送消息(调用方法),为了调用类方法,这个类的 isa 指针必须指向一个包含这些类方法的一个 objc_class 结构体,这就引出了元类(meta-class)的概念.<br/>
-元类中保存了创建类对象以及类方法所需的所有信息。 任何NSObject继承体系下的meta-class都使用NSObject的meta-class作为自己的所属类，而<strong>基类的meta-class的isa指针是指向它自己</strong>。</p>
+<p><strong>信号量</strong><br/>
+    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
+    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
 
-<p><img src="media/15788827057157/15789044962794.jpg" alt="" style="width:881px;"/></p>
+<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
+dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
+dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
+用法:
+信号量常用于对资源进行加锁操作
+</code></pre>
 
-<ul>
-<li>SEL method_name    方法名</li>
-<li>char *method_types 方法类型</li>
-<li>IMP method_imp     方法实现</li>
-</ul>
+<pre class="line-numbers"><code class="language-text">//在init等函数初始化
+_lock = dispatch_semaphore_create(1); 
+dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
+//修改Array或字典等数据的信息
+dispatch_semaphore_signal(_lock);
+</code></pre>
 
-<p><img src="media/15788827057157/15789046998441.jpg" alt="" style="width:728px;"/></p>
+<p><strong>@synchronized</strong><br/>
+@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
 
-<p>objc_msgSend 函数第二个参数类型为 SEL.它是 selector 在 OC 中的表示类型(Swift 中是 Selector 类).selector 是方法选择器,可以理解为区分方法的 ID,而这个 ID 的数据结构是 SEL.<br/>
-<img src="media/15788827057157/15789049888500.jpg" alt="" style="width:972px;"/></p>
+<pre class="line-numbers"><code class="language-text">// 写数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
+    }
+});
+// 读数据
+dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @synchronized (dict) {
+        id obj = [dict objectForKey:@&quot;trail&quot;];
+    }
+});
+</code></pre>
 
-<p><img src="media/15788827057157/15789050086371.jpg" alt="" style="width:988px;"/></p>
-
-<p><img src="media/15788827057157/15789060707679.jpg" alt="" style="width:978px;"/></p>
-
-<p><img src="media/15788827057157/15789062512658.jpg" alt="" style="width:547px;"/></p>
-
-<ul>
-<li>name:是指 class_name 而不是 category_name。</li>
-<li>cls:要扩展的类对象，编译期间是不会定义的，而是在Runtime阶段通过name对 应到对应的类对象。</li>
-<li>instanceMethods：category中所有给类添加的实例方法的列表。</li>
-<li>classMethods：category中所有添加的类方法的列表。</li>
-<li>protocols：category实现的所有协议的列表。</li>
-<li>instanceProperties：表示Category里所有的properties，这就是我们可以通过objc_setAssociatedObject和objc_getAssociatedObject增加实例变量的原因，不过这个和一般的实例变量是不一样的。</li>
-</ul>
-
-<p><img src="media/15788827057157/15789063762697.jpg" alt="" style="width:983px;"/></p>
-
-<h2 id="toc_5">Runtime 消息转发</h2>
-
-<p>消息转发的最后三次机会</p>
-
-<ul>
-<li>动态方法解析</li>
-<li>备用接受者</li>
-<li>完整消息转发</li>
-</ul>
-
-<p><img src="media/15788827057157/15789064378501.jpg" alt="" style="width:974px;"/></p>
-
-<h3 id="toc_6">动态方法解析</h3>
-
-<p><img src="media/15788827057157/15789066286973.jpg" alt="" style="width:964px;"/></p>
-
-<p>可以看到虽然没有实现foo:这个函数，但是我们通过class_addMethod动态添加fooMethod函数，并执行fooMethod这个函数的IMP。从打印结果看，成功实现了。<br/>
-如果resolve方法返回 NO ，运行时就会移到下一步：<strong>forwardingTargetForSelector</strong>。</p>
-
-<h3 id="toc_7">备用接受者</h3>
-
-<p>如果目标对象实现了<strong>-forwardingTargetForSelector:</strong>，Runtime 这时就会调用这个方法，给你把这个消息转发给其他对象的机会。</p>
-
-<p>实现一个备用接收者的例子如下：</p>
-
-<p><img src="media/15788827057157/15789068795712.jpg" alt="" style="width:667px;"/><br/>
-可以看到我们通过forwardingTargetForSelector把当前ViewController的方法转发给了Person去执行了。打印结果也证明我们成功实现了转发。</p>
-
-<h3 id="toc_8">完整消息转发</h3>
-
-<p>如果在上一步还不能处理未知消息，则唯一能做的就是启用完整的消息转发机制了。<br/>
-首先它会发送<strong>-methodSignatureForSelector:</strong>消息获得函数的参数和返回值类型。如果-<strong>methodSignatureForSelector:</strong>返回nil ，Runtime则会发出 <strong>-doesNotRecognizeSelector:</strong> 消息，程序这时也就挂掉了。如果返回了一个函数签名，Runtime就会创建一个<strong>NSInvocation</strong> 对象并发送 <strong>-forwardInvocation:</strong>消息给目标对象。</p>
-
-<p><img src="media/15788827057157/15789070035039.jpg" alt="" style="width:765px;"/><br/>
-<img src="media/15788827057157/15789070187925.jpg" alt="" style="width:774px;"/><br/>
-从打印结果来看，我们实现了完整的转发。通过签名，Runtime生成了一个对象anInvocation，发送给了forwardInvocation，我们在forwardInvocation方法里面让Person对象去执行了foo函数。签名参数v@:怎么解释呢，这里苹果文档Type Encodings有详细的解释。<br/>
-以上就是Runtime的三次转发流程。下面我们讲讲Runtime的实际应用。<br/>
-<img src="media/15788827057157/15789072653201.jpg" alt="" style="width:987px;"/></p>
-
-<h2 id="toc_9">Runtime 应用</h2>
-
-<ul>
-<li>AOP 面向切片编程(埋点方面用的比较多)
-<img src="media/15788827057157/15789071021461.jpg" alt="" style="width:702px;"/>
-<img src="media/15788827057157/15789071215521.jpg" alt="" style="width:811px;"/></li>
-</ul>
-
-<p>下面实现一个UIView的Category添加自定义属性defaultColor。<br/>
-<img src="media/15788827057157/15789080004602.jpg" alt="" style="width:839px;"/><br/>
-<img src="media/15788827057157/15789080309274.jpg" alt="" style="width:969px;"/></p>
-
-<p><img src="media/15788827057157/15789079081069.jpg" alt="" style="width:961px;"/><br/>
-<strong><em>注:weak 的关联内存管理策略是什么?</em></strong><br/>
-<a href="https://dayon.gitbooks.io/-ios/content/chapter8.html">https://dayon.gitbooks.io/-ios/content/chapter8.html</a></p>
-
-<h3 id="toc_10">方法添加</h3>
-
-<p><img src="media/15788827057157/15789083218769.jpg" alt="" style="width:943px;"/></p>
-
-<h3 id="toc_11">方法替换</h3>
-
-<p>下面实现一个替换ViewController的viewDidLoad方法的例子。<br/>
-<img src="media/15788827057157/15789085581682.jpg" alt="" style="width:1074px;"/><br/>
-swizzling应该只在+load中完成。 在 Objective-C 的运行时中，每个类有两个方法都会自动调用。+load 是在一个类被初始装载时调用，+initialize 是在应用第一次调用该类的类方法或实例方法前调用的。两个方法都是可选的，并且只有在方法被实现的情况下才会被调用。<br/>
-swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的状态，所以我们需要确保每个预防措施在运行时都是可用的。原子操作就是这样一个用于确保代码只会被执行一次的预防措施，就算是在不同的线程中也能确保代码只执行一次。Grand Central Dispatch 的 dispatch_once满足了所需要的需求，并且应该被当做使用swizzling 的初始化单例方法的标准。</p>
-
-<h3 id="toc_12">KVO实现</h3>
-
-<p><img src="media/15788827057157/15789086448973.jpg" alt="" style="width:924px;"/><br/>
-<img src="media/15788827057157/15789086852696.jpg" alt="" style="width:941px;"/><br/>
-<img src="media/15788827057157/15789087796562.jpg" alt="" style="width:950px;"/></p>
-
-<p>注:<br/>
-消息转发中&quot;v@:&quot;含义:<br/>
-<img src="media/15788827057157/15789066840487.jpg" alt="" style="width:712px;"/></p>
-
-<p>参考：<br/>
-<a href="https://juejin.im/post/5ac0a6116fb9a028de44d717">https://juejin.im/post/5ac0a6116fb9a028de44d717</a><br/>
-<a href="https://bujige.net/blog/iOS-Runtime-01.html">https://bujige.net/blog/iOS-Runtime-01.html</a><br/>
-<a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100">https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html#//apple_ref/doc/uid/TP40008048-CH100</a><br/>
-<a href="https://www.jianshu.com/p/ab966e8a82e2">https://www.jianshu.com/p/ab966e8a82e2</a></p>
+<p>参考:<br/>
+<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
+<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
+<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
 
                         
                       </div>
@@ -312,10 +233,10 @@ swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/13</span>
+                    <span class="date">2020/02/13</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
           				   
                     
 
@@ -419,6 +340,18 @@ swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的�
 	      
 		      
 			      <li class="post">
+			        <a href="15859202199650.html">Block 的深度探究</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
 			      </li>
 		     
@@ -432,18 +365,6 @@ swizzling应该只在dispatch_once 中完成,由于swizzling 改变了全局的�
 		      
 			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857097341147.html">架构框架-听课笔记</a>
 			      </li>
 		     
 		  

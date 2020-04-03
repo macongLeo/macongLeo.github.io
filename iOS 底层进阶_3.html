@@ -116,135 +116,85 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854861330491.html">
+                <a class="clearlink" href="15854675822663.html">
                 
-                  <h1>iOS 的内存管理(五) 自动释放池</h1>
+                  <h1>iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>先看一段代码</p>
+                        	<h2 id="toc_0">数据结构</h2>
 
-<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad
-{
-   [super viewDidLoad];
-   
-   NSMutableArray *array = [NSMutableArray array];
-   NSLog(@&quot;%@&quot;,array);
+<ul>
+<li>Spinlock_t (自旋锁)</li>
+<li>RefcountMap (引用计数表)</li>
+<li>weak_table_t(弱引用表)</li>
+</ul>
+
+<p>在runtime内存空间中，SideTables是一个64个元素长度的hash数组，里面存储了SideTable。SideTables的hash键值就是一个对象obj的address。<br/>
+因此可以说，一个obj，对应了一个SideTable。但是一个SideTable，会对应多个obj。<strong>因为SideTable的数量只有64个</strong>，所以会有很多obj共用同一个SideTable。<br/>
+<strong>SideTables可以理解为一个全局的hash数组</strong>，里面存储了SideTable类型的数据，其长度为64。</p>
+
+<p>SideTabls可以通过全局的静态函数获取：</p>
+
+<pre class="line-numbers"><code class="language-text">static StripedMap&lt;SideTable&gt;&amp; SideTables() {
+    return *reinterpret_cast&lt;StripedMap&lt;SideTable&gt;*&gt;(SideTableBuf);
 }
-
 </code></pre>
 
-<p>在 viewDidLoad 方法中通过 [NSMutableArray array] 创建了一个数组对象，然后在控制台打印它的值</p>
+<p><img src="media/15854675822663/20180920175152461.png" alt="20180920175152461"/></p>
 
-<p><strong>思考：这个 array 对应的内存是在什么时机释放的？</strong></p>
+<h3 id="toc_1">自旋锁(Spinlock_t)</h3>
 
-<p><strong>思考：AutoreleasePool 的实现原理是怎样的？</strong></p>
-
-<p><strong>思考：AutoreleasePool 为何可以嵌套使用？</strong></p>
-
-<h2 id="toc_0">自动释放池</h2>
-
-<p>@autoreleasepool{} 经过编译器编译后会变成什么?</p>
-
-<pre class="line-numbers"><code class="language-text">编译器会将 @autoreleasepool{} 改写为：
-
-void *ctx = objc_autoreleasePoolPush();
-
-{}中的代码
-
-objc_autoreleasePoolPop(ctx)
-
-</code></pre>
-
-<p>第一段是 objc_autoreleasePoolPush 这个函数调用，是没有参数的，返回值是一个无类型的指针<br/>
-中间是花括号中所添加的代码<br/>
-之后会调用 objc_autoreleasePoolPop 函数，这个函数的入参就是前一个函数 objc_autoreleasePoolPush 返回结果</p>
-
-<p><strong>objc_autoreleasePoolPush 的内部实现</strong><br/>
-<img src="media/15854861330491/15854863797428.jpg" alt="" style="width:569px;"/></p>
-
-<p><strong>objc_autoreleasePoolPop 的内部实现</strong><br/>
-<img src="media/15854861330491/15854864294078.jpg" alt="" style="width:537px;"/></p>
-
-<h3 id="toc_1">自动释放池的数据结构</h3>
-
-<p><img src="media/15854861330491/15854866906727.jpg" alt="" style="width:536px;"/></p>
-
-<p><img src="media/15854861330491/15854865388343.jpg" alt="" style="width:576px;"/></p>
-
-<h3 id="toc_2">AutoreleasePoolPage (C++的类)</h3>
-
-<p><img src="media/15854861330491/15854867368624.jpg" alt="" style="width:534px;"/><br/>
-这个类的组成结构主要有四个成员变量</p>
+<blockquote>
+<p>自旋锁是计算机科学用于多线程同步的一种锁，线程反复检查锁变量是否可用。由于线程在这一过程中保持执行，因此是一种忙等待。一旦获取了自旋锁，线程会一直保持该锁，直至显式释放自旋锁。<br/>
+自旋锁避免了进程上下文的调度开销，因此对于线程只会阻塞很短时间的场合是有效的。因此操作系统的实现在很多地方往往用自旋锁。Windows操作系统提供的轻型读写锁 ----维基百科</p>
+</blockquote>
 
 <ul>
-<li>第一个是 id* 类型的 next，实际上就是指向栈当中下一个可填充位置</li>
-<li>之后是两个 AutoreleasePoolPage 类型的成员变量，分别为 parent 和 child，也就是双向链表中的父指针和孩子指针</li>
-<li>还有一个成员变量 pthread_t 类型的，所以说 autoreleasepool 是和线程一一对应的，就是从这个结构当中的 Thread 成员变量体现出来的</li>
+<li>忙等锁</li>
+<li>适用于轻型访问(简单的 int 值 +1/-1 操作（在引用计数方面应用）)</li>
 </ul>
 
-<p><strong>AutoreleasePoolPage 的结构</strong><br/>
-<img src="media/15854861330491/15854868085779.jpg" alt="" style="width:529px;"/></p>
+<h3 id="toc_2">引用计数表(RefcountMap)</h3>
 
-<p>最下边是 AutoreleasePoolPage 自身所占有的内存，上面这些可以用来存储花括号中填充的 autorelease 对象，同样的这个栈是向下增长的，所以下面是高地址，上面是低地址，有一个 next 指针也就是 AutoreleasePoolPage 这个结构当中的一个成员变量，指向当前栈的一个空的位置，比如说现在在进行一个入栈操作，就可以添加到 next 指针所指向的位置</p>
+<p><img src="media/15854675822663/15854683584252.jpg" alt="" style="width:530px;"/></p>
 
-<p><strong>AutoreleasePoolPage::push 方法实现</strong><br/>
-<img src="media/15854861330491/15854868523600.jpg" alt="" style="width:524px;"/></p>
+<blockquote>
+<p>size_t 代表的就是对应对象的引用计数值，实际上就是一个无符号 long 型的变量</p>
+</blockquote>
 
-<p>如果发生了一个 AutoreleasePoolPage::push 操作，会把当前 next 位置置为 nil ，称他为哨兵对象，然后将 next 指针指向下一个可入栈的位置，这就是 AutoreleasePoolPage 的 push 方法的实现过程<br/>
-实际上每次进行一个 AutoreleasePool 的代码块的创建，相当于是不断的在栈当中去插入哨兵对象</p>
+<p><strong>引用计数表是哈希表，正如名字 Map，可以理解为是一个字典</strong>，也就是说通过一个指针可以找到对应对象的引用计数，这个查找过程也是哈希查找，这个哈希查找的哈希算法实际上是对传入对象的指针进行伪装的操作，然后获取对应的引用计数<br/>
+在这里再次明确一下哈希查找的过程，实际上之所以使用哈希查找就是为了提高查找效率，而查找效率的提高源于我们存储一个对象的引用计数是通过这个函数来计算存储位置的，而获取这个对象所代表的引用计数值的时候，也是通过这个函数来计算应该获取的索引位置，所以插入和获取都是通过同一函数来计算位置的，也就避免了一些循环遍历的操作，所以哈希查找可以提高查找效率</p>
 
-<p><strong>[ obj autorelease ] 方法系统内部实现</strong><br/>
-<img src="media/15854861330491/15854868804913.jpg" alt="" style="width:543px;"/><br/>
-比如说调用了一个对象的 autorelease 方法<br/>
-首先会判断当前 next 指针是否指向了栈顶，如果没有指向栈顶就直接把这个对象添加到当前这个栈的 next 位置，结束流程，假如当前 next 已经指向了栈顶，这个时候当前这个 AutoreleasePoolPage 就没有办法再装新的 autorelease 对象了，于是就需要增加一个栈节点拼接到到链表上，之后在新的栈上面去添加对象最终结束流程</p>
+<h4 id="toc_3">size_t</h4>
 
-<p><strong>AutoreleasePoolPage::pop 方法实现</strong></p>
+<p>假如 size_t 使用一个 64 位来表示<br/>
+<img src="media/15854675822663/15854703659468.jpg" alt="" style="width:996px;"/></p>
 
 <ul>
-<li>根据传入的哨兵对象找到对应的位置</li>
-<li>给上次push操作之后添加的对应一次发送release消息</li>
-<li>回退next指针到正确位置</li>
+<li>第一个二进制位 weakly_referenced 表示的是这个对象是否有弱引用，0没有，1有</li>
+<li>第二位表示当前对象是否正在进行 dealloc 操作</li>
+<li>后面的存储的就是这个对象实际的引用计数值<br/>
+那么在计算对象的具体引用计数值，需要对这个值（2-63）向右偏移两位，因为后面这两位要去掉才可以取到真实的引用计数值</li>
 </ul>
 
-<p>首先对 pop 流程做一个简单的说明：</p>
+<h4 id="toc_4">弱引用表(weak_table_t)</h4>
+
+<p><img src="media/15854675822663/15854704667848.jpg" alt="" style="width:470px;"/></p>
 
 <ul>
-<li>在进行 pop 操作的时候会根据传入的哨兵对象来找到 pop 的最终位置，这个所谓的哨兵对象就是前面提到的 objc_autoreleasePoolPush 函数的返回值，实际上返回的就是栈当中对应的哨兵地址，pop 操作和 push 操作是一一对应的，那么要 pop 回哪个位置实际上是 pop 回它所指向的前一个哨兵对象</li>
-<li>然后给上次 push 操作之后所添加的对象依次发送 release 消息</li>
-<li>之后回退 next 指针到正确的位置</li>
+<li>weak_table_t 也是一张哈希表</li>
+<li>weak_entry_t 是一个结构体数组</li>
 </ul>
 
-<p><img src="media/15854861330491/15854869764048.jpg" alt="" style="width:548px;"/><br/>
-假如说 next 指针指向这个位置，然后此时调用了 AutoreleasePoolPage::pop 操作，那么实际上要给这个红括号包含的这些对象依次发送 release 消息<br/>
-<img src="media/15854861330491/15854870031497.jpg" alt="" style="width:533px;"/></p>
+<blockquote>
+<p>在 Runtime 源码当中，弱引用表系统是通过 weak_table t 来定义的，weak table t 实际上也是一张哈希表，同样的给以一个对象的指针作为 Key ，通过一个哈希函数就可以计算出对应的弱引用的对象它的存储位置，weak entryt 是一个结构体数组，这个结构体数组当中存储的每一个对象是弱引用指针，也就是在代码中定义的，比如说 _ weak id obj，那么 obj 这个内存地址或者说指针就存储到 weak_entry_t 这个结构体数组当中<br/>
+这就是弱引用表的数据结构的描述</p>
+</blockquote>
 
-<p>发送 release 之后，这些对象就会从当前栈中被清除掉<br/>
-<img src="media/15854861330491/15854870216150.jpg" alt="" style="width:533px;"/><br/>
-清除之后会把 next 指针指向一个正确的位置，这个就是 pop 的整个过程</p>
-
-<h3 id="toc_3">自动释放池总结</h3>
-
-<p><img src="media/15854861330491/15854870566083.jpg" alt="" style="width:530px;"/><br/>
-在每一 RunLoop 的循环过程当中，都会在它将要结束的时候对前一次创建的 autoreleasepool 进行 pop 操作，同时会 push 进来一个新的 autoreleasePool，所以说在 viewDidLoad 方法中通过 [NSMutableArray array] 所创建的这个数组对象是在当次 RunLoop 将要结束的时候，然后调用 AutoreleasePoolPage::pop () 方法的时候，把对应的 array 对象调用它的 release 方法，然后对它进行释放</p>
-
-<p>关于AutoreleasePool 为何可以嵌套使用，实际上多次嵌套调用就是多次插入哨兵对象，比如说我们每次进行一个 @autoreleasepool{} 代码块的创建的时候，系统就会为我们进行哨兵对象的插入，然后完成新的 autoreleasepool 的创建，这个 autoreleasepool 的创建实际上创建了一个新的 page，假如说当前 page 还没有满的话就不用创建这个 page ，所以说我们所说的先创建的一个 autoreleasepool 对应的在底层实现就是插入了一个哨兵对象，所以当然是可以直接多次嵌套调用的</p>
-
-<p>autoreleasePool 使用场景的问题：在什么场景下需要手动创建 autoreleasePool，比如说在 for 循坏当中 alloc 出大量的图片数据，图片数据对内存消耗非常大，需要在 for 循环内部创建一个 autoreleasepool ，每一次 for 循环都进行一次内存的释放来降低内存的峰值，防止一些内存消耗过大所导致的一些问题</p>
-
-<p>实现原理：autoreleasePool实现原理就是以栈为节点，通过双向链接形式组合而成的一个数据结构</p>
-
-<p>补充<br/>
-ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的消息循环机制，当一个runloop结束时系统才会一次性清理掉被autorelease处理过的对象，其实本质上说是在本次runloop迭代结束时清理掉被本次迭代期间被放到autorelease pool中的对象的。至于何时runloop结束并没有固定的duration。</p>
-
-<p>方便是方便了，但是有些情况下，我们还是需要手动创建自动释放池，那么，什么时候呢？</p>
-
-<p>如果你正在编写不基于UI 框架的程序，比如命令行工具。<br/>
-如果你编写的循环创建了很多临时对象。<br/>
-你可以在循环中使用自动释放池block，在下次迭代前处理这些对象。在循环中使用自动释放池block，有助于减少应用程序的内存占用。<br/>
-你生成了一个辅助线程。<br/>
-一旦线程开始执行你必须自己创建自动释放池。否则，应用将泄漏对象。</p>
+<p>参考:<br/>
+<a href="https://blog.csdn.net/u013378438/java/article/details/82790332">https://blog.csdn.net/u013378438/java/article/details/82790332</a></p>
 
                         
                       </div>
@@ -360,6 +310,18 @@ ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的�
 	      
 		      
 			      <li class="post">
+			        <a href="15859202199650.html">Block 的深度探究</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
 			      </li>
 		     
@@ -373,18 +335,6 @@ ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的�
 		      
 			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857097341147.html">架构框架-听课笔记</a>
 			      </li>
 		     
 		  

@@ -116,115 +116,58 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15815876783958.html">
+                <a class="clearlink" href="15820370480952.html">
                 
-                  <h1>iOS 中的锁</h1>
+                  <h1>类 子类 分类 区别与联系</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ul>
-<li>自旋锁(OSSpinLock)</li>
-<li>互斥锁</li>
-<li>pthread_mutex</li>
-<li>信号量(dispatch_semaphore)</li>
-<li>NSLock</li>
-<li>递归锁(NSRecursiveLock)</li>
-<li>条件锁(NSConditionLock)</li>
-<li>@synchronized</li>
-</ul>
+                        	<p><strong>分类(category)</strong><br/>
+分类允许开发者在不改变原有类的情况下,对该类进行拓展,分类是 OC 的特有语法,他是表示一个指向分类的结构体指针,原则上分类只能增加方法,不能增加实例变量,因为在分类中,类的实例变量布局已经固定,所以不能添加实例变量,但是可以利用 runtime 的特性,添加关联属性.</p>
 
-<p><strong>自旋锁(OSSpinLock)</strong></p>
+<pre class="line-numbers"><code class="language-text">Category
+Category 是表示一个指向分类的结构体的指针，其定义如下：
+typedef struct objc_category *Category;
+struct objc_category {
+  char *category_name                          OBJC2_UNAVAILABLE; // 分类名
+  char *class_name                             OBJC2_UNAVAILABLE; // 分类所属的类名
+  struct objc_method_list *instance_methods    OBJC2_UNAVAILABLE; // 实例方法列表
+  struct objc_method_list *class_methods       OBJC2_UNAVAILABLE; // 类方法列表
+  struct objc_protocol_list *protocols         OBJC2_UNAVAILABLE; // 分类所实现的协议列表
+}
+</code></pre>
 
-<blockquote>
-<p>自旋锁已经不再安全,有优先级翻转问题,现在苹果也已经不再使用</p>
-</blockquote>
-
-<p>自旋锁和互斥锁有点类似,但是自旋锁不会引起调用者睡眠.如果自旋锁已经被别的执行单元保持,调用者就一直循环在那里看是否自旋锁的保持着已经释放了锁,其作用是解决资源的互斥使用.<br/>
-自旋锁的问题:<br/>
-    1. 自旋锁一直占用 CPU,在他未获得锁的情况下,一直运行-自旋<br/>
-    2. 递归调用有可能引起死锁<br/>
-    3. 自旋锁适用于使用者保持锁时间比较短的情况下</p>
-
-<p><strong>互斥锁</strong><br/>
-互斥锁属于 sleep-waiting 类型的锁.</p>
-
-<blockquote>
-<p>例如在一个双核的机器上有两个线程(线程A和线程B)，它们分别运行在Core0和 Core1上。假设线程A想要通过pthread_mutex_lock操作去得到一个临界区的锁，而此时这个锁正被线程B所持有，那么线程A就会被阻塞 (blocking)，Core0 会在此时进行上下文切换(Context Switch)将线程A置于等待队列中，此时Core0就可以运行其他的任务(例如另一个线程C)而不必进行忙等待。而自旋锁则不然，它属于busy-waiting类型的锁，如果线程A是使用pthread_spin_lock操作去请求锁，那么线程A就会一直在 Core0上进行忙等待并不停的进行锁请求，直到得到这个锁为止。</p>
-</blockquote>
-
-<p>互斥锁: 线程会从 sleep(加锁)---&gt;running(解锁),过程中有上下文的切换,CPU 的抢占,信号的发送等开销.<br/>
-自旋锁:线程一直都是 running(加锁---&gt;解锁),死循环检测锁的标志位</p>
-
-<p>互斥锁的起始开销要高于自旋锁,但是基本上是一劳永逸,临界区持有🔐的时间大小并不会对互斥锁的开销造成影响,而<mark>自旋锁是死循环检测</mark>,加锁全程消耗 CPU.起始开销虽然低于互斥锁,但是随着持锁时间增加,加锁开销是线性增长<br/>
-互斥锁适用:</p>
+<p>从上面可以看出,这个结构体主要包含了分类定义的实例方法与类方法,但是这里面并没有属性列表,也就没办法直接添加属性(实例变量)<br/>
+<strong>要点</strong>:</p>
 
 <ul>
-<li>临界区有 IO 操作</li>
-<li>临界区代码复制或者循环量大</li>
-<li>临界区竞争非常激烈</li>
-<li>单核处理器</li>
+<li>分类是用于给原有类添加方法的,因为在分类的结构体中只有方法列表,没有属性列表.</li>
+<li>分类中可以写@property,但是不会生成 getter/setter 方法,也不会生成实例变量.编译器会有警告,但是不会报错</li>
+<li>可以在分类中访问原有类的.h 中的属性</li>
+<li><strong>如果分类中有和原有类同名的方法,会优先调用分类中的方法,也就是会忽略原有类的方法,同名方法优先级&quot;分类&gt;类&gt;父类&quot;,所以分类中不要和类中原有方法同名</strong></li>
+<li>如果多个分类中都有和元类同名的方法,那么调用该方法的时候,由编译器决定,编译器会执行最后一个参与编译的分类中的方法.</li>
 </ul>
 
-<p>自旋锁适用:<br/>
-临界区持锁时间非常短且 CPU 资源不紧张的情况,一般用于多核服务器</p>
+<p><strong>拓展</strong><br/>
+<strong>主类,子类,分类中+load方法的执行顺序</strong></p>
 
-<blockquote>
-<p>OSSpinLock 在 iOS10.0 以后就被弃用了,可以使用 os_unfair_lock_lock 替代.而且存在优先级翻转问题<br/>
-优先级翻转:一个低优先级线程获得锁并访问共享资源,这时一个高优先级的线程也尝试获得这个锁,他会处于 spinlock 的忙等状态从而占用大量 CPU,此时低优先级无法与高优先级线程争夺 cpu 时间,从而导致任务迟迟无法完成,无法释放 lock.</p>
-</blockquote>
+<ul>
+<li>+load 方法是在 mian 函数执行之前执行的,并不会主动调用</li>
+<li>主类,分类,子类都会调用+load 方法</li>
+<li>调用顺序:主类的+load方法会先调用,然后调用子类的+load,最后调用分类的+load.</li>
+<li>所有分类的+load方法都会调用,调用顺序取决于它的编译顺序.</li>
+</ul>
 
-<p><strong>os_unfair_lock</strong></p>
+<p><strong>+ Initialize方法的调用顺序</strong></p>
 
-<p>os_unfair_lock用于取代不安全的 OSSpinLock,从 iOS10 开始支持,底层调用看,等待os_unfair_lock锁的线程会处于休眠状态,并非忙等,需要导入头文件#import <os/lock.h></p>
-
-<p><strong>pthread_mutex</strong><br/>
-mutex 叫做互斥锁.等待锁的线程会处于休眠状态,并且支持递归,性能和稳定性是公认最好的,比较推荐使用,pthread_mutex的缺点是只能一个线程持有锁,并且阻塞等待对象(这也是他比自旋锁慢的原因)</p>
-
-<p><strong>NSLock</strong><br/>
-NSLock是对 mutex 的普通锁的封装<br/>
-NSLock遵循 NSLocking 协议,lock 方法是加锁,unlock 是解锁.<br/>
-trylock 是尝试加锁,如果失败的话就返回 NO</p>
-
-<p><strong>信号量</strong><br/>
-    * 信号量的初始值,可以用来控制线程并发访问的最大数量<br/>
-    * 信号量的初始值为 1,代表同时只允许 1 条线程访问资源,保证线程同步</p>
-
-<pre class="line-numbers"><code class="language-text">dispatch_semaphore_create可以生产信号量,参数 value 是信号量的初始值
-dispatch_semaphore_wait会让信号量的值减一,当信号量的值为 0 时会等待(直到超时),否则正常执行
-dispatch_semaphore_signal会让信号量的值加一,如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数值增加的线程,会有系统唤醒最先等待的线程执行
-用法:
-信号量常用于对资源进行加锁操作
-</code></pre>
-
-<pre class="line-numbers"><code class="language-text">//在init等函数初始化
-_lock = dispatch_semaphore_create(1); 
-dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); 
-//修改Array或字典等数据的信息
-dispatch_semaphore_signal(_lock);
-</code></pre>
-
-<p><strong>@synchronized</strong><br/>
-@synchronized可以给任何 OC 对象加锁,不过@synchronized是效率最低的方案,因为他的 block 会隐式添加异常处理来保护代码块,有点是书写比较简便.</p>
-
-<pre class="line-numbers"><code class="language-text">// 写数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        [dict setObject:@&quot;boz&quot; forKey:@&quot;trail&quot;];
-    }
-});
-// 读数据
-dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-    @synchronized (dict) {
-        id obj = [dict objectForKey:@&quot;trail&quot;];
-    }
-});
-</code></pre>
+<ul>
+<li>+ Initialize只有当真正用到的时候,并且重写了+ Initialize方法才会调用</li>
+<li>当调用子类的+ Initialize方法的时候,如果父类重写了+ Initialize方法,会先调用父类的+ Initialize,然后调用子类的+ Initialize方法,如果此时父类的分类也重写了+ Initialize方法,那么父类的+ Initialize方法就会被覆盖掉</li>
+</ul>
 
 <p>参考:<br/>
-<a href="https://xiaozhuanlan.com/topic/4365017982">https://xiaozhuanlan.com/topic/4365017982</a><br/>
-<a href="https://juejin.im/post/5bf21d935188251d9e0c2937">https://juejin.im/post/5bf21d935188251d9e0c2937</a><br/>
-<a href="https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/">https://blog.ibireme.com/2016/01/16/spinlock_is_unsafe_in_ios/</a></p>
+<a href="https://juejin.im/post/5b6a63f4e51d4534b93f770f">https://juejin.im/post/5b6a63f4e51d4534b93f770f</a></p>
 
                         
                       </div>
@@ -233,10 +176,8 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/13</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
+                    <span class="date">2020/02/18</span>
+                    
           				   
                     
 
@@ -340,6 +281,18 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 	      
 		      
 			      <li class="post">
+			        <a href="15859202199650.html">Block 的深度探究</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
 			      </li>
 		     
@@ -353,18 +306,6 @@ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 		      
 			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857097341147.html">架构框架-听课笔记</a>
 			      </li>
 		     
 		  

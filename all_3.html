@@ -116,85 +116,129 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854675822663.html">
+                <a class="clearlink" href="15858220091653.html">
                 
-                  <h1>iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</h1>
+                  <h1>NSNotification 使用注意细节</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">数据结构</h2>
+                        	<h3 id="toc_0">关于观察者的移除</h3>
 
-<ul>
-<li>Spinlock_t (自旋锁)</li>
-<li>RefcountMap (引用计数表)</li>
-<li>weak_table_t(弱引用表)</li>
-</ul>
+<p>iOS9 以后的版本,不需要在 <code>- dealloc</code> 方法对观察者手动的移除了,因为在对象或者 ViewController 在释放 <code>-dealloc</code> 的时候,会自动的调用 <code>[[NSNotificationCenter defaultCenter]removeObserver:self]</code> 方法.<br/>
+在 iOS9 之前的版本需要我们在 <code>dealloc</code> 方法中手动的调用移除观察者的方法,因为在 iOS9 之前的版本中,在注册观察者的时候,通知中心并不会对观察者做 retain 操作,而是对观察者进行 <code>unsafe_unretained</code> 的引用,这里需要说明为什么是 unsafe_unretained 而不是 weak 的引用,因为 Cocoa 和 Cocoa Touch 中的一些类还没有支持 ARC,也就是不支持 weak,为了兼容之前的版本,所以这里使用了unsafe_unretained的引用,因为unsafe_unretained在释放的时候并不会自动置为 nil,所以有可能造成野指针,因此需要我们手动移除观察者.</p>
 
-<p>在runtime内存空间中，SideTables是一个64个元素长度的hash数组，里面存储了SideTable。SideTables的hash键值就是一个对象obj的address。<br/>
-因此可以说，一个obj，对应了一个SideTable。但是一个SideTable，会对应多个obj。<strong>因为SideTable的数量只有64个</strong>，所以会有很多obj共用同一个SideTable。<br/>
-<strong>SideTables可以理解为一个全局的hash数组</strong>，里面存储了SideTable类型的数据，其长度为64。</p>
+<p>需要注意的是,通过 <code>[NSNotificationCenter addObserverForName:object:queue:usingBlock]</code> 方法注册的观察者,即使在 iOS9 之后,依然需要我们手动移除观察者,因为通知中心对他们的持有是强引用</p>
 
-<p>SideTabls可以通过全局的静态函数获取：</p>
+<h3 id="toc_1">通知与线程</h3>
 
-<pre class="line-numbers"><code class="language-text">static StripedMap&lt;SideTable&gt;&amp; SideTables() {
-    return *reinterpret_cast&lt;StripedMap&lt;SideTable&gt;*&gt;(SideTableBuf);
+<p>NSNotification在多线程下的转发问题,官方文档的说法:</p>
+
+<blockquote>
+<p>In a multithreaded application, notifications are always delivered in the thread in which the notification was posted, which may not be the same thread in which an observer registered itself.</p>
+</blockquote>
+
+<p>翻译过来就是:</p>
+
+<blockquote>
+<p>在多线程应用中，Notification在哪个线程中post，就在哪个线程中被转发，而不一定是在注册观察者的那个线程中。</p>
+</blockquote>
+
+<p><strong>这也就是说 Notification 的发送和接收处理是在同一个线程中.</strong></p>
+
+<p>那么问题来了,假如我们在异步线程 POST 了一个通知,但是我们希望是在主线程中处理(比如是网络回调结束之后,刷新 UI),这个时候怎么办?<br/>
+ 看下官方文档的描述:</p>
+
+<blockquote>
+<p>For example, if an object running in a background thread is listening for notifications from the user interface, such as a window closing, you would like to receive the notifications in the background thread instead of the main thread. In these cases, you must capture the notifications as they are delivered on the default thread and redirect them to the appropriate thread.</p>
+</blockquote>
+
+<p>这里讲到了“重定向”，就是我们在Notification所在的默认线程中捕获这些分发的通知，然后将其重定向到指定的线程中。</p>
+
+<p>一种重定向的实现思路是自定义一个通知队列(注意，不是NSNotificationQueue对象，而是一个数组)，让这个队列去维护那些我们需要重定向的Notification。我们仍然是像平常一样去注册一个通知的观察者，当Notification来了时，先看看post这个Notification的线程是不是我们所期望的线程，如果不是，则将这个Notification存储到我们的队列中，并发送一个信号(signal)到期望的线程中，来告诉这个线程需要处理一个Notification。指定的线程在收到信号后，将Notification从队列中移除，并进行处理<br/>
+<a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Notifications/Articles/Threading.html">官方文档</a> 给出了代码,我们测试一下</p>
+
+<pre class="line-numbers"><code class="language-text">@interface ViewController () &lt;NSMachPortDelegate&gt;
+
+@property (nonatomic) NSMutableArray    *notifications;         // 通知队列
+@property (nonatomic) NSThread          *notificationThread;    // 期望线程
+@property (nonatomic) NSLock            *notificationLock;      // 用于对通知队列加锁的锁对象，避免线程冲突
+@property (nonatomic) NSMachPort        *notificationPort;
+
+@end
+
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    NSLog(@&quot;current thread = %@&quot;, [NSThread currentThread]);
+    
+    // 初始化
+    self.notifications = [[NSMutableArray alloc] init];
+    self.notificationLock = [[NSLock alloc] init];
+    
+    self.notificationThread = [NSThread currentThread];
+    self.notificationPort = [[NSMachPort alloc] init];
+    self.notificationPort.delegate = self;
+    
+    // 往当前线程的runloop添加端口源
+    // 当Mach消息到达而接收线程的run loop没有运行时，则内核会保存这条消息，直到下一次进入run loop
+    [[NSRunLoop currentRunLoop] addPort:self.notificationPort
+                                forMode:(__bridge NSString *)kCFRunLoopCommonModes];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(processNotification:) name:@&quot;TestNotification&quot; object:nil];
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        
+        [[NSNotificationCenter defaultCenter] postNotificationName:@&quot;TestNotification&quot; object:nil userInfo:nil];
+    
+    });
 }
+
+// MachPort 的代理方法
+- (void)handleMachMessage:(void *)msg {
+    
+    [self.notificationLock lock];
+    
+    while ([self.notifications count]) {
+        NSNotification *notification = [self.notifications objectAtIndex:0];
+        [self.notifications removeObjectAtIndex:0];
+        [self.notificationLock unlock];
+        [self processNotification:notification];
+        [self.notificationLock lock];
+    };
+    
+    [self.notificationLock unlock];
+}
+
+- (void)processNotification:(NSNotification *)notification {
+    
+    if ([NSThread currentThread] != _notificationThread) {
+        [self.notificationLock lock];
+        [self.notifications addObject:notification];
+        [self.notificationLock unlock];
+        [self.notificationPort sendBeforeDate:[NSDate date]
+                                   components:nil
+                                         from:nil
+                                     reserved:0];
+        NSLog(@&quot; 111111current thread = %@&quot;, [NSThread currentThread]);
+        NSLog(@&quot;接收和注册线程不在一个线程&quot;);
+    }
+    else {
+        // Process the notification here;
+        NSLog(@&quot;current thread = %@&quot;, [NSThread currentThread]);
+        NSLog(@&quot;process notification&quot;);
+    }
+}
+@end
+
 </code></pre>
 
-<p><img src="media/15854675822663/20180920175152461.png" alt="20180920175152461"/></p>
-
-<h3 id="toc_1">自旋锁(Spinlock_t)</h3>
-
-<blockquote>
-<p>自旋锁是计算机科学用于多线程同步的一种锁，线程反复检查锁变量是否可用。由于线程在这一过程中保持执行，因此是一种忙等待。一旦获取了自旋锁，线程会一直保持该锁，直至显式释放自旋锁。<br/>
-自旋锁避免了进程上下文的调度开销，因此对于线程只会阻塞很短时间的场合是有效的。因此操作系统的实现在很多地方往往用自旋锁。Windows操作系统提供的轻型读写锁 ----维基百科</p>
-</blockquote>
-
-<ul>
-<li>忙等锁</li>
-<li>适用于轻型访问(简单的 int 值 +1/-1 操作（在引用计数方面应用）)</li>
-</ul>
-
-<h3 id="toc_2">引用计数表(RefcountMap)</h3>
-
-<p><img src="media/15854675822663/15854683584252.jpg" alt="" style="width:530px;"/></p>
-
-<blockquote>
-<p>size_t 代表的就是对应对象的引用计数值，实际上就是一个无符号 long 型的变量</p>
-</blockquote>
-
-<p><strong>引用计数表是哈希表，正如名字 Map，可以理解为是一个字典</strong>，也就是说通过一个指针可以找到对应对象的引用计数，这个查找过程也是哈希查找，这个哈希查找的哈希算法实际上是对传入对象的指针进行伪装的操作，然后获取对应的引用计数<br/>
-在这里再次明确一下哈希查找的过程，实际上之所以使用哈希查找就是为了提高查找效率，而查找效率的提高源于我们存储一个对象的引用计数是通过这个函数来计算存储位置的，而获取这个对象所代表的引用计数值的时候，也是通过这个函数来计算应该获取的索引位置，所以插入和获取都是通过同一函数来计算位置的，也就避免了一些循环遍历的操作，所以哈希查找可以提高查找效率</p>
-
-<h4 id="toc_3">size_t</h4>
-
-<p>假如 size_t 使用一个 64 位来表示<br/>
-<img src="media/15854675822663/15854703659468.jpg" alt="" style="width:996px;"/></p>
-
-<ul>
-<li>第一个二进制位 weakly_referenced 表示的是这个对象是否有弱引用，0没有，1有</li>
-<li>第二位表示当前对象是否正在进行 dealloc 操作</li>
-<li>后面的存储的就是这个对象实际的引用计数值<br/>
-那么在计算对象的具体引用计数值，需要对这个值（2-63）向右偏移两位，因为后面这两位要去掉才可以取到真实的引用计数值</li>
-</ul>
-
-<h4 id="toc_4">弱引用表(weak_table_t)</h4>
-
-<p><img src="media/15854675822663/15854704667848.jpg" alt="" style="width:470px;"/></p>
-
-<ul>
-<li>weak_table_t 也是一张哈希表</li>
-<li>weak_entry_t 是一个结构体数组</li>
-</ul>
-
-<blockquote>
-<p>在 Runtime 源码当中，弱引用表系统是通过 weak_table t 来定义的，weak table t 实际上也是一张哈希表，同样的给以一个对象的指针作为 Key ，通过一个哈希函数就可以计算出对应的弱引用的对象它的存储位置，weak entryt 是一个结构体数组，这个结构体数组当中存储的每一个对象是弱引用指针，也就是在代码中定义的，比如说 _ weak id obj，那么 obj 这个内存地址或者说指针就存储到 weak_entry_t 这个结构体数组当中<br/>
-这就是弱引用表的数据结构的描述</p>
-</blockquote>
-
-<p>参考:<br/>
-<a href="https://blog.csdn.net/u013378438/java/article/details/82790332">https://blog.csdn.net/u013378438/java/article/details/82790332</a></p>
+<p>运行之后我们看下打印结果:<br/>
+<img src="media/15858220091653/15858408835782.jpg" alt="" style="width:955px;"/><br/>
+ 一开始接收到通知的时候,确实不在一个线程,所以添加到了数组中,并且发送了一个端口消息,然后在 MachPort 的代理方法中处理这个消息,最终在主线程接收到了这个通知.<br/>
+ 当然，更好的方法可能是我们自己去子类化一个NSNotificationCenter，或者单独写一个类来处理这种转发。</p>
 
                         
                       </div>
@@ -203,10 +247,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/29</span>
+                    <span class="date">2020/04/02</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
           				   
                     
 
@@ -310,6 +354,18 @@
 	      
 		      
 			      <li class="post">
+			        <a href="15859202199650.html">Block 的深度探究</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
+			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			      </li>
+		     
+		  
+		      
+			      <li class="post">
 			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
 			      </li>
 		     
@@ -323,18 +379,6 @@
 		      
 			      <li class="post">
 			        <a href="15833971627503.html">启动优化</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15854675822663.html">iOS 的内存管理(二) 有关散列表实现的内存管理方法的数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15857097341147.html">架构框架-听课笔记</a>
 			      </li>
 		     
 		  
