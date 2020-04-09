@@ -116,14 +116,33 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15833972428291.html">
+                <a class="clearlink" href="15841930756133.html">
                 
-                  <h1>设计模式-行为型模式</h1>
+                  <h1>layoutIfNeeded和setNeedsLayout的区别</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	
+                        	<h2 id="toc_0">layoutIfNeeded</h2>
+
+<p><code>layoutIfNeeded</code>：<strong>强制视图立即更新其布局，即同步执行</strong>。当使用Auto Layout时，布局引擎根据约束的变化更新视图的位置。该方法的接收者将作为根视图，布局时也将从视图树的根视图开始。如果没有待处理的布局更新，则此方法将直接退出，而不会修改布局，或调用任何与布局有关的方法。</p>
+
+<h2 id="toc_1">setNeedsLayout</h2>
+
+<p><code>setNeedsLayout</code>：当需要调整UIView子视图布局时，需要在主线程调用该方法。该方法记录请求并立即返回(即异步执行)，<strong>等待下一个更新周期更新视图(runloop 迭代)</strong>。因此，可以将多个视图布局更新合并到一个update cycle，这样有助于提高性能。需要注意的是，我们无法知道下个update cycle在何时发生。</p>
+
+<p><a href="https://developer.apple.com/documentation/uikit/uiview?language=objc">Apple 官方文档</a>已经明确说明,开发者不要直接调用 <code>layoutSubViews</code>与<code>drawRect</code>,应该在你认为系统默认的布局和重绘不能带给你想要的效果时,在之类中重写这些方法,然后分别通过 <code>setNeedsLayout</code>和 <code>setNeedsDisPlayInRectangle:</code> 来进行调用</p>
+
+<h3 id="toc_2">哪些操作会出触发 layoutSubViews?</h3>
+
+<ul>
+<li>init 初始化不会触发layoutSubViews</li>
+<li>addSubviews 会触发layoutSubViews</li>
+<li>设置 view的frame 会触发layoutSubViews(前提是 frame 发生了变化)</li>
+<li>滑动一个 UIScrollView 会触发layoutSubViews</li>
+<li>改变一个 view 的大小也会触发父 View 的layoutSubViews事件</li>
+</ul>
+
                         
                       </div>
                   </div>
@@ -131,10 +150,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/05</span>
+                    <span class="date">2020/03/14</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html'>设计模式(架构)</a></span>
+          					    <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
           				   
                     
 
@@ -238,31 +257,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  

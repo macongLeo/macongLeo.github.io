@@ -116,43 +116,20 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15857097341147.html">
+                <a class="clearlink" href="15862554344055.html">
                 
-                  <h1>架构框架-听课笔记</h1>
+                  <h1>关于alloc 的实现</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15857097341147/15857098129132.jpg" alt="" style="width:427px;"/></p>
+                        	<p>问题: alloc init 和 new 的区别是什么?</p>
 
-<h2 id="toc_0">怎样设计一个图片缓存框架?</h2>
+<p>先来一张 alloc 的流程图:<br/>
+<img src="media/15862554344055/15862555036304.jpg" alt="" style="width:1018px;"/></p>
 
-<p><img src="media/15857097341147/15857098864418.jpg" alt="" style="width:797px;"/></p>
-
-<p><img src="media/15857097341147/15857099206233.jpg" alt="" style="width:781px;"/></p>
-
-<h2 id="toc_1">查找流程</h2>
-
-<p><img src="media/15857097341147/15857099548397.jpg" alt="" style="width:527px;"/></p>
-
-<p><img src="media/15857097341147/15857100109900.jpg" alt="" style="width:600px;"/></p>
-
-<p><img src="media/15857097341147/15857102001520.jpg" alt="" style="width:1004px;"/></p>
-
-<p>根据图片大小的不同,分别考虑存储容量的大小<br/>
-比如 10kb 以下的小图,设计成存储 50 张<br/>
-50Kb-100Kb的,设计成存储 20 张<br/>
-对于大于 100Kb 的可能只需要缓存 10 张<br/>
-使用队列的数据结构存储</p>
-
-<h2 id="toc_2">淘汰策略</h2>
-
-<ul>
-<li><p>先进先出策略<br/>
-<img src="media/15857097341147/15857102489373.jpg" alt="" style="width:969px;"/></p></li>
-<li><p>LRU算法(最近最久未使用)<br/>
-<img src="media/15857097341147/15857103456915.jpg" alt="" style="width:593px;"/></p></li>
-</ul>
+<p>参考:<br/>
+<a href="https://juejin.im/post/5df6323d6fb9a016317813b0">https://juejin.im/post/5df6323d6fb9a016317813b0</a></p>
 
                         
                       </div>
@@ -161,10 +138,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/04/01</span>
+                    <span class="date">2020/04/07</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html'>设计模式(架构)</a></span>
+          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
           				   
                     
 
@@ -268,31 +245,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  

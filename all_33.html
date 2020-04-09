@@ -116,80 +116,56 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15834860456410.html">
+                <a class="clearlink" href="15846246156341.html">
                 
-                  <h1>Runtime 底层 之 isMemberOfClass && isKindOfClass的探究</h1>
+                  <h1>两数之和问题</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>isMemberOfClass和isKindOfClass一直以来都是想当然的使用,有时候得不到想要的结果,最后决定探究一下,彻底搞清楚,闲话不多说,先看下源码;</p>
+                        	<p>给定一个整数数组 nums 和一个目标值 target，请你在该数组中找出和为目标值的那 两个 整数，并返回他们的数组下标。</p>
 
-<h2 id="toc_0">isMemberOfClass</h2>
+<p>你可以假设每种输入只会对应一个答案。但是，你不能重复利用这个数组中同样的元素。</p>
 
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isMemberOfClass:(Class)cls {
-    return object_getClass((id)self) == cls;
-}
-- (BOOL)isMemberOfClass:(Class)cls {
-    return [self class] == cls;
+<p>示例:<br/>
+ 给定 nums = [2, 7, 11, 15], target = 9<br/>
+ 因为 nums[0] + nums[1] = 2 + 7 = 9<br/>
+ 所以返回 [0, 1]</p>
+
+<p>这个题目的在 OC 里的解法就是用字典,<br/>
+首先创建一个字典,value 为数组的 index,key 为数组元素,<br/>
+例如:数组[2,7,11,15];<br/>
+那么这个字典就是<br/>
+ @{@(0):@&quot;2&quot;,<br/>
+                                  @(1):@&quot;7&quot;,<br/>
+                                  @(2):@&quot;11&quot;,<br/>
+                                  @(3):@&quot;15&quot;,<br/>
+                                    }<br/>
+比如目标和为 9, 那么组合的话,第一个为 2,那么 &quot;9-2&quot; 作为 key,去字典里查找,看能否找到目标值,如果这个字典里有符合的 肯定能找到 value,反之就是没有            </p>
+
+<p>代码如下:</p>
+
+<pre class="line-numbers"><code class="language-text">
+- (NSArray *)getTwoNumSum:(int)targetSum array:(NSArray *)arr {
+    NSMutableDictionary *tmpDic = [NSMutableDictionary dictionary];
+    NSMutableArray *tmpA = [NSMutableArray array];
+    for (int i = 0; i &lt; arr.count; i++) {
+        [tmpDic setValue:@(i) forKey:arr[i]];
+    }
+    
+    [arr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSString *keyString = [NSString stringWithFormat:@&quot;%d&quot;,targetSum - ((NSString *)obj).intValue];
+        NSNumber *lastIndex = tmpDic[keyString];
+        if (lastIndex &amp;&amp; idx &lt; lastIndex.integerValue) {
+            [tmpA addObject:@([lastIndex integerValue])];
+            [tmpA addObject:@(idx)];
+        }
+    }];
+    
+    return tmpA;
+    
 }
 </code></pre>
-
-<p>isMemberOfClass有两个方法,一个是实例方法,一个是类方法,他俩的区别是:</p>
-
-<ul>
-<li>实例方法- (BOOL)isMemberOfClass:(Class)cls: 根据实例对象取得类对象,再去判断</li>
-<li>类方法 + (BOOL)isMemberOfClass:(Class)cls:根据对象取得元类对象,再去判断</li>
-</ul>
-
-<p>其实简单的说是根据传入的类的 isa,来判断,因为实例对象的 isa 是实例的类对象,类对象的 isa 指向的是类的元类,Meta Class</p>
-
-<p>验证:<br/>
-创建两个类,Person 类继承自 NSObject<br/>
-Student 类继承自 Person<br/>
-<img src="media/15834860456410/15834866616638.jpg" alt="" style="width:259px;"/><br/>
-<img src="media/15834860456410/15834866735409.jpg" alt="" style="width:232px;"/></p>
-
-<p>先看代码,思考一下打印结果是什么<br/>
-<img src="media/15834860456410/15834890909476.jpg" alt="" style="width:554px;"/><br/>
-res1 : [Person class] Person 类的元类 是不是和[NSObject class]类一致? 肯定是不一致 所以返回 NO<br/>
-res2: [Person class] Person 类的元类 是不是和[Person class]类一致? 元类和类肯定也是不一致 所以返回 NO</p>
-
-<p>实例对象;<br/>
-<img src="media/15834860456410/15834894446040.jpg" alt="" style="width:524px;"/><br/>
-第一行,Person new 出来一个实例,该实例的 isa 指向类 Person, 而 Person 很明显不是 NSObject类,所以为 0;<br/>
-第二行,Person new 出来一个实例,该实例的 isa 指向类 Person, 判断 Person 类是不是 Person,答案是肯定的,所以为 1;</p>
-
-<p><img src="media/15834860456410/15834896748734.jpg" alt="" style="width:765px;"/></p>
-
-<p><strong>object_getClass(cls)</strong> 这个方法返回是传入类的元类 </p>
-
-<h2 id="toc_1">isKindOfClass</h2>
-
-<ul>
-<li>调用者是传入的类的实例对象，或者调用者是传入类的继承者链中的类的实例对象，则返回YES</li>
-<li>判断调用者是否是传入对象的子类，别弄反了</li>
-<li>去父类递归查找判断</li>
-</ul>
-
-<pre class="line-numbers"><code class="language-text">+ (BOOL)isKindOfClass:(Class)cls {
-    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
--（BOOL)isKindOfClass:(Class)cls {
-    for(Class tcls = [self class]; tcls; tcls = tcls-&gt;super_class) {
-        if(tcls == cls) return YES;
-    }
-    return NO;
-}
-</code></pre>
-
-<p><img src="media/15834860456410/15834900954033.jpg" alt="" style="width:783px;"/></p>
-
-<p>参考:<br/>
-<a href="https://www.lagou.com/lgeduarticle/14758.html">https://www.lagou.com/lgeduarticle/14758.html</a></p>
 
                         
                       </div>
@@ -198,10 +174,10 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/06</span>
+                    <span class="date">2020/03/19</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
+          					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
           				   
                     
 
@@ -305,31 +281,31 @@ res2: [Person class] Person 类的元类 是不是和[Person class]类一致? �
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  

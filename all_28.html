@@ -116,89 +116,115 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15841931088622.html">
+                <a class="clearlink" href="15851010269707.html">
                 
-                  <h1>HTTPS 以及抓包工具抓取 HTTPS的原理</h1>
+                  <h1>多线程 01</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">什么是 HTTPS?</h2>
+                        	<p><img src="media/15851010269707/15851011219392.jpg" alt="" style="width:490px;"/></p>
 
-<p>HTTP:超文本传输协议,是属于 TCP/IP 分层中的应用层,位于传输层之上,当初为了快速处理大量事务,HTTP 在设计之初就比较简单,安全性奇差无比,明文传输.</p>
+<p><img src="media/15851010269707/15851058456651.jpg" alt="" style="width:1057px;"/></p>
 
-<blockquote>
-<p>HTTP 的报文直接丢给传输层,利用传输层的 TCP 协议 或者 UDP 协议进行数据传输,然后再利用网络层的 IP 协议和数据链路层来进行最终的数据包传输.</p>
-</blockquote>
+<p><img src="media/15851010269707/15851069438172.jpg" alt="" style="width:873px;"/></p>
 
-<p>HTTP 数据传输不会做数据的加密,不会验证通讯双方的身份,也不会校验报文的完整性,这样会导致以下的问题:</p>
+<p><img src="media/15851010269707/15851070411432.jpg" alt="" style="width:968px;"/></p>
 
-<ol>
-<li>由于通信报文是明文传输,内容很容易就被窃听.</li>
-<li>由于不验证通信双方身份,,很容遭遇伪装,服务器也更容易遭受 Dos 攻击</li>
-<li>不验证报文完整性,可能会出现篡改报文信息的情况</li>
-</ol>
-
-<p><img src="media/15841931088622/15842726169956.jpg" alt="" style="width:653px;"/></p>
-
-<p>由于 HTTP 的诸多弊端,现在通讯基本都要要求 HTTPS 通讯了.</p>
-
-<h4 id="toc_1">HTTP+加密+认证+完整性保护= HTTPS</h4>
-
-<p>HTTPS 中的 S 是指 SSL/TSL安全协议.<br/>
-简单说一下 SSL/TSL 协议:<br/>
-SSL:Secure Socket Layer,安全套接层<br/>
-TSL:Transport Layer Security 传输层安全<br/>
-SSL/TLS 解决了:</p>
-
-<ul>
-<li>机密性问题</li>
-<li>完整性问题</li>
-<li>认证问题<br/>
-有关于 SSL/TSL 的具体介绍,参考<a href="http://mouxuejie.com/blog/2017-03-16/https-ssl-tls-introduction/">这篇文章</a></li>
-</ul>
-
-<p>HTTPS 的分层结构图<br/>
-<img src="media/15841931088622/15842721166317.jpg" alt="" style="width:621px;"/></p>
-
-<ul>
-<li>对于报文的加密:有对称加密和非对称加密方式,HTTPS 采用的混合加密机制,在交换密钥环节,使用非对称加密,之后通信交换报文阶段则使用对称加密方式.</li>
-<li>对于验证通信双方的身份:使用 CA 证书来校验</li>
-<li>SSL 协议具有完整性的校验</li>
-</ul>
-
-<h4 id="toc_2">HTTPS 的大致流程:</h4>
+<h2 id="toc_0">同步异步的嵌套情况</h2>
 
 <ol>
-<li>客户端将自己支持的加密算法发送给服务器,请求服务器证书</li>
-<li>服务器选取一组加密算法,并将证书返回给客户端</li>
-<li>客户端校验证书合法性,生成随机对称密钥,用公钥加密后发送给服务器</li>
-<li>服务器用私钥解密出对称密钥,返回一个响应,HTTPS 连接建立完成</li>
-<li>随后双方通过这个对称密钥进行安全的数据通信</li>
+<li>同一个串行队列不能嵌套同步任务</li>
 </ol>
 
-<p><img src="media/15841931088622/15842727910283.jpg" alt="" style="width:1268px;"/></p>
+<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad {
+    [super viewDidLoad];
+    dispatch_queue_t serialQueue = dispatch_queue_create(&quot;com.test.serial&quot;, DISPATCH_QUEUE_SERIAL);
+    dispatch_sync(serialQueue, ^{
+        NSLog(@&quot;outside -- %@&quot;,[NSThread currentThread]);
+        dispatch_sync(serialQueue, ^{
+            NSLog(@&quot;inside -- %@&quot;,[NSThread currentThread]);
+        });
+    });
+}
+</code></pre>
 
-<h4 id="toc_3">Charles 抓包原理 &amp; 中间人攻击</h4>
+<p>如果outside的那个NSLog写在当前任务的最后，也就是放在第二个同步任务的后面，运行结果是什么都不会打印。<br/>
+好，现在使用刚才讲的队列和任务的特点分析一下。<br/>
+首先外层的任务是一个<strong>同步任务，会阻塞当前线程</strong>，这里的当前线程就是主线程了，因为是在viewDidLoad里面嘛。那就执行这个同步任务呗，由于该任务是添加在serialQueue队列中，所以从这个队列里面取出这个同步任务并执行，执行到outside的那个log时打印出了当前线程，结果是主线程，因为阻塞了主线程嘛，自然就在主线程中运行了。<br/>
+接着往下执行，又往serialQueue中添加一个任务，这又是个同步任务，阻塞当前线程，要执行完了这个任务才能接着往下执行。那就把这个任务取出来，赶快执行掉好往下走啊。很遗憾，serialQueue是一个串行队列，现在正在执行第一个同步任务，就是有outside打印的那个同步任务，所以serialQueue取不出inside那个任务。所以，inside这个任务要等outside执行完才能执行。另一方面，由于第二个任务(inside)是同步任务，一定要执行完这个同步任务才能往下走，所以outside要等inside这个任务执行完了，才能往下走，才能走完，这个任务才得以结束。所以outside要等inside执行完才能执行完。这两个任务就这样互相掐着，永远不能执行或者执行完毕。更悲惨的是，这两个任务阻塞的是主线程，那主线程就没办法再继续走下去了。解决的方法，可以将两个任务添加到不同的队列中，两个队列取任务互不干扰，就不会出现“互掐”的情况了。或者将队列改成并行队列，或者将第二个任务改成异步任务，这些都会在下面的组合情况中看到。<br/>
+这也就解释了，为什么在主队列上只能添加异步任务。首先主队列是一个串行队列，其次程序启动后，主队列中一直有一个任务，不断地监听用户输入及各种事件。所以如果在主线程中，往主队列中添加同步任务，则这个同步任务会阻塞主线程，而且永远取不出来，应用中断不能进行下去。如果是在其他线程向主队列添加同步任务，则主线程不会影响，但这个同步任务是永远不会执行到了。</p>
 
-<p>其实使用 HTTPS 的一般来说是比较安全的,但是为什么 Charles 能做到抓取 HTTPS 的呢?这就涉及到了中间人攻击,先来张图说明一下什么是中间人攻击<br/>
-<img src="media/15841931088622/15842730199211.jpg" alt="" style="width:1114px;"/><br/>
-<img src="media/15841931088622/15842732234540.jpg" alt="" style="width:1265px;"/></p>
+<h3 id="toc_1">小结:同一个串行队列不能嵌套同步任务，注意是同一个哦。</h3>
 
-<p>Charles 之所以能抓取到 HTTPS 的,是因为我们信任了 Charles 的证书</p>
-
-<p><img src="media/15841931088622/15842732914888.jpg" alt="" style="width:1183px;"/></p>
-
-<p>简单总结就是:</p>
+<p>总结:</p>
 
 <ol>
-<li>首先 Charles 假冒了客户端,拿到服务器的 CA 证书</li>
-<li>然后 Charles 假冒了服务器,给客户端发了一张自己制作的证书,客户端信任该证书</li>
-<li>Charles 再次假冒服务器,拿到客户端的对称密钥</li>
-<li>Charles 再次假冒客户端,将对称密钥发送给服务器,让服务器认为这次通信是没问题的,服务器发送成功响应</li>
-<li>最后Charles假冒服务器将成功响应发送给客户端</li>
-<li>最后客户端也Charles建立连接,Charles与服务器建立连接(中间人攻击)</li>
+<li>同一串行队列下，任务的嵌套，内部只能嵌套异步任务，这也就是主队列中只能添加异步任务的原因；</li>
+<li>同一串行队列中的任务运行结果总是可预测但可能造成“互掐”的情况，导致某些任务不能正确执行；</li>
+<li>并行队列中的任务，不管如何组合都不会造成“互掐”的情况，但某些运行结果不可预测；</li>
 </ol>
+
+<p><img src="media/15851010269707/15851075862036.jpg" alt="" style="width:820px;"/></p>
+
+<p><img src="media/15851010269707/15851090585252.jpg" alt="" style="width:838px;"/></p>
+
+<p><img src="media/15851010269707/15851017111972.jpg" alt="" style="width:836px;"/></p>
+
+<p><img src="media/15851010269707/15851017567172.jpg" alt="" style="width:879px;"/></p>
+
+<p><img src="media/15851010269707/15851018121080.jpg" alt="" style="width:848px;"/><br/>
+<img src="media/15851010269707/15851020176877.jpg" alt="" style="width:884px;"/></p>
+
+<p><img src="media/15851010269707/15851020960997.jpg" alt="" style="width:822px;"/><br/>
+<img src="media/15851010269707/15851023213655.jpg" alt="" style="width:897px;"/></p>
+
+<p>同步提交队列,都会在当前线程执行</p>
+
+<p><img src="media/15851010269707/15851027199062.jpg" alt="" style="width:899px;"/></p>
+
+<p><img src="media/15851010269707/15851030188745.jpg" alt="" style="width:904px;"/></p>
+
+<p><img src="media/15851010269707/15851031442106.jpg" alt="" style="width:881px;"/></p>
+
+<p><img src="media/15851010269707/15851031777487.jpg" alt="" style="width:869px;"/></p>
+
+<p><img src="media/15851010269707/15851032063949.jpg" alt="" style="width:876px;"/></p>
+
+<p><img src="media/15851010269707/15851040806193.jpg" alt="" style="width:844px;"/></p>
+
+<p><img src="media/15851010269707/15851041160345.jpg" alt="" style="width:704px;"/></p>
+
+<p><img src="media/15851010269707/15851041534668.jpg" alt="" style="width:865px;"/><br/>
+<img src="media/15851010269707/15851043842920.jpg" alt="" style="width:854px;"/></p>
+
+<p><img src="media/15851010269707/15851045388676.jpg" alt="" style="width:866px;"/></p>
+
+<p><img src="media/15851010269707/15851047722705.jpg" alt="" style="width:845px;"/><br/>
+<img src="media/15851010269707/15851047827469.jpg" alt="" style="width:794px;"/></p>
+
+<p><img src="media/15851010269707/15851048287042.jpg" alt="" style="width:637px;"/></p>
+
+<p><img src="media/15851010269707/15851048435496.jpg" alt="" style="width:708px;"/></p>
+
+<p><img src="media/15851010269707/15851048607668.jpg" alt="" style="width:692px;"/></p>
+
+<p><img src="media/15851010269707/15851050042189.jpg" alt="" style="width:892px;"/></p>
+
+<p><img src="media/15851010269707/15851050789988.jpg" alt="" style="width:887px;"/></p>
+
+<p><img src="media/15851010269707/15851051160079.jpg" alt="" style="width:897px;"/></p>
+
+<p><img src="media/15851010269707/15851051994795.jpg" alt="" style="width:877px;"/></p>
+
+<p><img src="media/15851010269707/15851053149191.jpg" alt="" style="width:741px;"/></p>
+
+<p><img src="media/15851010269707/15851053527547.jpg" alt="" style="width:826px;"/></p>
+
+<p><img src="media/15851010269707/15851053908129.jpg" alt="" style="width:818px;"/></p>
+
+<p>参考:<br/>
+链接：<a href="https://www.jianshu.com/p/de406582131e">https://www.jianshu.com/p/de406582131e</a></p>
 
                         
                       </div>
@@ -207,10 +233,10 @@ SSL/TLS 解决了:</p>
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/14</span>
+                    <span class="date">2020/03/25</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html'>网络进阶</a></span>
+          					    <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
           				   
                     
 
@@ -314,31 +340,31 @@ SSL/TLS 解决了:</p>
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  

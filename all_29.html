@@ -116,32 +116,65 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15841930756133.html">
+                <a class="clearlink" href="15844949626994.html">
                 
-                  <h1>layoutIfNeeded和setNeedsLayout的区别</h1>
+                  <h1>Block 进阶 (一)</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">layoutIfNeeded</h2>
+                        	<h2 id="toc_0">什么是 BLOCK</h2>
 
-<p><code>layoutIfNeeded</code>：<strong>强制视图立即更新其布局，即同步执行</strong>。当使用Auto Layout时，布局引擎根据约束的变化更新视图的位置。该方法的接收者将作为根视图，布局时也将从视图树的根视图开始。如果没有待处理的布局更新，则此方法将直接退出，而不会修改布局，或调用任何与布局有关的方法。</p>
+<p><strong>Blocks 是带有自动变量(局部变量)的匿名函数</strong><br/>
+顾名思义,所谓的匿名函数,就是不带名称的函数</p>
 
-<h2 id="toc_1">setNeedsLayout</h2>
+<h3 id="toc_1">Block语法</h3>
 
-<p><code>setNeedsLayout</code>：当需要调整UIView子视图布局时，需要在主线程调用该方法。该方法记录请求并立即返回(即异步执行)，<strong>等待下一个更新周期更新视图(runloop 迭代)</strong>。因此，可以将多个视图布局更新合并到一个update cycle，这样有助于提高性能。需要注意的是，我们无法知道下个update cycle在何时发生。</p>
+<p>完整形式的 Block 语法与一般的 C语言函数相比,仅有两点不同:</p>
 
-<p><a href="https://developer.apple.com/documentation/uikit/uiview?language=objc">Apple 官方文档</a>已经明确说明,开发者不要直接调用 <code>layoutSubViews</code>与<code>drawRect</code>,应该在你认为系统默认的布局和重绘不能带给你想要的效果时,在之类中重写这些方法,然后分别通过 <code>setNeedsLayout</code>和 <code>setNeedsDisPlayInRectangle:</code> 来进行调用</p>
+<ol>
+<li>没有函数名</li>
+<li>带有标识符 ^</li>
+</ol>
 
-<h3 id="toc_2">哪些操作会出触发 layoutSubViews?</h3>
+<p><img src="media/15844949626994/15848551473057.jpg" alt="" style="width:265px;"/></p>
 
-<ul>
-<li>init 初始化不会触发layoutSubViews</li>
-<li>addSubviews 会触发layoutSubViews</li>
-<li>设置 view的frame 会触发layoutSubViews(前提是 frame 发生了变化)</li>
-<li>滑动一个 UIScrollView 会触发layoutSubViews</li>
-<li>改变一个 view 的大小也会触发父 View 的layoutSubViews事件</li>
-</ul>
+<p>比如定义一个 Block:<br/>
+<sup>int</sup> (int coun) {return count +1;}</p>
+
+<p><img src="media/15844949626994/15848602566357.jpg" alt="" style="width:1280px;"/></p>
+
+<p>__block </p>
+
+<ol>
+<li>赋值</li>
+<li>使用<br/>
+赋值和使用的区别</li>
+</ol>
+
+<p><img src="media/15844949626994/15848609404010.jpg" alt="" style="width:1178px;"/></p>
+
+<p><img src="media/15844949626994/15848704478850.jpg" alt="" style="width:1213px;"/></p>
+
+<p><img src="media/15844949626994/15848706459399.jpg" alt="" style="width:1222px;"/></p>
+
+<p><img src="media/15844949626994/15848610458567.jpg" alt="" style="width:1280px;"/></p>
+
+<p><img src="media/15844949626994/15848611114983.jpg" alt="" style="width:1095px;"/><br/>
+<strong>栈上的 Block 的__forwarding 指针,是指向他自己的!</strong></p>
+
+<p><img src="media/15844949626994/15848613522664.jpg" alt="" style="width:851px;"/></p>
+
+<p><img src="media/15844949626994/15848621885769.jpg" alt="" style="width:1092px;"/></p>
+
+<p>三种 Block<br/>
+<img src="media/15844949626994/15848614833261.jpg" alt="" style="width:1226px;"/></p>
+
+<p><img src="media/15844949626994/15848615309355.jpg" alt="" style="width:1212px;"/></p>
+
+<p><img src="media/15844949626994/15848627599661.jpg" alt="" style="width:1183px;"/></p>
+
+<p><img src="media/15844949626994/15848628231886.jpg" alt="" style="width:1131px;"/></p>
 
                         
                       </div>
@@ -150,10 +183,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/14</span>
+                    <span class="date">2020/03/18</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
+          					    <span class="posted-in"><a href='Block%20%E7%9B%B8%E5%85%B3.html'>Block 相关</a></span>
           				   
                     
 
@@ -257,31 +290,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  

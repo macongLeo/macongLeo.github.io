@@ -116,45 +116,181 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="shu-xing-de-shi-zhi-shu-xing-d.html">
+                <a class="clearlink" href="15820364056941.html">
                 
-                  <h1>属性的实质</h1>
+                  <h1>关联对象 AssociatedObject 完全解析</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<blockquote>
-<p>属性的实质是什么？<br/>
-包括哪几个部分？<br/>
-属性默认的关键字都有哪些？<br/>
-@dynamic关键字和@synthesize关键字是用来做什么的</p>
+                        	<p>相关面试题:</p>
+
+<blockquote>
+<p>关联对象有什么应用，系统如何管理关联对象？其被释放的时候需要手动将所有的关联对象的指针置空么？</p>
 </blockquote>
 
-<p>实质包含部分:</p>
+<p>先回答问题:</p>
 
-<p>@property = ivar + getter + setter;</p>
+<ol>
+<li>关联对象的作用是可以为分类<mark>增加实例变量和存取发法</mark>(分类不能直接添加)</li>
+<li>系统使用AssociationsManager管理关联对象</li>
+</ol>
 
-<p>实例变量+get方法+ set方法，也就是说使用@property系统会自动生成setter和getter方法;</p>
+<p><strong>在分类中,因为类的实例变量布局已经固定</strong>,使用@property 已经无法向固定的布局中添加新的实例变量(这样做可能会覆盖之类的实例变量),所以我们需要使用关联对象以及两个方法来模拟构成属性的三个要素.</p>
 
-<p>默认常用关键字:</p>
+<p>在分类中@property 并不会自动生成实例变量以及存取方法,所以需要使用关联对象为已经存在的类添加属性,例如:</p>
 
-<p>property中我们经常使用的关键字有strong，weak，assign，copy，nonatomic，atomic....等</p>
+<pre class="line-numbers"><code class="language-text">#import &quot;DKObject+Category.h&quot;
+#import &lt;objc/runtime.h&gt;
 
-<p>@dynamic这个关键词，通常是用不到的。<br/>
-它与@synthesize的区别在于：<br/>
-使用@synthesize编译器会确实的产生getter和setter方法，而@dynamic仅仅是告诉编译器这两个方法在运行期会有的，无需产生警告。</p>
+@implementation DKObject (Category)
 
-<p>假设有这么个场景，B类，C类分别继承A类，A类实现某个协议（@protocol），协议中某个属性( somePropety )我不想在A中实现，而在B类，C类中分别实现。如果A中不写任何代码，编译器就会给出警告：“use @synthesize, @dynamic or provide a method implementation&quot;这时你给用@dynamic somePropety; <br/>
-编译器就不会警告，同时也不会产生任何默认代码。</p>
+- (NSString *)categoryProperty {
+    return objc_getAssociatedObject(self, _cmd);
+}
 
-<p>@dynamic 就是要来告诉编译器，代码中用@dynamic修饰的属性，其getter和setter方法会在程序运行的时候或者用其他方式动态绑定，以便让编译器通过编译。<br/>
-其主要的作用就是用在NSManageObject对象的属性声明上，由于此类对象的属性一般是从Core Data的属性中生成的，Core Data框架会在程序运行的时候为此类属性生成getter和Setter方法。</p>
+- (void)setCategoryProperty:(NSString *)categoryProperty {
+    objc_setAssociatedObject(self, @selector(categoryProperty), categoryProperty, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+@end
+</code></pre>
 
-<p>参考:</p>
+<p>我们使用了 <mark>objc_getAssociateedObjcet</mark>以及 <mark>objc_serAssociatedObject</mark> 来模拟属性的存取方法,使用关联对象来模拟实例变量</p>
 
-<p><a href="">https://www.jianshu.com/p/00dbeec23291</a></p>
+<p>这里有两个需要解释的问题:</p>
 
-<hr/>
+<ol>
+<li>为什么向方法中传入@selector(catagoryProperty)?</li>
+<li>OBJC_ASSOCIATION_RETAIN_NONATOMIC是干什么的</li>
+</ol>
+
+<p>关于第一个,我们先看这两个方法的原型;</p>
+
+<pre class="line-numbers"><code class="language-text">id objc_getAssociatedObject(id object, const void *key);
+void objc_setAssociatedObject(id object, const void *key, id value, objc_AssociationPolicy policy);
+</code></pre>
+
+<p>@selector(categoryProperty)其实也就是参数中的 key,其实可以使用静态指针 stati void * 类型的参数来代替,不过这里强烈建议使用@selector(categoryProperty)作为key 传入.因为这种方法省略了生命参数的代码,并且能很好的保证 key 的唯一性.<br/>
+关于OBJC_ASSOCIATION_RETAIN_NONATOMIC,其实就是内存管理语句.<br/>
+<img src="media/15820364056941/15820966989089.jpg" alt="" style="width:519px;"/><br/>
+注意:关联对象的内存管理策略中没有对应的 weak.如果确实需要使用 weak 应该怎么处理呢?<br/>
+最简单的方法是使用 block 包起来,例如:</p>
+
+<pre class="line-numbers"><code class="language-text">-(void)setWeakvalue:(NSObject *)weakvalue {
+    __weak typeof(weakvalue) weakObj = weakvalue;
+    typeof(weakvalue) (^block)() = ^(){
+        return weakObj;
+    };
+    objc_setAssociatedObject(self, weakValueKey, block, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+-(NSObject *)weakvalue {
+    id (^block)() = objc_getAssociatedObject(self, weakValueKey);
+    return block();
+}
+</code></pre>
+
+<p>首先我们在 setter 方法里面使用了一个weak 的局部变量 weakObj 来存储值,并在 block 中将其捕获并返回,由于 weakObj 是弱引用,所以不会修改对象的引用计数,当对象释放时,由于 weakObj 的 weak 属性,它在释放后也会指向 nil,所以在 getter 返回的时候也就是 nil,也就是模拟了 weak 释放后自动置为 nil.</p>
+
+<p><strong>objc_setAssociatedObject</strong></p>
+
+<pre class="line-numbers"><code class="language-text">void _object_set_associative_reference(id object, void *key, id value, uintptr_t policy) {
+    // 关联对象使用 ObjcAssociation 这个c++对象来存储。
+      // 设置新对象，那么有可能有老的对象会被废弃。那么新建一个ObjcAssociation对象，之后用来存储老的对象
+    ObjcAssociation old_association(0, nil);
+
+      // acquireValue函数： 设置新的对象的retainCount，也就是对他进行手动内存管理
+    id new_value = value ? acquireValue(value, policy) : nil;
+    {
+        AssociationsManager manager;
+        AssociationsHashMap &amp;associations(manager.associations());
+        disguised_ptr_t disguised_object = DISGUISE(object);
+
+          // 如果确实是要设置新关联对象的时候
+        if (new_value) {
+            // break any existing association.
+            AssociationsHashMap::iterator i = associations.find(disguised_object);
+
+              // 这个对象之前设置过关联对象，也就是说该对象的关联对象数量大于1
+            if (i != associations.end()) {
+                // secondary table exists
+                ObjectAssociationMap *refs = i-&gt;second;
+                ObjectAssociationMap::iterator j = refs-&gt;find(key);
+                 // 寻找全局的关联对象表，如果存在老对象的话
+                if (j != refs-&gt;end()) {
+                      // 存储老对象到之前新建的ObjcAssociation对象中
+                    old_association = j-&gt;second;
+                      // 设置新的关联对象
+                    j-&gt;second = ObjcAssociation(policy, new_value);
+                }
+                  // 不存在老对象，直接设置新关联对象
+                  else {
+                    (*refs)[key] = ObjcAssociation(policy, new_value);
+                }
+            }
+              // 这个对象之前没有设置过任何的关联对象
+              else {
+                // create the new association (first time).
+                ObjectAssociationMap *refs = new ObjectAssociationMap;
+                associations[disguised_object] = refs;
+                (*refs)[key] = ObjcAssociation(policy, new_value);
+                 // 将对象的isa的has_assoc字段设置成true
+                object-&gt;setHasAssociatedObjects();
+            }
+        } 
+          // 要将关联对象设成 nil，也就是取消该关联对象。先存老对象，再在全局表中删除该关联对象
+          else {
+            // setting the association to nil breaks the association.
+            AssociationsHashMap::iterator i = associations.find(disguised_object);
+            if (i !=  associations.end()) {
+                ObjectAssociationMap *refs = i-&gt;second;
+                ObjectAssociationMap::iterator j = refs-&gt;find(key);
+                if (j != refs-&gt;end()) {
+                    old_association = j-&gt;second;
+                    refs-&gt;erase(j);
+                }
+            }
+        }
+    }
+    // 释放老对象，retainCount相关，内存管理相关
+    if (old_association.hasValue()) ReleaseValue()(old_association);
+}
+</code></pre>
+
+<p>可以看到设置新的关联对象其实很简单：</p>
+
+<ul>
+<li>现在全局关联对象表中寻找这个 key</li>
+<li>先存原来关联对象</li>
+<li>再设置新的关联对象</li>
+<li>释放原有的关联对象</li>
+</ul>
+
+<p><strong>关联对象的实现</strong><br/>
+关联对象使用的是全局的表来存储所有关联对象,如图:<br/>
+<img src="media/15820364056941/15820977012071.jpg" alt="" style="width:643px;"/><br/>
+<strong>关联对象是和对象一一对应的,而不是和类一一对应的</strong></p>
+
+<ol>
+<li>所有的关联对象都由一个<strong>AssociationsManager</strong>对象来管理,这个对象里有一个<strong>AssociationsHashMap</strong>.</li>
+<li><strong>AssociationsHashMap</strong>由许多 key-value 构成.key 是对象的地址,value 是一个<strong>ObjectAssociationMap</strong>,也就是所谓的关联对象</li>
+<li><strong>ObjectAssociationMap</strong>就是关联对象,每个关联对象里面包含多个 key-value 对,key 是属性名,value 是<strong>ObjcAssociation</strong>,也就是相当于属性对应的实例变量.</li>
+<li><strong>ObjcAssociation</strong>相当于实例变量,这个结构体有两个成员,_policy 属性的内存管理语句,_value 属性的值</li>
+</ol>
+
+<p>总结:</p>
+
+<ol>
+<li>category 可以给现有类添加属性,方法,协议,但是不能添加实例变量</li>
+<li>添加属性对应的实例变量需要使用关联对象来实现</li>
+<li>category 里面的方法不会覆盖掉原有同名方法,只是会提前检索到,所以感觉是被覆盖掉了</li>
+<li>对于系统自带的类,在 runtime 时才会加载 category,但是自定义的分类在编译期就已经全部加载了,就像不存在分类,但是存在一个大大的自定义类一样.</li>
+</ol>
+
+<p>参考:<br/>
+<a href="https://draveness.me/ao">https://draveness.me/ao</a><br/>
+<a href="http://vanney9.com/2017/07/14/association-object-and-retain-count/">http://vanney9.com/2017/07/14/association-object-and-retain-count/</a><br/>
+<a href="http://vanney9.com/2017/06/07/objective-c-runtime-category/">http://vanney9.com/2017/06/07/objective-c-runtime-category/</a><br/>
+<a href="https://www.jianshu.com/p/1b0a1f9ecf39">https://www.jianshu.com/p/1b0a1f9ecf39</a></p>
 
                         
                       </div>
@@ -163,10 +299,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
+                    <span class="date">2020/02/18</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+          					    <span class="posted-in"><a href='Runtime.html'>Runtime</a></span>
           				   
                     
 
@@ -192,7 +328,7 @@
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			
+			 <a href="all_57.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -270,31 +406,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  

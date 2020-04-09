@@ -116,135 +116,135 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854826531787.html">
+                <a class="clearlink" href="15854861330491.html">
                 
-                  <h1>iOS 的内存管理(三) 引用计数管理</h1>
+                  <h1>iOS 的内存管理(五) 自动释放池</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h3 id="toc_0">MRC</h3>
+                        	<p>先看一段代码</p>
 
-<p><img src="media/15854826531787/15854837401174.jpg" alt="" style="width:538px;"/><br/>
-MRC：是通过手动引用计数来进行对象的内存管理，关于内存管理涉及到这么几个方法</p>
+<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad
+{
+   [super viewDidLoad];
+   
+   NSMutableArray *array = [NSMutableArray array];
+   NSLog(@&quot;%@&quot;,array);
+}
 
-<ul>
-<li>alloc：用来分配一个对象的内存空间</li>
-<li>retain：可以使一个对象的引用计数加一</li>
-<li>release：对一个对象的引用计数进行减一操作</li>
-<li>retainCount：这个函数可以获取当前对象的引用计数值</li>
-<li>autorelease：如果调用了一个对象的 autorelease 方法，那么当前这个对象会在 autorelease pool 结束的时候调用它的 release 操作进行计数减一</li>
-<li>dealloc：在 MRC 中调用 dealloc 的话，需要显示的调用 super dealloc 来释放或者说废弃父类的相关成员变量</li>
-<li>在 MRC 当中所使用的特有方法，就是标红的这四个方法，在 ARC 当中如果调用这个四个方法，会引起编译报错</li>
-</ul>
+</code></pre>
 
-<h3 id="toc_1">ARC</h3>
+<p>在 viewDidLoad 方法中通过 [NSMutableArray array] 创建了一个数组对象，然后在控制台打印它的值</p>
 
-<p><img src="media/15854826531787/15854838107212.jpg" alt="" style="width:546px;"/><br/>
-ARC：是自动引用计数管理内存</p>
+<p><strong>思考：这个 array 对应的内存是在什么时机释放的？</strong></p>
 
-<p>实际上是由编译器自动为我们插入 retain release 之外，还需要 Runtime 的功能支持，然后由编译器和 Runtime 共同协作才能组成 ARC 的全部功能</p>
+<p><strong>思考：AutoreleasePool 的实现原理是怎样的？</strong></p>
 
-<p>ARC 中禁止手动调用 MRC 当中独有的方法，比如 retain release retainCount dealloc，在 ARC 当中可以重写某个对象的 dealloc 方法，但是不能在 dealloc 方法当中显式调用 super dealloc 方法<br/>
-除此之外 ARC 当中增加了 weak 和 strong 属性关键字</p>
+<p><strong>思考：AutoreleasePool 为何可以嵌套使用？</strong></p>
 
-<p>1.<strong>alloc 实现</strong></p>
+<h2 id="toc_0">自动释放池</h2>
 
-<p>进过一系列调用，最终调用了 C 函数 calloc</p>
+<p>@autoreleasepool{} 经过编译器编译后会变成什么?</p>
 
-<p>此时并没有设置引用计数为 1</p>
+<pre class="line-numbers"><code class="language-text">编译器会将 @autoreleasepool{} 改写为：
 
-<p>alloc 比较简单，只是经过一系列的函数封装和调用最终调用了一个<strong>C 函数 calloc</strong></p>
+void *ctx = objc_autoreleasePoolPush();
 
-<p><strong>alloc 分配之后的对象它并没有设置引用计数为 1</strong>，但是通过 retainCount 获取它的引用计数时为 1，原因请往下看:<br/>
-2.<strong>retain 实现</strong></p>
+{}中的代码
 
-<p><img src="media/15854826531787/15854839454208.jpg" alt="" style="width:511px;"/></p>
+objc_autoreleasePoolPop(ctx)
 
-<ul>
-<li>这段代码表示通过当前对象的指针到 SideTables 当中去获取它所指的 SideTable ，当获取到这个对象引用计数相关的 SideTable 之后，再在这个 SideTable 的结构当中去获取引用计数 refcnts 成员变量（引用计数表），通过当前对象的指针在这个 SideTables 当中的引用计数表当中去获取当前对象的引用计数值</li>
-<li>在进行 retain 操作的时候是进行了两次哈希查找，最终查找到的结构是 size_t 类型的（无符号 long 型）值，然后再对引用计数值加一操作</li>
-<li>这里面所加的是一个 SIDE_TAVLE_RC_ONE 的宏定义，加的值不是实际的 1，因为我们在讲述 size_t 这个存储引用计数变量的时候，说明了它64个bit位前两个位置不是存储引用计数的，而是在后面的62位中存储的引用计数，这里的所谓加一操作实际上加上了对应的偏移量，这个偏移量实际上应该是 4，给我们反应出来的结果就是加一操作</li>
-</ul>
+</code></pre>
 
-<p>3.<strong>release 实现</strong></p>
+<p>第一段是 objc_autoreleasePoolPush 这个函数调用，是没有参数的，返回值是一个无类型的指针<br/>
+中间是花括号中所添加的代码<br/>
+之后会调用 objc_autoreleasePoolPop 函数，这个函数的入参就是前一个函数 objc_autoreleasePoolPush 返回结果</p>
 
-<p><img src="media/15854826531787/15854840341775.jpg" alt="" style="width:522px;"/></p>
+<p><strong>objc_autoreleasePoolPush 的内部实现</strong><br/>
+<img src="media/15854861330491/15854863797428.jpg" alt="" style="width:569px;"/></p>
 
-<ul>
-<li>第一行代码和上面分析的一样，通过当前对象的指针经过哈希算法在 SideTables 当中去获取它所指的 SideTable</li>
-<li>然后再根据当前对象指针访问 table 当中的引用计数表去查找它对应的引用计数表</li>
-<li><p>查找到之后，把对应的值进行减一操作</p>
-<p>4.retainCount 实现</p>
-<p><img src="media/15854826531787/15854840872021.jpg" alt="" style="width:520px;"/></p></li>
-<li><p>第一句代码同上</p></li>
-<li><p>声明了一个局部变量，指定它的值是 1，然后通过当前对象到引用计数表当中去查找，把查找的结果做一个向右便宜的操作，然后再结合这个局部变量的 1 进行一个加的操作，再返回给调用方</p></li>
-<li><p>所以说，如果我们刚新 alloc 出来的对象，在引用计数表当中是没有这个对象相关联的一个 Key Value 的映射的，这个值读出来就是 0，然后由于局部变量是 1，所以此时只经过 alloc 调用产生的对象去调用它的 retainCount 就可以获取到它的值为 1</p></li>
-</ul>
+<p><strong>objc_autoreleasePoolPop 的内部实现</strong><br/>
+<img src="media/15854861330491/15854864294078.jpg" alt="" style="width:537px;"/></p>
 
-<p>5.<strong>dealloc 实现（重要）</strong></p>
+<h3 id="toc_1">自动释放池的数据结构</h3>
 
-<p><img src="media/15854826531787/15854841670162.jpg" alt="" style="width:546px;"/></p>
+<p><img src="media/15854861330491/15854866906727.jpg" alt="" style="width:536px;"/></p>
+
+<p><img src="media/15854861330491/15854865388343.jpg" alt="" style="width:576px;"/></p>
+
+<h3 id="toc_2">AutoreleasePoolPage (C++的类)</h3>
+
+<p><img src="media/15854861330491/15854867368624.jpg" alt="" style="width:534px;"/><br/>
+这个类的组成结构主要有四个成员变量</p>
 
 <ul>
-<li>首先会调用 _ objc _rootDealloc() 私有函数</li>
-<li>这个函数又会调用 rootDealloc() 函数，然后会在这个函数内部判断当前对象是否可以直接释放</li>
-<li>如果这些条件都不满足就直接调用 C 函数的 free() 进行对象的内存释放</li>
-<li>否则就要再调用一个函数做后续的清理</li>
+<li>第一个是 id* 类型的 next，实际上就是指向栈当中下一个可填充位置</li>
+<li>之后是两个 AutoreleasePoolPage 类型的成员变量，分别为 parent 和 child，也就是双向链表中的父指针和孩子指针</li>
+<li>还有一个成员变量 pthread_t 类型的，所以说 autoreleasepool 是和线程一一对应的，就是从这个结构当中的 Thread 成员变量体现出来的</li>
 </ul>
 
-<p>直接释放的判断条件</p>
+<p><strong>AutoreleasePoolPage 的结构</strong><br/>
+<img src="media/15854861330491/15854868085779.jpg" alt="" style="width:529px;"/></p>
+
+<p>最下边是 AutoreleasePoolPage 自身所占有的内存，上面这些可以用来存储花括号中填充的 autorelease 对象，同样的这个栈是向下增长的，所以下面是高地址，上面是低地址，有一个 next 指针也就是 AutoreleasePoolPage 这个结构当中的一个成员变量，指向当前栈的一个空的位置，比如说现在在进行一个入栈操作，就可以添加到 next 指针所指向的位置</p>
+
+<p><strong>AutoreleasePoolPage::push 方法实现</strong><br/>
+<img src="media/15854861330491/15854868523600.jpg" alt="" style="width:524px;"/></p>
+
+<p>如果发生了一个 AutoreleasePoolPage::push 操作，会把当前 next 位置置为 nil ，称他为哨兵对象，然后将 next 指针指向下一个可入栈的位置，这就是 AutoreleasePoolPage 的 push 方法的实现过程<br/>
+实际上每次进行一个 AutoreleasePool 的代码块的创建，相当于是不断的在栈当中去插入哨兵对象</p>
+
+<p><strong>[ obj autorelease ] 方法系统内部实现</strong><br/>
+<img src="media/15854861330491/15854868804913.jpg" alt="" style="width:543px;"/><br/>
+比如说调用了一个对象的 autorelease 方法<br/>
+首先会判断当前 next 指针是否指向了栈顶，如果没有指向栈顶就直接把这个对象添加到当前这个栈的 next 位置，结束流程，假如当前 next 已经指向了栈顶，这个时候当前这个 AutoreleasePoolPage 就没有办法再装新的 autorelease 对象了，于是就需要增加一个栈节点拼接到到链表上，之后在新的栈上面去添加对象最终结束流程</p>
+
+<p><strong>AutoreleasePoolPage::pop 方法实现</strong></p>
 
 <ul>
-<li>nonpointer_isa：判断当前对象是否使用了非指针型的 isa</li>
-<li>weakly_referenced：当前对象是否有 weak 指针指向它</li>
-<li>has_assoc：当前对象是否有关联对象</li>
-<li>has_cxx_dtor：当期对象的内部实现是否有涉及到一些C++相关的内容，以及当前对象是否使用 ARC 管理内存，如果有涉及C++或者使用ARC管理内存返回YES</li>
-<li>has_sidetable_rc：当前对象的引用计数是否是在通过 sidetable 当中的引用计数表来维护的，因为在前面讲述关于 nonpointer_isa 的时候提到过如果说采用这中非指针型的 isa 指针的话，它当中存储了一部分引用计数的值，当超出上限的时候，再使用 sidetable 这种方式去存储</li>
+<li>根据传入的哨兵对象找到对应的位置</li>
+<li>给上次push操作之后添加的对应一次发送release消息</li>
+<li>回退next指针到正确位置</li>
 </ul>
 
-<p>只有当当前对象既不是非指针型的 isa ，同时没有弱引用，并且也没有关联对象，并且也没有涉及到 C++ 相关内容，并且没有涉及到 ARC，并且当前对象没有采用 sidetable 来存储引用计数，只有在这种条件下，才可以调用 C 函数直接释放，否则的话就要调用 object_dispose() 对象清除函数</p>
-
-<p>思考：为什么要进行这么多的判断才能进行后续的 object_dispose() 方法调用？</p>
+<p>首先对 pop 流程做一个简单的说明：</p>
 
 <ul>
-<li>如果对象有弱引用的话，那么在这个对象释放废弃的时候需要对它的引用对象进行处理</li>
-<li>如果有关联对象需要对关联对象进行处理</li>
-<li>包括C++、引用计数相关的处理</li>
+<li>在进行 pop 操作的时候会根据传入的哨兵对象来找到 pop 的最终位置，这个所谓的哨兵对象就是前面提到的 objc_autoreleasePoolPush 函数的返回值，实际上返回的就是栈当中对应的哨兵地址，pop 操作和 push 操作是一一对应的，那么要 pop 回哪个位置实际上是 pop 回它所指向的前一个哨兵对象</li>
+<li>然后给上次 push 操作之后所添加的对象依次发送 release 消息</li>
+<li>之后回退 next 指针到正确的位置</li>
 </ul>
 
-<p><strong>object_dispose() 实现</strong><br/>
-<img src="media/15854826531787/15854844199890.jpg" alt="" style="width:354px;"/></p>
+<p><img src="media/15854861330491/15854869764048.jpg" alt="" style="width:548px;"/><br/>
+假如说 next 指针指向这个位置，然后此时调用了 AutoreleasePoolPage::pop 操作，那么实际上要给这个红括号包含的这些对象依次发送 release 消息<br/>
+<img src="media/15854861330491/15854870031497.jpg" alt="" style="width:533px;"/></p>
 
-<ul>
-<li>首先这个函数内部会调用一个 objc_destructInstance() 函数，看这名字就可以得出是销毁实例的含义</li>
-<li>然后这个方法调用之后再调用 C 函数的 free()</li>
-<li>然后结束 dealloc 实现</li>
-</ul>
+<p>发送 release 之后，这些对象就会从当前栈中被清除掉<br/>
+<img src="media/15854861330491/15854870216150.jpg" alt="" style="width:533px;"/><br/>
+清除之后会把 next 指针指向一个正确的位置，这个就是 pop 的整个过程</p>
 
-<p><strong>objc_destructInstance() 实现</strong><br/>
-<img src="media/15854826531787/15854844674550.jpg" alt="" style="width:550px;"/></p>
+<h3 id="toc_3">自动释放池总结</h3>
 
-<ul>
-<li>在这个函数当中首先会判断当前还有是否有 C++ 相关的内容或者当前对象是否采用的是 ARC</li>
-<li>如果有的话会调用 objec_cxxDestruct() 这个方法，如果没有的话会判断当前对象是否有关联对象</li>
-<li>如果当前对象有关联对象的话在 dealloc 内部实现会调用 _object_remove_assocations() ,通过名称可以看出是做了对象的相关关联对象的移除</li>
-<li>关联对象的判断过了之后会调用一个叫 clearDeallocating() 函数，然后结束 dealloc 流程</li>
-</ul>
+<p><img src="media/15854861330491/15854870566083.jpg" alt="" style="width:530px;"/><br/>
+在每一 RunLoop 的循环过程当中，都会在它将要结束的时候对前一次创建的 autoreleasepool 进行 pop 操作，同时会 push 进来一个新的 autoreleasePool，所以说在 viewDidLoad 方法中通过 [NSMutableArray array] 所创建的这个数组对象是在当次 RunLoop 将要结束的时候，然后调用 AutoreleasePoolPage::pop () 方法的时候，把对应的 array 对象调用它的 release 方法，然后对它进行释放</p>
 
-<p>思考：我通过关联对象的技术为一个类添加了一些实例变量，那么在对象的 dealloc 方法方法当中是否有必要对它的关联对象进行移除操作？<br/>
-<strong>不需要</strong><br/>
-在系统的 dealloc 内部实现当中，会自动判断当前对象是否有关联对象，<strong>如果有的话系统内部就帮助我们把相关的关联对象移除掉</strong></p>
+<p>关于AutoreleasePool 为何可以嵌套使用，实际上多次嵌套调用就是多次插入哨兵对象，比如说我们每次进行一个 @autoreleasepool{} 代码块的创建的时候，系统就会为我们进行哨兵对象的插入，然后完成新的 autoreleasepool 的创建，这个 autoreleasepool 的创建实际上创建了一个新的 page，假如说当前 page 还没有满的话就不用创建这个 page ，所以说我们所说的先创建的一个 autoreleasepool 对应的在底层实现就是插入了一个哨兵对象，所以当然是可以直接多次嵌套调用的</p>
 
-<p><strong>clearDeallocating() 实现</strong><br/>
-<img src="media/15854826531787/15854845474639.jpg" alt="" style="width:552px;"/></p>
+<p>autoreleasePool 使用场景的问题：在什么场景下需要手动创建 autoreleasePool，比如说在 for 循坏当中 alloc 出大量的图片数据，图片数据对内存消耗非常大，需要在 for 循环内部创建一个 autoreleasepool ，每一次 for 循环都进行一次内存的释放来降低内存的峰值，防止一些内存消耗过大所导致的一些问题</p>
 
-<ul>
-<li>首先需要调用 sidetable_clearDeallocating() 函数</li>
-<li>之后会调用 weak_clear_no_lock() 函数，这个函数做的就是将指向该对象的弱引用指针置为 nil</li>
-<li>之后会调用 table.refcnts.erase() ,table 的引用计数的擦除操作，实际上就是将当前对象在引用计数表当中的一些存储数据给清除掉</li>
-<li>然后结束调用流程</li>
-</ul>
+<p>实现原理：autoreleasePool实现原理就是以栈为节点，通过双向链接形式组合而成的一个数据结构</p>
+
+<p>补充<br/>
+ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的消息循环机制，当一个runloop结束时系统才会一次性清理掉被autorelease处理过的对象，其实本质上说是在本次runloop迭代结束时清理掉被本次迭代期间被放到autorelease pool中的对象的。至于何时runloop结束并没有固定的duration。</p>
+
+<p>方便是方便了，但是有些情况下，我们还是需要手动创建自动释放池，那么，什么时候呢？</p>
+
+<p>如果你正在编写不基于UI 框架的程序，比如命令行工具。<br/>
+如果你编写的循环创建了很多临时对象。<br/>
+你可以在循环中使用自动释放池block，在下次迭代前处理这些对象。在循环中使用自动释放池block，有助于减少应用程序的内存占用。<br/>
+你生成了一个辅助线程。<br/>
+一旦线程开始执行你必须自己创建自动释放池。否则，应用将泄漏对象。</p>
 
                         
                       </div>
@@ -360,31 +360,31 @@ ARC：是自动引用计数管理内存</p>
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  

@@ -116,101 +116,58 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780315733102.html">
+                <a class="clearlink" href="15820370480952.html">
                 
-                  <h1>探寻 OC 对象的本质</h1>
+                  <h1>类 子类 分类 区别与联系</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<blockquote>
-<p>面试题：一个 NSObject 对象占用多少内存？</p>
-</blockquote>
+                        	<p><strong>分类(category)</strong><br/>
+分类允许开发者在不改变原有类的情况下,对该类进行拓展,分类是 OC 的特有语法,他是表示一个指向分类的结构体指针,原则上分类只能增加方法,不能增加实例变量,因为在分类中,类的实例变量布局已经固定,所以不能添加实例变量,但是可以利用 runtime 的特性,添加关联属性.</p>
 
-<p>我们平时编写的代码都是 Objective-C 的代码，但是底层实现其实都是 C/C++的代码</p>
-
-<pre class="line-numbers"><code class="language-text">#import &lt;Foundation/Foundation.h&gt;
-#import &lt;malloc/malloc.h&gt;
-#import &lt;objc/runtime.h&gt;
-
-int main(int argc, const char * argv[]) {
-    @autoreleasepool {
-        NSObject *obj = [[NSObject alloc] init];
-        // 创建一个实例对象，实际上分配多少内存 - 16
-        NSLog(@&quot;%zd&quot;, malloc_size((__bridge const void *)obj));
-
-        // 创建一个实例对象，至少需要多少内存 - 8
-        NSLog(@&quot;%zd&quot;, class_getInstanceSize([NSObject class]));
-    }
-    return 0;
+<pre class="line-numbers"><code class="language-text">Category
+Category 是表示一个指向分类的结构体的指针，其定义如下：
+typedef struct objc_category *Category;
+struct objc_category {
+  char *category_name                          OBJC2_UNAVAILABLE; // 分类名
+  char *class_name                             OBJC2_UNAVAILABLE; // 分类所属的类名
+  struct objc_method_list *instance_methods    OBJC2_UNAVAILABLE; // 实例方法列表
+  struct objc_method_list *class_methods       OBJC2_UNAVAILABLE; // 类方法列表
+  struct objc_protocol_list *protocols         OBJC2_UNAVAILABLE; // 分类所实现的协议列表
 }
 </code></pre>
 
+<p>从上面可以看出,这个结构体主要包含了分类定义的实例方法与类方法,但是这里面并没有属性列表,也就没办法直接添加属性(实例变量)<br/>
+<strong>要点</strong>:</p>
+
 <ul>
-<li>系统分配了 16 个字节给 NSObject 对象（通过 malloc——size 函数获得）</li>
-<li><p>OC 源码显示分配给对象的内存为 16 个字节的整数倍，至少是 16 个字节</p>
-<p><img src="media/15780315733102/15780350303674.jpg" alt="" style="width:660px;"/></p></li>
+<li>分类是用于给原有类添加方法的,因为在分类的结构体中只有方法列表,没有属性列表.</li>
+<li>分类中可以写@property,但是不会生成 getter/setter 方法,也不会生成实例变量.编译器会有警告,但是不会报错</li>
+<li>可以在分类中访问原有类的.h 中的属性</li>
+<li><strong>如果分类中有和原有类同名的方法,会优先调用分类中的方法,也就是会忽略原有类的方法,同名方法优先级&quot;分类&gt;类&gt;父类&quot;,所以分类中不要和类中原有方法同名</strong></li>
+<li>如果多个分类中都有和元类同名的方法,那么调用该方法的时候,由编译器决定,编译器会执行最后一个参与编译的分类中的方法.</li>
 </ul>
 
-<blockquote>
-<p>OC的对象、类主要是基于C\C++的什么数据结构实现的呢？<br/>
-结构体<br/>
-OC 的对象是基于 C 的结构体实现的<br/>
-这个结构体只有一个成员：isa 指针，而指针在 64 位架构中占 8 个字节。<br/>
-那么这个结构体占多大的内存空间呢，我们发现这个结构体只有一个成员，isa指针，而指针在64位架构中占8个字节。也就是说一个NSObjec对象所占用的内存是8个字节。到这里我们已经可以基本解答第一个问题。但是我们发现NSObject对象中还有很多方法，那这些方法不占用内存空间吗？其实类的方法等也占用内存空间，但是这些方法所占用的存储空间并不在NSObject对象中。</p>
-</blockquote>
+<p><strong>拓展</strong><br/>
+<strong>主类,子类,分类中+load方法的执行顺序</strong></p>
 
-<h2 id="toc_0">实例对象 类（对象） 元类</h2>
+<ul>
+<li>+load 方法是在 mian 函数执行之前执行的,并不会主动调用</li>
+<li>主类,分类,子类都会调用+load 方法</li>
+<li>调用顺序:主类的+load方法会先调用,然后调用子类的+load,最后调用分类的+load.</li>
+<li>所有分类的+load方法都会调用,调用顺序取决于它的编译顺序.</li>
+</ul>
 
-<p><img src="media/15780315733102/15780363563241.jpg" alt="" style="width:552px;"/></p>
+<p><strong>+ Initialize方法的调用顺序</strong></p>
 
-<blockquote>
-<ol>
-<li>instance的isa指向class</li>
-<li>class的isa指向meta-class</li>
-<li>meta-class的isa指向基类的meta-class，基类的isa指向自己</li>
-<li>class的superclass指向父类的class，如果没有父类，superclass指针为nil</li>
-<li>meta-class的superclass指向父类的meta-class，基类的meta-class的superclass指向基类的class</li>
-<li>instance调用对象方法的轨迹，isa找到class，方法不存在，就通过superclass找父类</li>
-<li>class调用类方法的轨迹，isa找meta-class，方法不存在，就通过superclass找父类</li>
-</ol>
-</blockquote>
+<ul>
+<li>+ Initialize只有当真正用到的时候,并且重写了+ Initialize方法才会调用</li>
+<li>当调用子类的+ Initialize方法的时候,如果父类重写了+ Initialize方法,会先调用父类的+ Initialize,然后调用子类的+ Initialize方法,如果此时父类的分类也重写了+ Initialize方法,那么父类的+ Initialize方法就会被覆盖掉</li>
+</ul>
 
-<h2 id="toc_1">为什么会存在元类？</h2>
-
-<p>元类是一个类对象的类<br/>
-简而言之：<br/>
-当你向一个对象发送一条消息的时候，运行时会在对象的类的方法列表中查找这条消息是否存在。<br/>
-当你向一个类发送一条消息的时候，运行时会在类的元类的方法列表中查找这条消息是否存在。</p>
-
-<p>元类的存在是必需的，因为他存储了一个类的所有类方法。每个类的元类都是独一无二的，因为每个类都有一系列独特的类方法。<br/>
-什么是元类的类</p>
-
-<p>元类，和类一样，也是一个对象。这表示你能够对元类调用方法。自然的，这表示他必须也有一个类指针。</p>
-
-<p>所有元类使用基类的元类（即继承链顶端的类的元类）作为他们的类，而所有类的基类都是 NSObject（大多数类是这样的），所以大多数元类使用 NSObject 的元类作为他的类。</p>
-
-<p>根据规则所有元类使用基类的元类作为他们的类，那么基类的元类就是他自己的类（他们的isa指针指向了自己）。这表明NSObject的元类的指针指向的是他自己（他是一个他自己的实例）。</p>
-
-<h2 id="toc_2">继承类和元类</h2>
-
-<p>同样的，类使用 super_class 指针指向他们的 superclass，元类也有 super_class 指针来指向 superclass。<br/>
-这里又有一个奇怪的地方，基类的元类设置的 superclass 是基类自己。<br/>
-这种继承结构导致的结果是所有结构中的实例、类以及元类都继承自结构中的基类。</p>
-
-<p>所有实例、类和元类都在 NSObject 的层级下，这表明所有 NSObject 的实例方法都能够被使用，同样的，对类以及元类来说，所有 NSObject 的类方法也是有效的。</p>
-
-<h2 id="toc_3">元类总结：</h2>
-
-<p>元类是一个类对象的类。每一个类有他自己独一无二的元类（因为每个类能够有自己独一无二的方法列表）。这就意味着类对象的类并不是和他们一样的类。</p>
-
-<p>元类能确保类对象有所有底层类的实例和类方法，中间加上所有自己的类方法。所有类继承自NSObject，这意味着NSObject所有的实例和协议方法为所有类（和元类）对象都定义了。</p>
-
-<p>所有元类使用基类的元类（NSObject 元类）来作为他们的类，包括只在运行时自定义的类的元类。</p>
-
-<p>参考：<br/>
-<a href="https://juejin.im/post/5ac81c75518825556534c0af">https://juejin.im/post/5ac81c75518825556534c0af</a><br/>
-<a href="https://www.jianshu.com/p/79b06fabb459">https://www.jianshu.com/p/79b06fabb459</a></p>
+<p>参考:<br/>
+<a href="https://juejin.im/post/5b6a63f4e51d4534b93f770f">https://juejin.im/post/5b6a63f4e51d4534b93f770f</a></p>
 
                         
                       </div>
@@ -219,10 +176,8 @@ OC 的对象是基于 C 的结构体实现的<br/>
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+                    <span class="date">2020/02/18</span>
+                    
           				   
                     
 
@@ -326,31 +281,31 @@ OC 的对象是基于 C 的结构体实现的<br/>
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  

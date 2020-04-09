@@ -116,194 +116,135 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15850184530012.html">
+                <a class="clearlink" href="15854826531787.html">
                 
-                  <h1>iOS 的内存管理(一) 内存管理方案</h1>
+                  <h1>iOS 的内存管理(三) 引用计数管理</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h3 id="toc_0">内存布局</h3>
+                        	<h3 id="toc_0">MRC</h3>
 
-<p><img src="media/15850184530012/15850185492355.jpg" alt="" style="width:858px;"/></p>
-
-<ul>
-<li>stack(栈区): 方法调用,函数等都是在栈区</li>
-<li>heap(堆区): 通过 alloc 生成的对象等 都在堆区,包括 block 也是会 copy 到堆区 </li>
-<li>bss: 未初始化的数据</li>
-<li>data: 已初始化的全局变量等</li>
-<li>text: 代码段</li>
-</ul>
-
-<h3 id="toc_1">内存管理方案</h3>
-
-<p><img src="media/15850184530012/15850192095288.jpg" alt="" style="width:834px;"/></p>
-
-<h4 id="toc_2">TaggedPointer</h4>
+<p><img src="media/15854826531787/15854837401174.jpg" alt="" style="width:538px;"/><br/>
+MRC：是通过手动引用计数来进行对象的内存管理，关于内存管理涉及到这么几个方法</p>
 
 <ul>
-<li>对于小对象使用的 TaggedPointer 管理.(例如 NSNumeber 等) <a href="https://juejin.im/post/58fe0c6561ff4b006671e789">相关TaggedPointer的可以参考这篇文章</a></li>
+<li>alloc：用来分配一个对象的内存空间</li>
+<li>retain：可以使一个对象的引用计数加一</li>
+<li>release：对一个对象的引用计数进行减一操作</li>
+<li>retainCount：这个函数可以获取当前对象的引用计数值</li>
+<li>autorelease：如果调用了一个对象的 autorelease 方法，那么当前这个对象会在 autorelease pool 结束的时候调用它的 release 操作进行计数减一</li>
+<li>dealloc：在 MRC 中调用 dealloc 的话，需要显示的调用 super dealloc 来释放或者说废弃父类的相关成员变量</li>
+<li>在 MRC 当中所使用的特有方法，就是标红的这四个方法，在 ARC 当中如果调用这个四个方法，会引起编译报错</li>
 </ul>
 
-<blockquote>
-<ol>
-<li>Tagged Pointer专门用来存储小的对象，例如NSNumber和NSDate</li>
-<li>Tagged Pointer指针的值不再是地址了，而是真正的值。所以，实际上它不再是一个对象了，它只是一个披着对象皮的普通变量而已。所以，它的内存并不存储在堆中，也不需要malloc和free。</li>
-<li>在内存读取上有着3倍的效率，创建时比以前快106倍。</li>
-</ol>
-</blockquote>
+<h3 id="toc_1">ARC</h3>
 
-<h4 id="toc_3">NONPOINTER_ISA</h4>
+<p><img src="media/15854826531787/15854838107212.jpg" alt="" style="width:546px;"/><br/>
+ARC：是自动引用计数管理内存</p>
 
-<p>于64位架构下的 iOS 应用程序采用的是 NONPOINTER_ISA 内存管理方案<br/>
-NONPOINTER _ISA 内存管理方案的涵义：实际上在64位架构下 isa 这个指针本身是占64个 比特位的，那么实际上有32位或者说40位就够用了，剩余这些位数的比特位实际上是浪费的，苹果为了提高内存的利用率，在 isa 当中剩余的这些比特位当中，存储了一些关于内存管理当面的相关数据内容，所以说这个叫非指针型的 isa</p>
+<p>实际上是由编译器自动为我们插入 retain release 之外，还需要 Runtime 的功能支持，然后由编译器和 Runtime 共同协作才能组成 ARC 的全部功能</p>
 
-<p><img src="media/15850184530012/15854664976969.jpg" alt="" style="width:717px;"/><br/>
-<img src="media/15850184530012/15854665338523.jpg" alt="" style="width:715px;"/></p>
+<p>ARC 中禁止手动调用 MRC 当中独有的方法，比如 retain release retainCount dealloc，在 ARC 当中可以重写某个对象的 dealloc 方法，但是不能在 dealloc 方法当中显式调用 super dealloc 方法<br/>
+除此之外 ARC 当中增加了 weak 和 strong 属性关键字</p>
 
-<p>在 arm64 架构下，isa 指针一共有 64 个bit位，这 64 个bit位都存储了哪些内容：</p>
+<p>1.<strong>alloc 实现</strong></p>
+
+<p>进过一系列调用，最终调用了 C 函数 calloc</p>
+
+<p>此时并没有设置引用计数为 1</p>
+
+<p>alloc 比较简单，只是经过一系列的函数封装和调用最终调用了一个<strong>C 函数 calloc</strong></p>
+
+<p><strong>alloc 分配之后的对象它并没有设置引用计数为 1</strong>，但是通过 retainCount 获取它的引用计数时为 1，原因请往下看:<br/>
+2.<strong>retain 实现</strong></p>
+
+<p><img src="media/15854826531787/15854839454208.jpg" alt="" style="width:511px;"/></p>
 
 <ul>
-<li>第 0 位 是一个叫 indexed 的标志位，如果这个位置是 0 ，代表的是我们使用的 isa 指针只是一个纯的 isa 指针，它里面的内容就直接代表当前对象的类对象的地址，如果这个标志位是 1 的话就代表这个 isa 里面存储的不止是它的类对象的地址，而且还有内存管理方面的数据，那就是我们这里面要讲到的非指针型的 isa</li>
-<li>第 1 位 has_assoc ，是表示当前对象是否有关联对象，0 代表没有，1代表有</li>
-<li>第 2 位 has_cxx_dtor ,这个函数或者说这个变量标志表示的是当前对象是否有使用 C++ 相关的代码，那么在 ARC 当中也可以这个表示位来表示有些对象是通过 ARC 来进行内存管理的</li>
-<li>3-35 位 表示的是当前对象的类对象的指针地址（一共有33位01的bit来表示当前对象的类对象的指针地址，我们需要把这个这个位置全部拿出来再去计算它对应的类对象的实际的指针地址）</li>
-<li>36-41 位 这 6 位代表的是 magic 字段（不讲解）</li>
-<li>42 位 是 weakly_referenced 就标识了这个对象是否有相应的弱引用指针</li>
-<li>43 位 deallocating 标志当前对象是否正在进行 dealloc 操作</li>
-<li>44 位 has_sidetable_rc 这个0是指当前 isa 指针当中如果所存储的引用计数已经达到了上限的话，那么需要外挂一个 sidetable 数据结构去存储相关的引用计数内容，那就是接下里要讲解的散列表</li>
-<li>45-63 位 代表的是 extra_rc 也就是额外的引用计数，当引用计数在很小的值范围之内的话就会存到 isa 指针当中，而不是有单独的引用计数表去存储它<br/>
-通过对 NONPOINTER_ ISA 的 64 个bit位的分析，就应该清楚关于内存管理不仅仅是散列表，其实还有 isa 部分的 extra_rc 来存储相关的引用计数值</li>
+<li>这段代码表示通过当前对象的指针到 SideTables 当中去获取它所指的 SideTable ，当获取到这个对象引用计数相关的 SideTable 之后，再在这个 SideTable 的结构当中去获取引用计数 refcnts 成员变量（引用计数表），通过当前对象的指针在这个 SideTables 当中的引用计数表当中去获取当前对象的引用计数值</li>
+<li>在进行 retain 操作的时候是进行了两次哈希查找，最终查找到的结构是 size_t 类型的（无符号 long 型）值，然后再对引用计数值加一操作</li>
+<li>这里面所加的是一个 SIDE_TAVLE_RC_ONE 的宏定义，加的值不是实际的 1，因为我们在讲述 size_t 这个存储引用计数变量的时候，说明了它64个bit位前两个位置不是存储引用计数的，而是在后面的62位中存储的引用计数，这里的所谓加一操作实际上加上了对应的偏移量，这个偏移量实际上应该是 4，给我们反应出来的结果就是加一操作</li>
 </ul>
 
-<p><img src="media/15850184530012/15850194749345.jpg" alt="" style="width:936px;"/></p>
+<p>3.<strong>release 实现</strong></p>
 
-<p>散列表方案在源码中是通过 Side Tables() 结构来实现的</p>
-
-<p>Side Tables() 结构是什么？</p>
-
-<p>在他的结构下面挂了很多 Side Table 数据结构，这些数据结构在不同的架构上面是有不同个数的，比如在非嵌入式系统当中，Side Table 这个表一共有 64 个，在这里解释一下，<strong>Side Tables() 实际上是一个哈希表</strong>，可以通过一个对象指针来具体找到它对应的引用计数表或者说弱引用表在哪一张具体的 Side Table 当中</p>
-
-<h4 id="toc_4">Side Table的结构</h4>
-
-<p><img src="media/15850184530012/15854671062962.jpg" alt="" style="width:1019px;"/><br/>
-实际上 Side Table 结构就包含了以下三个元素</p>
+<p><img src="media/15854826531787/15854840341775.jpg" alt="" style="width:522px;"/></p>
 
 <ul>
-<li>自旋锁 (spinlock_t)</li>
-<li>引用计数表 (RefcountMap)</li>
-<li>弱引用表 (weak_table_t)</li>
+<li>第一行代码和上面分析的一样，通过当前对象的指针经过哈希算法在 SideTables 当中去获取它所指的 SideTable</li>
+<li>然后再根据当前对象指针访问 table 当中的引用计数表去查找它对应的引用计数表</li>
+<li><p>查找到之后，把对应的值进行减一操作</p>
+<p>4.retainCount 实现</p>
+<p><img src="media/15854826531787/15854840872021.jpg" alt="" style="width:520px;"/></p></li>
+<li><p>第一句代码同上</p></li>
+<li><p>声明了一个局部变量，指定它的值是 1，然后通过当前对象到引用计数表当中去查找，把查找的结果做一个向右便宜的操作，然后再结合这个局部变量的 1 进行一个加的操作，再返回给调用方</p></li>
+<li><p>所以说，如果我们刚新 alloc 出来的对象，在引用计数表当中是没有这个对象相关联的一个 Key Value 的映射的，这个值读出来就是 0，然后由于局部变量是 1，所以此时只经过 alloc 调用产生的对象去调用它的 retainCount 就可以获取到它的值为 1</p></li>
 </ul>
 
-<h4 id="toc_5">为什么不是一个 SideTable，而是有多个 SideTable 共同组成 SideTables？</h4>
+<p>5.<strong>dealloc 实现（重要）</strong></p>
 
-<p><img src="media/15850184530012/15854671971171.jpg" alt="" style="width:544px;"/><br/>
-假如说只有一张 SideTable ，那么在内存中分配的所有对象的引用计数或者说弱引用存储都放到一张大表当中，这个时候如果说要操作某一个对象的引用计数值进行修改，比如说加一减一的操作，由于所有的对象可能是在不同的线程当中去分配创建的，包括调用他们的 retain，release等方法也可能是在不同线程当中操作的，那么这个时候再对这张表进行操作的时候，需要进行加锁处理才能保证对数据的访问安全，在这个过程当中就存在了效率问题，如果现在已经有一个对象在操作这张表，那么下一个对象就要等前一个对象操作完后把锁释放之后它才能操作这张表</p>
+<p><img src="media/15854826531787/15854841670162.jpg" alt="" style="width:546px;"/></p>
 
-<p><strong>系统为了解决效率问题引用了分离锁的技术方案</strong><br/>
-<img src="media/15850184530012/15854672662243.jpg" alt="" style="width:565px;"/><br/>
-分离锁: 提高访问效率<br/>
-可以把内存对象所对应的引用技术表可以分拆成多个部分，比如说把它分拆成8个，分拆成8个需要对这8个表分别加锁</p>
+<ul>
+<li>首先会调用 _ objc _rootDealloc() 私有函数</li>
+<li>这个函数又会调用 rootDealloc() 函数，然后会在这个函数内部判断当前对象是否可以直接释放</li>
+<li>如果这些条件都不满足就直接调用 C 函数的 free() 进行对象的内存释放</li>
+<li>否则就要再调用一个函数做后续的清理</li>
+</ul>
 
-<p>比如说某一个对象A在第一张表里面，另一个对象B在另一张表中，那么当A和B同时进行引用计数操作的时候可以并发操作，但是如果按照一张表的情况下他们就需要顺序操作</p>
+<p>直接释放的判断条件</p>
 
-<p><strong>怎样实现快速分流？</strong><br/>
-快速分流指的是通过一个对象的指针如何快速的定位到它属于哪张 side Table 表？<br/>
-<img src="media/15850184530012/15854673276430.jpg" alt="" style="width:529px;"/><br/>
-side Tables 的本质是一张哈希表，这张哈希表当中可能有64张具体的 side Table ，然后存储不同对象的引用计数表和弱引用表</p>
+<ul>
+<li>nonpointer_isa：判断当前对象是否使用了非指针型的 isa</li>
+<li>weakly_referenced：当前对象是否有 weak 指针指向它</li>
+<li>has_assoc：当前对象是否有关联对象</li>
+<li>has_cxx_dtor：当期对象的内部实现是否有涉及到一些C++相关的内容，以及当前对象是否使用 ARC 管理内存，如果有涉及C++或者使用ARC管理内存返回YES</li>
+<li>has_sidetable_rc：当前对象的引用计数是否是在通过 sidetable 当中的引用计数表来维护的，因为在前面讲述关于 nonpointer_isa 的时候提到过如果说采用这中非指针型的 isa 指针的话，它当中存储了一部分引用计数的值，当超出上限的时候，再使用 sidetable 这种方式去存储</li>
+</ul>
 
-<p><strong>哈希表的概念这里简单讲解一下：</strong></p>
+<p>只有当当前对象既不是非指针型的 isa ，同时没有弱引用，并且也没有关联对象，并且也没有涉及到 C++ 相关内容，并且没有涉及到 ARC，并且当前对象没有采用 sidetable 来存储引用计数，只有在这种条件下，才可以调用 C 函数直接释放，否则的话就要调用 object_dispose() 对象清除函数</p>
 
-<p>看这幅图，左侧是一个对象，这个对象指针可以作为一个 Key ，经过哈希函数的一个运算然后会计算出一个值来决定出这个对象它所对应的 side Table 是哪张或者说在数组的索引是多少<br/>
-<img src="media/15850184530012/15854673710066.jpg" alt="" style="width:570px;"/></p>
+<p>思考：为什么要进行这么多的判断才能进行后续的 object_dispose() 方法调用？</p>
 
-<p><strong>哈希查找的过程：</strong></p>
+<ul>
+<li>如果对象有弱引用的话，那么在这个对象释放废弃的时候需要对它的引用对象进行处理</li>
+<li>如果有关联对象需要对关联对象进行处理</li>
+<li>包括C++、引用计数相关的处理</li>
+</ul>
 
-<p>比如说给定值是对象的内存地址，目标值是 side Tables 结构当中的下标索引<br/>
-现在给一个对象的内存指针地址，通过一个哈希函数把指针作为哈希函数的参数，然后经过函数的运算就可以得出一个数组的下标索引值<br/>
-哈希函数对于 side Tables 具体的情况，实际上表达式就是这样的，也就是说通过对象的内存地址来和 side Tables 数组的个数来进行取余运算，这样就可以计算出一个对象指针它所对应的引用计数表或者弱引用表在哪一张具体的 side Table 当中</p>
+<p><strong>object_dispose() 实现</strong><br/>
+<img src="media/15854826531787/15854844199890.jpg" alt="" style="width:354px;"/></p>
 
-<p><strong>为什么通过哈希查找？</strong></p>
+<ul>
+<li>首先这个函数内部会调用一个 objc_destructInstance() 函数，看这名字就可以得出是销毁实例的含义</li>
+<li>然后这个方法调用之后再调用 C 函数的 free()</li>
+<li>然后结束 dealloc 实现</li>
+</ul>
 
-<p>是为了提高查找效率，比如说存储的时候是通过这个哈希函数进行存储的，比如说这个数组个数是8，内存地址假设是1的话，那么取余就是1，就把这个对象存储到数组对应第一个位置，当我们去访问这个对象的时候，也不需要根据这个数组进行遍历来比较指针值，而是也通过这个函数进行一次运算去取值，这个过程不涉及遍历的操作，自然查找效率是比较高的，内存地址的分布是均匀分布，可以称这个哈希函数为一个均匀散列函数</p>
+<p><strong>objc_destructInstance() 实现</strong><br/>
+<img src="media/15854826531787/15854844674550.jpg" alt="" style="width:550px;"/></p>
 
-<p><img src="media/15850184530012/15850200383486.jpg" alt="" style="width:961px;"/></p>
+<ul>
+<li>在这个函数当中首先会判断当前还有是否有 C++ 相关的内容或者当前对象是否采用的是 ARC</li>
+<li>如果有的话会调用 objec_cxxDestruct() 这个方法，如果没有的话会判断当前对象是否有关联对象</li>
+<li>如果当前对象有关联对象的话在 dealloc 内部实现会调用 _object_remove_assocations() ,通过名称可以看出是做了对象的相关关联对象的移除</li>
+<li>关联对象的判断过了之后会调用一个叫 clearDeallocating() 函数，然后结束 dealloc 流程</li>
+</ul>
 
-<p><img src="media/15850184530012/15850200876436.jpg" alt="" style="width:954px;"/></p>
+<p>思考：我通过关联对象的技术为一个类添加了一些实例变量，那么在对象的 dealloc 方法方法当中是否有必要对它的关联对象进行移除操作？<br/>
+<strong>不需要</strong><br/>
+在系统的 dealloc 内部实现当中，会自动判断当前对象是否有关联对象，<strong>如果有的话系统内部就帮助我们把相关的关联对象移除掉</strong></p>
 
-<p><img src="media/15850184530012/15850201877684.jpg" alt="" style="width:953px;"/></p>
+<p><strong>clearDeallocating() 实现</strong><br/>
+<img src="media/15854826531787/15854845474639.jpg" alt="" style="width:552px;"/></p>
 
-<p><img src="media/15850184530012/15850202525726.jpg" alt="" style="width:949px;"/></p>
-
-<p><img src="media/15850184530012/15850203223423.jpg" alt="" style="width:969px;"/></p>
-
-<p><img src="media/15850184530012/15850203400278.jpg" alt="" style="width:971px;"/></p>
-
-<p><img src="media/15850184530012/15850205496980.jpg" alt="" style="width:970px;"/></p>
-
-<p><img src="media/15850184530012/15850205879482.jpg" alt="" style="width:960px;"/></p>
-
-<p><img src="media/15850184530012/15850206478224.jpg" alt="" style="width:969px;"/></p>
-
-<p><img src="media/15850184530012/15850207066295.jpg" alt="" style="width:962px;"/></p>
-
-<p><img src="media/15850184530012/15850207396384.jpg" alt="" style="width:971px;"/></p>
-
-<p><img src="media/15850184530012/15850207608561.jpg" alt="" style="width:947px;"/></p>
-
-<p><img src="media/15850184530012/15850210697010.jpg" alt="" style="width:905px;"/></p>
-
-<p><img src="media/15850184530012/15850212350177.jpg" alt="" style="width:960px;"/></p>
-
-<p><img src="media/15850184530012/15850212575758.jpg" alt="" style="width:941px;"/></p>
-
-<p><img src="media/15850184530012/15850212850247.jpg" alt="" style="width:958px;"/></p>
-
-<p><img src="media/15850184530012/15850213194390.jpg" alt="" style="width:909px;"/></p>
-
-<p><img src="media/15850184530012/15850213660368.jpg" alt="" style="width:955px;"/></p>
-
-<p><img src="media/15850184530012/15850213853081.jpg" alt="" style="width:961px;"/></p>
-
-<p><img src="media/15850184530012/15850214068756.jpg" alt="" style="width:946px;"/></p>
-
-<p><img src="media/15850184530012/15850214329200.jpg" alt="" style="width:925px;"/></p>
-
-<p><img src="media/15850184530012/15850214597880.jpg" alt="" style="width:965px;"/></p>
-
-<p><img src="media/15850184530012/15850298949596.jpg" alt="" style="width:951px;"/></p>
-
-<p><img src="media/15850184530012/15850299116460.jpg" alt="" style="width:739px;"/></p>
-
-<p><img src="media/15850184530012/15850299454982.jpg" alt="" style="width:919px;"/></p>
-
-<p><img src="media/15850184530012/15850299637114.jpg" alt="" style="width:862px;"/></p>
-
-<p><img src="media/15850184530012/15850299814203.jpg" alt="" style="width:719px;"/></p>
-
-<p><img src="media/15850184530012/15850300681263.jpg" alt="" style="width:957px;"/></p>
-
-<p><img src="media/15850184530012/15850301248399.jpg" alt="" style="width:763px;"/></p>
-
-<p><img src="media/15850184530012/15850301421396.jpg" alt="" style="width:778px;"/></p>
-
-<p><img src="media/15850184530012/15850301560783.jpg" alt="" style="width:889px;"/></p>
-
-<p><img src="media/15850184530012/15850301725047.jpg" alt="" style="width:930px;"/></p>
-
-<p><img src="media/15850184530012/15850301945003.jpg" alt="" style="width:758px;"/></p>
-
-<p><img src="media/15850184530012/15850302269775.jpg" alt="" style="width:852px;"/></p>
-
-<p><img src="media/15850184530012/15850302519639.jpg" alt="" style="width:761px;"/></p>
-
-<p><img src="media/15850184530012/15850302736090.jpg" alt="" style="width:917px;"/></p>
-
-<p><img src="media/15850184530012/15850303046859.jpg" alt="" style="width:935px;"/></p>
-
-<p><img src="media/15850184530012/15850303446196.jpg" alt="" style="width:854px;"/></p>
-
-<p><img src="media/15850184530012/15850305123047.jpg" alt="" style="width:938px;"/></p>
+<ul>
+<li>首先需要调用 sidetable_clearDeallocating() 函数</li>
+<li>之后会调用 weak_clear_no_lock() 函数，这个函数做的就是将指向该对象的弱引用指针置为 nil</li>
+<li>之后会调用 table.refcnts.erase() ,table 的引用计数的擦除操作，实际上就是将当前对象在引用计数表当中的一些存储数据给清除掉</li>
+<li>然后结束调用流程</li>
+</ul>
 
                         
                       </div>
@@ -312,7 +253,7 @@ side Tables 的本质是一张哈希表，这张哈希表当中可能有64张具
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/24</span>
+                    <span class="date">2020/03/29</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
@@ -341,7 +282,7 @@ side Tables 的本质是一张哈希表，这张哈希表当中可能有64张具
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			
+			 <a href="内存管理_6.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -419,31 +360,31 @@ side Tables 的本质是一张哈希表，这张哈希表当中可能有64张具
 	      
 		      
 			      <li class="post">
-			        <a href="15859202199650.html">Block 的深度探究</a>
+			        <a href="15864293812709.html">排序数组(升序)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15859201393931.html">BLOCK 深入浅出的讲解</a>
+			        <a href="15864237953841.html">翻转二叉树</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858808743256.html">GCD之dispatch_barrier_async 解决多线程读写问题</a>
+			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15858220091653.html">NSNotification 使用注意细节</a>
+			        <a href="15863378232750.html">二叉树的层序遍历</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15833971627503.html">启动优化</a>
+			        <a href="15863331611135.html">二叉树的最小深度</a>
 			      </li>
 		     
 		  
