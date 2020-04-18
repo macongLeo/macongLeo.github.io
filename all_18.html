@@ -116,135 +116,129 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15854861330491.html">
+                <a class="clearlink" href="15858220091653.html">
                 
-                  <h1>iOS 的内存管理(五) 自动释放池</h1>
+                  <h1>NSNotification 使用注意细节</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>先看一段代码</p>
+                        	<h3 id="toc_0">关于观察者的移除</h3>
 
-<pre class="line-numbers"><code class="language-text">- (void)viewDidLoad
-{
-   [super viewDidLoad];
-   
-   NSMutableArray *array = [NSMutableArray array];
-   NSLog(@&quot;%@&quot;,array);
+<p>iOS9 以后的版本,不需要在 <code>- dealloc</code> 方法对观察者手动的移除了,因为在对象或者 ViewController 在释放 <code>-dealloc</code> 的时候,会自动的调用 <code>[[NSNotificationCenter defaultCenter]removeObserver:self]</code> 方法.<br/>
+在 iOS9 之前的版本需要我们在 <code>dealloc</code> 方法中手动的调用移除观察者的方法,因为在 iOS9 之前的版本中,在注册观察者的时候,通知中心并不会对观察者做 retain 操作,而是对观察者进行 <code>unsafe_unretained</code> 的引用,这里需要说明为什么是 unsafe_unretained 而不是 weak 的引用,因为 Cocoa 和 Cocoa Touch 中的一些类还没有支持 ARC,也就是不支持 weak,为了兼容之前的版本,所以这里使用了unsafe_unretained的引用,因为unsafe_unretained在释放的时候并不会自动置为 nil,所以有可能造成野指针,因此需要我们手动移除观察者.</p>
+
+<p>需要注意的是,通过 <code>[NSNotificationCenter addObserverForName:object:queue:usingBlock]</code> 方法注册的观察者,即使在 iOS9 之后,依然需要我们手动移除观察者,因为通知中心对他们的持有是强引用</p>
+
+<h3 id="toc_1">通知与线程</h3>
+
+<p>NSNotification在多线程下的转发问题,官方文档的说法:</p>
+
+<blockquote>
+<p>In a multithreaded application, notifications are always delivered in the thread in which the notification was posted, which may not be the same thread in which an observer registered itself.</p>
+</blockquote>
+
+<p>翻译过来就是:</p>
+
+<blockquote>
+<p>在多线程应用中，Notification在哪个线程中post，就在哪个线程中被转发，而不一定是在注册观察者的那个线程中。</p>
+</blockquote>
+
+<p><strong>这也就是说 Notification 的发送和接收处理是在同一个线程中.</strong></p>
+
+<p>那么问题来了,假如我们在异步线程 POST 了一个通知,但是我们希望是在主线程中处理(比如是网络回调结束之后,刷新 UI),这个时候怎么办?<br/>
+ 看下官方文档的描述:</p>
+
+<blockquote>
+<p>For example, if an object running in a background thread is listening for notifications from the user interface, such as a window closing, you would like to receive the notifications in the background thread instead of the main thread. In these cases, you must capture the notifications as they are delivered on the default thread and redirect them to the appropriate thread.</p>
+</blockquote>
+
+<p>这里讲到了“重定向”，就是我们在Notification所在的默认线程中捕获这些分发的通知，然后将其重定向到指定的线程中。</p>
+
+<p>一种重定向的实现思路是自定义一个通知队列(注意，不是NSNotificationQueue对象，而是一个数组)，让这个队列去维护那些我们需要重定向的Notification。我们仍然是像平常一样去注册一个通知的观察者，当Notification来了时，先看看post这个Notification的线程是不是我们所期望的线程，如果不是，则将这个Notification存储到我们的队列中，并发送一个信号(signal)到期望的线程中，来告诉这个线程需要处理一个Notification。指定的线程在收到信号后，将Notification从队列中移除，并进行处理<br/>
+<a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Notifications/Articles/Threading.html">官方文档</a> 给出了代码,我们测试一下</p>
+
+<pre class="line-numbers"><code class="language-text">@interface ViewController () &lt;NSMachPortDelegate&gt;
+
+@property (nonatomic) NSMutableArray    *notifications;         // 通知队列
+@property (nonatomic) NSThread          *notificationThread;    // 期望线程
+@property (nonatomic) NSLock            *notificationLock;      // 用于对通知队列加锁的锁对象，避免线程冲突
+@property (nonatomic) NSMachPort        *notificationPort;
+
+@end
+
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    NSLog(@&quot;current thread = %@&quot;, [NSThread currentThread]);
+    
+    // 初始化
+    self.notifications = [[NSMutableArray alloc] init];
+    self.notificationLock = [[NSLock alloc] init];
+    
+    self.notificationThread = [NSThread currentThread];
+    self.notificationPort = [[NSMachPort alloc] init];
+    self.notificationPort.delegate = self;
+    
+    // 往当前线程的runloop添加端口源
+    // 当Mach消息到达而接收线程的run loop没有运行时，则内核会保存这条消息，直到下一次进入run loop
+    [[NSRunLoop currentRunLoop] addPort:self.notificationPort
+                                forMode:(__bridge NSString *)kCFRunLoopCommonModes];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(processNotification:) name:@&quot;TestNotification&quot; object:nil];
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        
+        [[NSNotificationCenter defaultCenter] postNotificationName:@&quot;TestNotification&quot; object:nil userInfo:nil];
+    
+    });
 }
 
+// MachPort 的代理方法
+- (void)handleMachMessage:(void *)msg {
+    
+    [self.notificationLock lock];
+    
+    while ([self.notifications count]) {
+        NSNotification *notification = [self.notifications objectAtIndex:0];
+        [self.notifications removeObjectAtIndex:0];
+        [self.notificationLock unlock];
+        [self processNotification:notification];
+        [self.notificationLock lock];
+    };
+    
+    [self.notificationLock unlock];
+}
+
+- (void)processNotification:(NSNotification *)notification {
+    
+    if ([NSThread currentThread] != _notificationThread) {
+        [self.notificationLock lock];
+        [self.notifications addObject:notification];
+        [self.notificationLock unlock];
+        [self.notificationPort sendBeforeDate:[NSDate date]
+                                   components:nil
+                                         from:nil
+                                     reserved:0];
+        NSLog(@&quot; 111111current thread = %@&quot;, [NSThread currentThread]);
+        NSLog(@&quot;接收和注册线程不在一个线程&quot;);
+    }
+    else {
+        // Process the notification here;
+        NSLog(@&quot;current thread = %@&quot;, [NSThread currentThread]);
+        NSLog(@&quot;process notification&quot;);
+    }
+}
+@end
+
 </code></pre>
 
-<p>在 viewDidLoad 方法中通过 [NSMutableArray array] 创建了一个数组对象，然后在控制台打印它的值</p>
-
-<p><strong>思考：这个 array 对应的内存是在什么时机释放的？</strong></p>
-
-<p><strong>思考：AutoreleasePool 的实现原理是怎样的？</strong></p>
-
-<p><strong>思考：AutoreleasePool 为何可以嵌套使用？</strong></p>
-
-<h2 id="toc_0">自动释放池</h2>
-
-<p>@autoreleasepool{} 经过编译器编译后会变成什么?</p>
-
-<pre class="line-numbers"><code class="language-text">编译器会将 @autoreleasepool{} 改写为：
-
-void *ctx = objc_autoreleasePoolPush();
-
-{}中的代码
-
-objc_autoreleasePoolPop(ctx)
-
-</code></pre>
-
-<p>第一段是 objc_autoreleasePoolPush 这个函数调用，是没有参数的，返回值是一个无类型的指针<br/>
-中间是花括号中所添加的代码<br/>
-之后会调用 objc_autoreleasePoolPop 函数，这个函数的入参就是前一个函数 objc_autoreleasePoolPush 返回结果</p>
-
-<p><strong>objc_autoreleasePoolPush 的内部实现</strong><br/>
-<img src="media/15854861330491/15854863797428.jpg" alt="" style="width:569px;"/></p>
-
-<p><strong>objc_autoreleasePoolPop 的内部实现</strong><br/>
-<img src="media/15854861330491/15854864294078.jpg" alt="" style="width:537px;"/></p>
-
-<h3 id="toc_1">自动释放池的数据结构</h3>
-
-<p><img src="media/15854861330491/15854866906727.jpg" alt="" style="width:536px;"/></p>
-
-<p><img src="media/15854861330491/15854865388343.jpg" alt="" style="width:576px;"/></p>
-
-<h3 id="toc_2">AutoreleasePoolPage (C++的类)</h3>
-
-<p><img src="media/15854861330491/15854867368624.jpg" alt="" style="width:534px;"/><br/>
-这个类的组成结构主要有四个成员变量</p>
-
-<ul>
-<li>第一个是 id* 类型的 next，实际上就是指向栈当中下一个可填充位置</li>
-<li>之后是两个 AutoreleasePoolPage 类型的成员变量，分别为 parent 和 child，也就是双向链表中的父指针和孩子指针</li>
-<li>还有一个成员变量 pthread_t 类型的，所以说 autoreleasepool 是和线程一一对应的，就是从这个结构当中的 Thread 成员变量体现出来的</li>
-</ul>
-
-<p><strong>AutoreleasePoolPage 的结构</strong><br/>
-<img src="media/15854861330491/15854868085779.jpg" alt="" style="width:529px;"/></p>
-
-<p>最下边是 AutoreleasePoolPage 自身所占有的内存，上面这些可以用来存储花括号中填充的 autorelease 对象，同样的这个栈是向下增长的，所以下面是高地址，上面是低地址，有一个 next 指针也就是 AutoreleasePoolPage 这个结构当中的一个成员变量，指向当前栈的一个空的位置，比如说现在在进行一个入栈操作，就可以添加到 next 指针所指向的位置</p>
-
-<p><strong>AutoreleasePoolPage::push 方法实现</strong><br/>
-<img src="media/15854861330491/15854868523600.jpg" alt="" style="width:524px;"/></p>
-
-<p>如果发生了一个 AutoreleasePoolPage::push 操作，会把当前 next 位置置为 nil ，称他为哨兵对象，然后将 next 指针指向下一个可入栈的位置，这就是 AutoreleasePoolPage 的 push 方法的实现过程<br/>
-实际上每次进行一个 AutoreleasePool 的代码块的创建，相当于是不断的在栈当中去插入哨兵对象</p>
-
-<p><strong>[ obj autorelease ] 方法系统内部实现</strong><br/>
-<img src="media/15854861330491/15854868804913.jpg" alt="" style="width:543px;"/><br/>
-比如说调用了一个对象的 autorelease 方法<br/>
-首先会判断当前 next 指针是否指向了栈顶，如果没有指向栈顶就直接把这个对象添加到当前这个栈的 next 位置，结束流程，假如当前 next 已经指向了栈顶，这个时候当前这个 AutoreleasePoolPage 就没有办法再装新的 autorelease 对象了，于是就需要增加一个栈节点拼接到到链表上，之后在新的栈上面去添加对象最终结束流程</p>
-
-<p><strong>AutoreleasePoolPage::pop 方法实现</strong></p>
-
-<ul>
-<li>根据传入的哨兵对象找到对应的位置</li>
-<li>给上次push操作之后添加的对应一次发送release消息</li>
-<li>回退next指针到正确位置</li>
-</ul>
-
-<p>首先对 pop 流程做一个简单的说明：</p>
-
-<ul>
-<li>在进行 pop 操作的时候会根据传入的哨兵对象来找到 pop 的最终位置，这个所谓的哨兵对象就是前面提到的 objc_autoreleasePoolPush 函数的返回值，实际上返回的就是栈当中对应的哨兵地址，pop 操作和 push 操作是一一对应的，那么要 pop 回哪个位置实际上是 pop 回它所指向的前一个哨兵对象</li>
-<li>然后给上次 push 操作之后所添加的对象依次发送 release 消息</li>
-<li>之后回退 next 指针到正确的位置</li>
-</ul>
-
-<p><img src="media/15854861330491/15854869764048.jpg" alt="" style="width:548px;"/><br/>
-假如说 next 指针指向这个位置，然后此时调用了 AutoreleasePoolPage::pop 操作，那么实际上要给这个红括号包含的这些对象依次发送 release 消息<br/>
-<img src="media/15854861330491/15854870031497.jpg" alt="" style="width:533px;"/></p>
-
-<p>发送 release 之后，这些对象就会从当前栈中被清除掉<br/>
-<img src="media/15854861330491/15854870216150.jpg" alt="" style="width:533px;"/><br/>
-清除之后会把 next 指针指向一个正确的位置，这个就是 pop 的整个过程</p>
-
-<h3 id="toc_3">自动释放池总结</h3>
-
-<p><img src="media/15854861330491/15854870566083.jpg" alt="" style="width:530px;"/><br/>
-在每一 RunLoop 的循环过程当中，都会在它将要结束的时候对前一次创建的 autoreleasepool 进行 pop 操作，同时会 push 进来一个新的 autoreleasePool，所以说在 viewDidLoad 方法中通过 [NSMutableArray array] 所创建的这个数组对象是在当次 RunLoop 将要结束的时候，然后调用 AutoreleasePoolPage::pop () 方法的时候，把对应的 array 对象调用它的 release 方法，然后对它进行释放</p>
-
-<p>关于AutoreleasePool 为何可以嵌套使用，实际上多次嵌套调用就是多次插入哨兵对象，比如说我们每次进行一个 @autoreleasepool{} 代码块的创建的时候，系统就会为我们进行哨兵对象的插入，然后完成新的 autoreleasepool 的创建，这个 autoreleasepool 的创建实际上创建了一个新的 page，假如说当前 page 还没有满的话就不用创建这个 page ，所以说我们所说的先创建的一个 autoreleasepool 对应的在底层实现就是插入了一个哨兵对象，所以当然是可以直接多次嵌套调用的</p>
-
-<p>autoreleasePool 使用场景的问题：在什么场景下需要手动创建 autoreleasePool，比如说在 for 循坏当中 alloc 出大量的图片数据，图片数据对内存消耗非常大，需要在 for 循环内部创建一个 autoreleasepool ，每一次 for 循环都进行一次内存的释放来降低内存的峰值，防止一些内存消耗过大所导致的一些问题</p>
-
-<p>实现原理：autoreleasePool实现原理就是以栈为节点，通过双向链接形式组合而成的一个数据结构</p>
-
-<p>补充<br/>
-ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的消息循环机制，当一个runloop结束时系统才会一次性清理掉被autorelease处理过的对象，其实本质上说是在本次runloop迭代结束时清理掉被本次迭代期间被放到autorelease pool中的对象的。至于何时runloop结束并没有固定的duration。</p>
-
-<p>方便是方便了，但是有些情况下，我们还是需要手动创建自动释放池，那么，什么时候呢？</p>
-
-<p>如果你正在编写不基于UI 框架的程序，比如命令行工具。<br/>
-如果你编写的循环创建了很多临时对象。<br/>
-你可以在循环中使用自动释放池block，在下次迭代前处理这些对象。在循环中使用自动释放池block，有助于减少应用程序的内存占用。<br/>
-你生成了一个辅助线程。<br/>
-一旦线程开始执行你必须自己创建自动释放池。否则，应用将泄漏对象。</p>
+<p>运行之后我们看下打印结果:<br/>
+<img src="media/15858220091653/15858408835782.jpg" alt="" style="width:955px;"/><br/>
+ 一开始接收到通知的时候,确实不在一个线程,所以添加到了数组中,并且发送了一个端口消息,然后在 MachPort 的代理方法中处理这个消息,最终在主线程接收到了这个通知.<br/>
+ 当然，更好的方法可能是我们自己去子类化一个NSNotificationCenter，或者单独写一个类来处理这种转发。</p>
 
                         
                       </div>
@@ -253,10 +247,10 @@ ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的�
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/29</span>
+                    <span class="date">2020/04/02</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html'>内存管理</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html'>iOS 底层进阶</a></span>
           				   
                     
 
@@ -360,31 +354,31 @@ ARC时代，系统自动管理自己的autoreleasepool，runloop就是iOS中的�
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

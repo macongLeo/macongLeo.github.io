@@ -116,44 +116,160 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15848634915010.html">
+                <a class="clearlink" href="15841929373401.html">
                 
-                  <h1>Block 对于变量的截获</h1>
+                  <h1>打开一个 web 页面 发送 Http 的过程是怎么样的</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<ol>
-<li>对于基本数据类型的截获,是值截获,仅仅截获值,在截获的时候值是多少就是多少,后续更改,不会影响 Block 内部的变化</li>
-<li>对于<mark>局部静态变量,是截获的该静态变量的指针</mark>,也是就是说这个静态变量变化的话,Block 截获的值也会跟着变化</li>
-<li><mark>对于对象类型的局部变量,连同所有权修饰符一同截获</mark>(这也从一个侧面说明了__weak 的原理,因为截获对象类型的时候,连同所有权修饰符一同截获了,weak 修饰的话,就打破了强引用环,解决了循环引用)</li>
-<li>全局变量,全局静态变量,是不会截获的.</li>
+                        	<h3 id="toc_0">整体流程图</h3>
+
+<p><img src="media/15841929373401/15854093459396.jpg" alt="" style="width:228px;"/></p>
+
+<h3 id="toc_1">1.浏览器缓存</h3>
+
+<p>这里将浏览器缓存机制放在了第一步,如果命中了缓存,在缓存不过期的情况下,会直接使用浏览器缓存的数据,且不需要向服务端请求,<a href="https://heyingye.github.io/2018/04/16/%E5%BD%BB%E5%BA%95%E7%90%86%E8%A7%A3%E6%B5%8F%E8%A7%88%E5%99%A8%E7%9A%84%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6/">彻底理解浏览器的缓存机制</a>这篇博客讲解的非常清楚.<br/>
+缓存命中过程:<br/>
+<img src="media/15841929373401/15854615075828.jpg" alt="" style="width:545px;"/></p>
+
+<ul>
+<li>浏览器每次发起请求,都会先在浏览器缓存中查询请求结果和缓存标识</li>
+<li>浏览器每次拿到返回的请求结果都会将该结果和缓存标识存入浏览器缓存中.</li>
+</ul>
+
+<h4 id="toc_2">强制缓存(也叫本地缓存)</h4>
+
+<p>强制缓存就是向浏览器缓存查找缓存结果和缓存标识，并根据该结果的缓存规则来决定是否使用该缓存结果的过程。强制缓存又分为以下几个方面:</p>
+
+<ul>
+<li><p>不存在该缓存结果和缓存标识，强制缓存失败，则直接向服务器再一次发送请求<br/>
+<img src="media/15841929373401/15854618518832.jpg" alt="" style="width:539px;"/></p></li>
+<li><p>存在请求结果和缓存标识，但是该结果已失效过期，强制缓存失败，则使用协商缓存(后续分析)</p></li>
+</ul>
+
+<p><img src="media/15841929373401/15854618784022.jpg" alt="" style="width:537px;"/></p>
+
+<ul>
+<li> 存在请求结果和缓存标识，而且结果未过期，强制缓存生效，直接返回结果
+<img src="media/15841929373401/15854619238687.jpg" alt="" style="width:539px;"/></li>
+</ul>
+
+<h4 id="toc_3">协商缓存</h4>
+
+<p>协商缓存就是强制缓存失效后，浏览器携带缓存标识向服务器发起请求，由服务器根据缓存标识决定是否继续使用缓存的过程。主要分为以下两种情况:<br/>
+<img src="media/15841929373401/15854620081323.jpg" alt="" style="width:560px;"/></p>
+
+<blockquote>
+<p>304状态码表示客户端发送附带条件 (附带条件包括If-Match,If-Modified-Since,If-None-Match等字段) 的请求时，服务器端允许请求访问资源，但未满足条件的情况。304状态码返回时，不包含任何响应的主体部分。</p>
+</blockquote>
+
+<p><img src="media/15841929373401/15854620409506.jpg" alt="" style="width:549px;"/></p>
+
+<p><img src="media/15841929373401/15854623016473.jpg" alt="" style="width:621px;"/></p>
+
+<p><img src="media/15841929373401/15854623263095.jpg" alt="" style="width:605px;"/><br/>
+<img src="media/15841929373401/15854624150638.jpg" alt="" style="width:611px;"/><br/>
+<strong>注意： 当我们第一次访问一个请求时，浏览器中是没有缓存的，这时候就需要到服务器中去获取，而与服务器连接并获取资源的这个过程，涉及到下面将的 DNS域名解析，TCP连接，HTTP请求等内容。这里把浏览器缓存机制放在第一位，是考虑如果客户多次访问同一个请求，是先去检验浏览器的缓存的</strong></p>
+
+<h3 id="toc_4">1.DNS 解析</h3>
+
+<p>先解释一下,什么是 DNS 解析.</p>
+
+<blockquote>
+<p>当用户输入一个网址并按下回车键的时候，浏览器得到了一个域名。而在实际通信过程中，我们需要的是一个IP地址。因此我们需要先把域名转换成相应的IP地址，这个过程称作DNS解析</p>
+
+<p>DNS(Domain Name System)是域名系统的英文缩写，是一种组织成域层次结构的计算机和网络服务命名系统，它用于TCP/IP网络，它所提供的服务是将主机名和域名转换为IP地址的工作</p>
+</blockquote>
+
+<h4 id="toc_5">分层式 DNS 域名服务器</h4>
+
+<ul>
+<li><strong>根域名服务器</strong></li>
+<li><strong>顶级域名服务器</strong></li>
+<li><strong>权威域名服务器</strong></li>
+<li><strong>本地域名服务器</strong></li>
+</ul>
+
+<h4 id="toc_6">DNS域名解析过程</h4>
+
+<ol>
+<li>浏览器首先搜索浏览器自身缓存的 DNS 记录</li>
+<li>如果浏览器没有找到需要的记录,或者记录已过期,则搜索 hosts 文件</li>
+<li><p>向本地服务器查询(LDNS)</p>
+<blockquote>
+<p>如果前面两个过程都无法解析，操作系统会把这个域名发送给这里设置的LDNS,也就是本地区的的域名服务器。这个DNS通常都提供给你本地互联网接入的一个DNS解析服务。比如你在学校接入互联网，那么本地DNS服务器就在你的学校。实际上大约80%的域名服务解析都在这里就完成了，LDNS承担了主要的域名解析工作</p>
+</blockquote></li>
+<li><p>LDNS没有命中，直接到Root Server域名服务器请求解析</p></li>
+<li><p>域名服务器返回给本地域名服务器一个所查询域的主域名服务器（gTLD Server)地址</p>
+<blockquote>
+<p>gTLD就是前面说的国际顶级域名服务器，如.com,.cn等。</p>
+</blockquote></li>
+<li><p>本地域名服务器再向上一步返回的gTLD服务器发送请求</p></li>
+<li><p>接受请求的顶级域名服务器查询并返回此域名对应的权威服务器(Name Server)</p></li>
+<li><p>权威服务器会查询存储的域名和IP的映射关系表并返回</p></li>
+<li><p>把解析的结果返回给用户，用户根据TTL值缓存在本地系统缓存中，域名解析过程结束</p></li>
 </ol>
 
-<p>我们先定义一个比较简单的 Block</p>
+<ul>
+<li><strong>递归查询</strong></li>
+</ul>
 
-<pre class="line-numbers"><code class="language-text">- (void)testMethod {
-    int mutiNum = 6;
-    int (^Block)(int) = ^int(int num) {
-        return num * mutiNum;
-    };
-    Block(2);
-}
+<blockquote>
+<p>主机向本地域名服务器的查询一般都是采用递归查询，所为递归查询就是：如果主机所访问的本地域名服务器不知道被查询域名的IP地址，那么本地域名就以DNS客户的身份，替代主机，向其他根域名服务器继续发出查询请求报文，而不是让主机自己进行下一步的查询。</p>
+</blockquote>
 
-</code></pre>
+<ul>
+<li><strong>迭代查询</strong></li>
+</ul>
 
-<p><img src="media/15848634915010/15848690037809.jpg" alt="" style="width:740px;"/><br/>
-在终端中 输入命令: clang -rewrite-objc MCBlock.m <br/>
-可以查看我们自定义的这个 MCBlock.m 的文件编译之后的源码.终端执行完成之后,在原文件夹会生成一个.cpp 的文件<br/>
-<img src="media/15848634915010/15848691080865.jpg" alt="" style="width:489px;"/><br/>
-打开这个 cpp 的源码文件</p>
+<blockquote>
+<p>本地域名服务器向根域名服务器的查询通常是采用迭代查询。迭代查询就是：当根域名服务器收到本地域名服务器发出的迭代查询请求报文时，要么给出所要查询的IP地址，要么告诉本地域名服务器下一步应当向哪一个域名服务器查询，然后让本地域名服务器进行后续的查询。</p>
+</blockquote>
 
-<p>找到我们定义这个 testMethod 方法<br/>
-<img src="media/15848634915010/15848691727627.jpg" alt="" style="width:907px;"/><br/>
-从这个源码我们可以看到,mutiNum = 6,是直接被捕获到了</p>
+<p><img src="media/15841929373401/15854630586322.jpg" alt="" style="width:611px;"/></p>
 
-<p>我们可以看到里面有一个__block_impl 的参数.找到这个参数的定义<br/>
-<img src="media/15848634915010/15848696004996.jpg" alt="" style="width:467px;"/></p>
+<h3 id="toc_7">3.发起 TCP 请求</h3>
+
+<p>浏览器会选择一个大于1024的本机端口向目标IP地址的80端口发起TCP连接请求。经过标准的TCP握手流程，建立TCP连接。</p>
+
+<h3 id="toc_8">3.发起 HTTP 请求</h3>
+
+<p>其本质是在建立起的TCP连接中，按照HTTP协议标准发送一个索要网页的请求。</p>
+
+<h3 id="toc_9">4.负债均衡</h3>
+
+<p>1）什么是负载均衡？当一台服务器无法支持大量的用户访问时，将用户分摊到两个或多个服务器上的方法叫负载均衡。<br/>
+（2）负载均衡的方法很多，Nginx负载均衡、LVS-NAT、LVS-DR等。这里，我们以简单的Nginx负载均衡为例。<br/>
+（3）什么是Nginx？Nginx是一款面向性能设计的HTTP服务器，相较于Apache、lighttpd具有占有内存少，稳定性高等优势。Nginx有4种类型的模块：core、handlers、filters、load-balancers。我们这里讨论其中的2种，分别是负责负载均衡的模块load-balancers和负责执行一系列过滤操作的filters模块。</p>
+
+<p>（1）如果我们的平台配备了负载均衡的话，前一步DNS解析获得的IP地址应该是我们Nginx负载均衡服务器的IP地址。所以，我们的浏览器将我们的网页请求发送到了Nginx负载均衡服务器上。<br/>
+（2）Nginx根据我们设定的分配算法和规则，选择一台后端的真实Web服务器，与之建立TCP连接、并转发我们浏览器发出去的网页请求。<br/>
+（3）Web服务器收到请求，产生响应，并将网页发送给Nginx负载均衡服务器。<br/>
+（4）Nginx负载均衡服务器将网页传递给filters链处理，之后发回给我们的浏览器.</p>
+
+<h3 id="toc_10">5.浏览器渲染</h3>
+
+<p>（1）浏览器根据页面内容，生成DOM Tree。根据CSS内容，生成CSS Rule Tree(规则树)。调用JS执行引擎执行JS代码。<br/>
+（2）根据DOM Tree和CSS Rule Tree生成Render Tree(呈现树)。<br/>
+（3）根据Render Tree渲染网页。<br/>
+在浏览器解析页面内容的时候，发现页面引用了其他未加载的image、css文件、js文件等静态内容，因此开始了第二部分。</p>
+
+<h3 id="toc_11">6.网页静态资源加载</h3>
+
+<p>以阿里巴巴的淘宝网首页的logo为例，其url地址为img.alicdn.com/tps/i2/TB1bNE7LFXXXXaOXFXXwFSA1XXX-292-116.png_145x145.jpg</p>
+
+<p>我们清楚地看到了url中有cdn字样。</p>
+
+<p>　　<br/>
+什么是CDN？如果我在广州访问杭州的淘宝网，跨省的通信必然造成延迟。如果淘宝网能在广东建立一个服务器，静态资源我可以直接从就近的广东服务器获取，必然能提高整个网站的打开速度，这就是CDN。CDN叫内容分发网络，是依靠部署在各地的边缘服务器，使用户就近获取所需内容，降低网络拥塞，提高用户访问响应速度。</p>
+
+<p>接下来的流程就是浏览器根据url加载该url下的图片内容。本质上是浏览器重新开始第一部分的流程，所以这里不再重复阐述。区别只是负责均衡服务器后端的服务器不再是应用服务器，而是提供静态资源的服务器。</p>
+
+<p>参考:<br/>
+<a href="https://juejin.im/post/5b83b0bfe51d4538c63131a8">https://juejin.im/post/5b83b0bfe51d4538c63131a8</a></p>
+
+<p><a href="https://blog.csdn.net/weibo1230123/article/details/82899205">https://blog.csdn.net/weibo1230123/article/details/82899205</a></p>
 
                         
                       </div>
@@ -162,10 +278,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/22</span>
+                    <span class="date">2020/03/14</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Block%20%E7%9B%B8%E5%85%B3.html'>Block 相关</a></span>
+          					    <span class="posted-in"><a href='%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html'>网络进阶</a></span>
           				   
                     
 
@@ -269,31 +385,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

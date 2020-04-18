@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  Socket(TODO) - 路漫漫其修远兮
+  Socket - 路漫漫其修远兮
   
   </title>
   
@@ -116,7 +116,7 @@
       <div class="markdown-body article-wrap">
        <div class="article">
           
-          <h1>Socket(TODO)</h1>
+          <h1>Socket</h1>
      
         <div class="read-more clearfix">
           <span class="date">2020/03/05</span>
@@ -136,7 +136,84 @@
       </div><!-- article -->
 
       <div class="article-content">
-      
+      <p><img src="media/15833970837752/15867691390950.jpg" alt="" style="width:616px;"/></p>
+
+<p>socket 的原意是&quot;插座&quot;, 在计算机通讯领域,socket被翻译为&quot;套接字&quot;.</p>
+
+<h2 id="toc_0">Socket是什么,套接字是什么</h2>
+
+<p>socket是在应用层和传输层之间的一个抽象层,他把 TCP/IP 层复杂的操作抽象为几个简单的接口供应用层调用已实现进程在网络中通信<br/>
+<img src="media/15833970837752/15867695157433.jpg" alt="" style="width:580px;"/></p>
+
+<blockquote>
+<p>socket起源于UNIX，在Unix一切皆文件哲学的思想下，socket是一种&quot;打开—读/写—关闭&quot;模式的实现，服务器和客户端各自维护一个&quot;文件&quot;，在建立连接打开后，可以向自己文件写入内容供对方读取或者读取对方内容，通讯结束时关闭文件。</p>
+</blockquote>
+
+<h2 id="toc_1">socket通信流程</h2>
+
+<p>socket是&quot;打开—读/写—关闭&quot;模式的实现，以使用TCP协议通讯的socket为例，其交互流程大概是这样子的<br/>
+<img src="media/15833970837752/15867696378088.jpg" alt="" style="width:583px;"/></p>
+
+<ul>
+<li>服务器根据地址类型（ipv4,ipv6）、<code>socket类型</code>、协议创建socket</li>
+<li>服务器为socket绑定ip地址和端口号</li>
+<li>服务器socket监听端口号请求，随时准备接收客户端发来的连接，这时候服务器的socket并没有被打开</li>
+<li>客户端创建socket</li>
+<li>客户端打开socket，根据服务器ip地址和端口号试图连接服务器socket</li>
+<li>服务器socket接收到客户端socket请求，被动打开，开始接收客户端请求，直到客户端返回连接信息。这时候socket进入<strong>阻塞</strong>状态，所谓阻塞即accept()方法一直到客户端返回连接信息后才返回，开始接收下一个客户端谅解请求</li>
+<li>客户端连接成功，向服务器发送连接状态信息</li>
+<li>服务器accept方法返回，连接成功</li>
+<li>客户端向socket写入信息</li>
+<li>服务器读取信息</li>
+<li>客户端关闭</li>
+<li>服务器端关闭</li>
+</ul>
+
+<h2 id="toc_2">Socket有哪些类型</h2>
+
+<p>这个世界上有很多种套接字（socket），比如 DARPA Internet 地址（Internet 套接字）、本地节点的路径名（Unix套接字）、CCITT X.25地址（X.25 套接字）等。但本教程只讲第一种套接字——Internet 套接字，它是最具代表性的，也是最经典最常用的</p>
+
+<h3 id="toc_3">流格式套接字(SOCK_STREAM)</h3>
+
+<p>流格式套接字（Stream Sockets）也叫“<strong>面向连接的套接字</strong>”，在代码中使用 <code>SOCK_STREAM</code> 表示。</p>
+
+<p>SOCK_STREAM 是一种可靠的、双向的通信数据流，数据可以准确无误地到达另一台计算机，如果损坏或丢失，可以重新发送。<br/>
+SOCK_STREAM 有以下几个特征：</p>
+
+<ul>
+<li>数据在传输过程中不会消失；</li>
+<li>数据是按照顺序传输的；</li>
+<li>数据的发送和接收不是同步的（有的教程也称“不存在数据边界”）。</li>
+</ul>
+
+<p>流格式套接字使用<strong>TCP 协议</strong>（The Transmission Control Protocol，传输控制协议）</p>
+
+<p>关于 &quot;TCP/IP&quot;:<br/>
+    * TCP 用来确保数据的正确性<br/>
+    * IP（Internet Protocol，网络协议）用来控制数据如何从源头到达目的地，也就是常说的“路由”。</p>
+
+<h3 id="toc_4">数据的发送和接收不同步问题</h3>
+
+<blockquote>
+<p>假设传送带传送的是水果，接收者需要凑齐 100 个后才能装袋，但是传送带可能把这 100 个水果分批传送，比如第一批传送 20 个，第二批传送 50 个，第三批传送 30 个。接收者不需要和传送带保持同步，只要根据自己的节奏来装袋即可，不用管传送带传送了几批，也不用每到一批就装袋一次，可以等到凑够了 100 个水果再装袋。</p>
+</blockquote>
+
+<p>流格式套接字的内部有一个缓冲区（也就是字符数组），通过 socket 传输的数据将保存到这个缓冲区。接收端在收到数据后并不一定立即读取，只要数据不超过缓冲区的容量，接收端有可能在缓冲区被填满以后一次性地读取，也可能分成好几次读取。</p>
+
+<p>也就是说，不管数据分几次传送过来，接收端只需要根据自己的要求读取，不用非得在数据到达时立即读取。传送端有自己的节奏，接收端也有自己的节奏，它们是不一致的。</p>
+
+<p>流格式套接字有什么实际的应用场景吗？浏览器所使用的 http 协议就基于面向连接的套接字，因为必须要确保数据准确无误，否则加载的 HTML 将无法解析。</p>
+
+<h3 id="toc_5">数据报格式套接字(SOCK_DGRAM)</h3>
+
+<p>数据报格式套接字（Datagram Sockets）也叫“无连接的套接字”，在代码中使用 <code>SOCK_DGRAM</code> 表示。</p>
+
+<p>计算机只管传输数据，不作数据校验，如果数据在传输中损坏，或者没有到达另一台计算机，是没有办法补救的。也就是说，数据错了就错了，无法重传。</p>
+
+<p>因为数据报套接字所做的校验工作少，所以在传输效率方面比流格式套接字要高。</p>
+
+<p><strong>总之，数据报套接字是一种不可靠的、不按顺序传递的、以追求速度为目的的套接字。使用 UDP协议</strong></p>
+
 
     
 
@@ -146,16 +223,16 @@
         <div class="large-6 columns">
         <p class="text-left" style="padding:15px 0px;">
       
-          <a href="15833971971986.html" 
-          title="Previous Post: 设计模式-创建型模式">&laquo; 设计模式-创建型模式</a>
+          <a href="15867715737861.html" 
+          title="Previous Post: 堆, 栈 数据结构">&laquo; 堆, 栈 数据结构</a>
       
         </p>
         </div>
         <div class="large-6 columns">
       <p class="text-right" style="padding:15px 0px;">
       
-          <a  href="15833971022587.html" 
-          title="Next Post: 网络框架的构建(TODO)">网络框架的构建(TODO) &raquo;</a>
+          <a  href="15851010269707.html" 
+          title="Next Post: 多线程 01">多线程 01 &raquo;</a>
       
       </p>
         </div>
@@ -246,31 +323,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

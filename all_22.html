@@ -116,141 +116,91 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15853864599373.html">
+                <a class="clearlink" href="15857060089212.html">
                 
-                  <h1>iOS 网络总结</h1>
+                  <h1>设计模式-听课笔记</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15853864599373/15853864948484.jpg" alt="" style="width:1108px;"/></p>
+                        	<p><img src="media/15857060089212/15857060704879.jpg" alt="" style="width:934px;"/><br/>
+ <img src="media/15857060089212/15857061083809.jpg" alt="" style="width:732px;"/></p>
 
-<p><img src="media/15853864599373/15853865257665.jpg" alt="" style="width:1211px;"/></p>
+<h2 id="toc_0">单一职责原则</h2>
 
-<p><img src="media/15853864599373/15853866765062.jpg" alt="" style="width:1228px;"/></p>
+<p><strong>: 一个类只负责一件事</strong></p>
 
-<p><img src="media/15853864599373/15853868250082.jpg" alt="" style="width:1218px;"/></p>
+<p>比如 UIView 和 CALayer<br/>
+UIView 只负责事件传递和事件响应<br/>
+CALayer只负责有关动画,视图的显示等</p>
 
-<p><img src="media/15853864599373/15853869340461.jpg" alt="" style="width:1190px;"/></p>
+<h2 id="toc_1">开闭原则</h2>
 
-<p><img src="media/15853864599373/15853869932347.jpg" alt="" style="width:1202px;"/></p>
+<p><strong>:对修改关闭,对拓展开发</strong></p>
 
-<p><img src="media/15853864599373/15853870331071.jpg" alt="" style="width:1038px;"/></p>
+<h2 id="toc_2">接口隔离原则</h2>
 
-<p><img src="media/15853864599373/15853870649657.jpg" alt="" style="width:1209px;"/></p>
+<p><strong>:使用多个专门的协议,而不是一个庞大臃肿的协议</strong></p>
 
-<p><img src="media/15853864599373/15853870945147.jpg" alt="" style="width:1135px;"/></p>
+<h2 id="toc_3">依赖倒置原则</h2>
 
-<p><img src="media/15853864599373/15853874218495.jpg" alt="" style="width:1245px;"/></p>
+<p><strong>:抽象不应该依赖具体实现,具体实现可以依赖抽象</strong></p>
 
-<p><img src="media/15853864599373/15853873959386.jpg" alt="" style="width:1185px;"/></p>
+<h2 id="toc_4">里是替换原则</h2>
 
-<p>在浏览器发送HTTP请求之前，需要在浏览器和服务器之间建立一条TCP/IP连接。<strong>每一条TCP连接唯一地被通信两端的两个端点(即两个套接字)所确定，TCP连接的端点叫做套接字(socket)。</strong>根据RFC 793的定义，端口号拼接到IP地址即构成了套接字。而一次TCP连接主要分为<strong>建立连接(三次握手)，数据传输，断开连接(四次挥手)</strong>，下图给出了TCP的通信过程</p>
+<p><strong>:父类可以被子类无缝替换,且原有功能不受影响</strong></p>
 
-<p><img src="media/15853864599373/15854634720977.jpg" alt="" style="width:608px;"/></p>
+<h2 id="toc_5">迪米特法则</h2>
 
-<h3 id="toc_0">TCP报文段首部中的几个概念</h3>
+<p><strong>:一个对象应该尽可能少的对其他对象的了解<br/>
+    高内聚,低耦合</strong></p>
 
-<p><img src="media/15853864599373/15854636636753.jpg" alt="" style="width:608px;"/></p>
+<h1 id="toc_6">责任链</h1>
+
+<p><img src="media/15857060089212/15857074075053.jpg" alt="" style="width:981px;"/></p>
+
+<p><img src="media/15857060089212/15857074394284.jpg" alt="" style="width:1037px;"/></p>
+
+<p>责任链的构成: 有一个和原类同样类型的成员变量</p>
+
+<h1 id="toc_7">桥接</h1>
+
+<h1 id="toc_8">适配器</h1>
+
+<p><img src="media/15857060089212/15857088591557.jpg" alt="" style="width:940px;"/></p>
+
+<p><img src="media/15857060089212/15857088717278.jpg" alt="" style="width:988px;"/></p>
+
+<p><img src="media/15857060089212/15857088827664.jpg" alt="" style="width:523px;"/></p>
+
+<p>比如有一个类叫 Tagrget 需要适配<br/>
+<img src="media/15857060089212/15857089449473.jpg" alt="" style="width:548px;"/></p>
+
+<p>Target 中有一个原有的方法 operation,有可能因为年代久远,或者逻辑比较复杂,无法在原有的基础上修改<br/>
+ <img src="media/15857060089212/15857089690332.jpg" alt="" style="width:491px;"/></p>
+
+<p>应对这样的情况,我们新建一个 CoolTarget 类,并且持有原有的 target<br/>
+<img src="media/15857060089212/15857090944165.jpg" alt="" style="width:722px;"/></p>
+
+<p>然后通过一个方法对原有逻辑修改<br/>
+<img src="media/15857060089212/15857091622643.jpg" alt="" style="width:451px;"/><br/>
+这样就完成了一个适配器</p>
+
+<h1 id="toc_9">单例模式</h1>
+
+<p><img src="media/15857060089212/15857092621968.jpg" alt="" style="width:883px;"/><br/>
+<img src="media/15857060089212/15857092896116.jpg" alt="" style="width:651px;"/></p>
+
+<p><strong>重写 allocWithZone  copyWithZone 这两个方法,保证单例永远只调用一次</strong></p>
+
+<h1 id="toc_10">命令模式</h1>
 
 <ul>
-<li>确认号</li>
+<li><strong>行为参数化</strong></li>
+<li><strong>降低代码重合度</strong></li>
 </ul>
 
-<blockquote>
-<p>确认号是期望收到对方下一个报文段的第一个数据字节的序号。例如，B正确收到A发送过来的一个报文段，其序号字段值为501，而数据长度是200字节(序号501 ~ 700)，这表明B正确收到了A发送的到序号为 700 为止的数据。所以，B期望收到A的下一个数据序号是 701 ，于是B将确认号置为 701，表示为 ACK = 701。总之，**若确认号 = N，则表明 N - 1 为止的所有数据都已正确收到</p>
-</blockquote>
-
-<ul>
-<li>确认 ACK</li>
-</ul>
-
-<blockquote>
-<p>ACK标志位用于确认收到</p>
-</blockquote>
-
-<ul>
-<li>同步 SYN</li>
-</ul>
-
-<blockquote>
-<p>用来初始化一个连接的同步序列号，当建立一个新连接时，从客户机发送到服务器的第一个报文段的SYN位字段被启用。</p>
-</blockquote>
-
-<ul>
-<li>终止 FIN</li>
-</ul>
-
-<blockquote>
-<p>用来释放一个连接，当FIN = 1时，表明此报文段的发送方的数据已发送完毕，并要求释放运输连接。</p>
-</blockquote>
-
-<ul>
-<li>序列号</li>
-</ul>
-
-<blockquote>
-<p>TCP是面向字节流的，在一个TCP连接中传送的字节流中的每一个字节都按顺序编号，整个要传送的字节流的起始序号必须在连接建立时设置，这里的起始序号就是TCP三次握手过程中的初始序列号(Initial Sequence Number，ISN)。在《TCP/IP详解 卷1:协议》中谈到，在一个连接中，TCP报文段在经过网络路后可能会存在延迟抵达与排序混乱的情况，为了解决这一问题，需要仔细选择初始序列号，现代系统通常采用半随机的方法选择初始序列号，保证一定的安全性。</p>
-</blockquote>
-
-<p><img src="media/15853864599373/15854638724312.jpg" alt="" style="width:606px;"/></p>
-
-<h4 id="toc_1">第一次握手</h4>
-
-<p>客户端在打算建立TCP连接时，向服务端发出 <strong>连接请求报文段(也就是SYN报文段，其SYN标志被置位)</strong> 设置首部中的同步位 SYN = 1 ,同时随机选择一个<strong>初始序号</strong> seq = x。<strong>TCP规定，SYN 报文段(即 SYN = 1 的报文段) 不能携带数据，但要消耗掉一个序号</strong>，这时，TCP客户进程进入 SYN-SENT (同步已发送) 状态</p>
-
-<h4 id="toc_2">第二次握手</h4>
-
-<p>服务器收到连接请求报文段后，如同意建立连接，则向客户端发送确认，在确认报文段（SYN+ACK段）中应把 SYN 位和 ACK 位都置1，确认号是 <strong>ack = x + 1</strong>，表示服务端希望从客户端这边接收数据的序列号。同时也为自己随机选择一个初始序号 seq = y。<strong>请注意，这个报文段也不能携带数据，但同样要消耗掉一个序号</strong>。这时 TCP 服务器进程进入 SYN-RCVD(同步收到)状态</p>
-
-<h4 id="toc_3">第三次握手</h4>
-
-<p>客户端收到服务器发送的确认后，还要再次向服务端给出确认。确认报文段的ACK置1，确认号 ack = y + 1.而自己的序号 seq = x + 1,TCP的标准规定，ACK报文段可以携带数据，但如果不携带数据则不消息序号，在这种情况下，下一个数据报文段的序号仍是seq = x + 1。这是TCP连接已经建立，客户端进入ESTABLISHED(已建立连接)状态，服务端收到确认后，也进入 ESTABLISHED 状态。</p>
-
-<p><img src="media/15853864599373/15854641448315.jpg" alt="" style="width:605px;"/></p>
-
-<h4 id="toc_4">第一次挥手</h4>
-
-<p>客户端向服务端<strong>发出连接释放报文段(即FIN标志置为1的报文段)，</strong>并停止再发送数据，客户端把连接释放的报文段首部的终止控制位FIN置1，其序号为 seq = u ,它等于前面已传送过的数据的最后一个字节的序号加1.这时客户端进入<strong>FIN-WAIT-1 (终止等待 1)状态</strong>，等待 B 的确认，请注意，TCP 规定，FIN 报文段即使不携带数据，它也消耗掉一个序号。</p>
-
-<h4 id="toc_5">第二次挥手</h4>
-
-<p>服务器端收到连接释放报文段后即发出确认，确认号是 ack = u + 1,而这个报文段自己的序号是 v ，等于服务端前面已传送过的数据的最后一个字节的序号加1.然后服务端进入CLOSE-WAIT(关闭等待)状态。这时的TCP连接处于 <strong>半关闭</strong>状态，即客户端已经没有数据要发送了，但服务端若发送数据，客户端仍要接收。服务端到客户端这个方向的连接并没有关闭，这个状态可能要持续一段时间。<br/>
-客户端收到来自服务端的确认后，就进入 <strong>FIN-WAIT-2(终止等待 2) 状态</strong>，等待 服务端发出的连接释放报文段</p>
-
-<h4 id="toc_6">第三次挥手</h4>
-
-<p>如果服务端已经没有向客户端发送的数据了，其应用进程就通知服务端释放连接。这时服务端发出的连接释放报文段必须使 FIN = 1。现假定服务端的序号为 w (在半关闭状态 B 可能又发送了一些数据)。服务端还必须重复上次已经发送过的确认号 ack = u + 1。这时 B 就进入 LAST-ACK (最后确认) 状态，等待 A 的确认。</p>
-
-<h4 id="toc_7">第四次挥手</h4>
-
-<p>客户端收到服务端的连接释放报文后，必须对此发出确认。在确认报文段中把 ACK 置为 1，确认号 ack = w + 1。而自己的序号是 seq = u + 1 (根据TCP标准，前面已经发送过的 FIN 报文段要消耗一个序号)。然后进入TIME-WAIT(时间等待)状态。这时，TCP连接还没有释放掉，等待时间计数器设置的时间 2MSL后，客户端才进入到CLOSED状态</p>
-
-<p><img src="media/15853864599373/15854643157795.jpg" alt="" style="width:615px;"/></p>
-
-<p><img src="media/15853864599373/15854643510874.jpg" alt="" style="width:613px;"/></p>
-
-<p><img src="media/15853864599373/15853877664437.jpg" alt="" style="width:1036px;"/></p>
-
-<p><img src="media/15853864599373/15854020442601.jpg" alt="" style="width:1216px;"/></p>
-
-<p><img src="media/15853864599373/15854021432556.jpg" alt="" style="width:1155px;"/></p>
-
-<p><img src="media/15853864599373/15854022338597.jpg" alt="" style="width:1204px;"/></p>
-
-<p><img src="media/15853864599373/15854023191361.jpg" alt="" style="width:1197px;"/></p>
-
-<p><img src="media/15853864599373/15854025339222.jpg" alt="" style="width:1241px;"/></p>
-
-<p><img src="media/15853864599373/15854026766709.jpg" alt="" style="width:1044px;"/></p>
-
-<p><img src="media/15853864599373/15854026965034.jpg" alt="" style="width:1138px;"/></p>
-
-<p><img src="media/15853864599373/15854028346466.jpg" alt="" style="width:1190px;"/></p>
-
-<p><img src="media/15853864599373/15854028839824.jpg" alt="" style="width:1203px;"/></p>
-
-<h2 id="toc_8">为什么是 3 次握手,不是 2 次?为什么断开需要 4 次挥手</h2>
+<p><img src="media/15857060089212/15857096914244.jpg" alt="" style="width:1213px;"/></p>
 
                         
                       </div>
@@ -259,10 +209,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/28</span>
+                    <span class="date">2020/04/01</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html'>网络进阶</a></span>
+          					    <span class="posted-in"><a href='%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html'>设计模式(架构)</a></span>
           				   
                     
 
@@ -366,31 +316,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

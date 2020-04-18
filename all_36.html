@@ -116,32 +116,44 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15841930756133.html">
+                <a class="clearlink" href="15848634915010.html">
                 
-                  <h1>layoutIfNeeded和setNeedsLayout的区别</h1>
+                  <h1>Block 对于变量的截获</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<h2 id="toc_0">layoutIfNeeded</h2>
+                        	<ol>
+<li>对于基本数据类型的截获,是值截获,仅仅截获值,在截获的时候值是多少就是多少,后续更改,不会影响 Block 内部的变化</li>
+<li>对于<mark>局部静态变量,是截获的该静态变量的指针</mark>,也是就是说这个静态变量变化的话,Block 截获的值也会跟着变化</li>
+<li><mark>对于对象类型的局部变量,连同所有权修饰符一同截获</mark>(这也从一个侧面说明了__weak 的原理,因为截获对象类型的时候,连同所有权修饰符一同截获了,weak 修饰的话,就打破了强引用环,解决了循环引用)</li>
+<li>全局变量,全局静态变量,是不会截获的.</li>
+</ol>
 
-<p><code>layoutIfNeeded</code>：<strong>强制视图立即更新其布局，即同步执行</strong>。当使用Auto Layout时，布局引擎根据约束的变化更新视图的位置。该方法的接收者将作为根视图，布局时也将从视图树的根视图开始。如果没有待处理的布局更新，则此方法将直接退出，而不会修改布局，或调用任何与布局有关的方法。</p>
+<p>我们先定义一个比较简单的 Block</p>
 
-<h2 id="toc_1">setNeedsLayout</h2>
+<pre class="line-numbers"><code class="language-text">- (void)testMethod {
+    int mutiNum = 6;
+    int (^Block)(int) = ^int(int num) {
+        return num * mutiNum;
+    };
+    Block(2);
+}
 
-<p><code>setNeedsLayout</code>：当需要调整UIView子视图布局时，需要在主线程调用该方法。该方法记录请求并立即返回(即异步执行)，<strong>等待下一个更新周期更新视图(runloop 迭代)</strong>。因此，可以将多个视图布局更新合并到一个update cycle，这样有助于提高性能。需要注意的是，我们无法知道下个update cycle在何时发生。</p>
+</code></pre>
 
-<p><a href="https://developer.apple.com/documentation/uikit/uiview?language=objc">Apple 官方文档</a>已经明确说明,开发者不要直接调用 <code>layoutSubViews</code>与<code>drawRect</code>,应该在你认为系统默认的布局和重绘不能带给你想要的效果时,在之类中重写这些方法,然后分别通过 <code>setNeedsLayout</code>和 <code>setNeedsDisPlayInRectangle:</code> 来进行调用</p>
+<p><img src="media/15848634915010/15848690037809.jpg" alt="" style="width:740px;"/><br/>
+在终端中 输入命令: clang -rewrite-objc MCBlock.m <br/>
+可以查看我们自定义的这个 MCBlock.m 的文件编译之后的源码.终端执行完成之后,在原文件夹会生成一个.cpp 的文件<br/>
+<img src="media/15848634915010/15848691080865.jpg" alt="" style="width:489px;"/><br/>
+打开这个 cpp 的源码文件</p>
 
-<h3 id="toc_2">哪些操作会出触发 layoutSubViews?</h3>
+<p>找到我们定义这个 testMethod 方法<br/>
+<img src="media/15848634915010/15848691727627.jpg" alt="" style="width:907px;"/><br/>
+从这个源码我们可以看到,mutiNum = 6,是直接被捕获到了</p>
 
-<ul>
-<li>init 初始化不会触发layoutSubViews</li>
-<li>addSubviews 会触发layoutSubViews</li>
-<li>设置 view的frame 会触发layoutSubViews(前提是 frame 发生了变化)</li>
-<li>滑动一个 UIScrollView 会触发layoutSubViews</li>
-<li>改变一个 view 的大小也会触发父 View 的layoutSubViews事件</li>
-</ul>
+<p>我们可以看到里面有一个__block_impl 的参数.找到这个参数的定义<br/>
+<img src="media/15848634915010/15848696004996.jpg" alt="" style="width:467px;"/></p>
 
                         
                       </div>
@@ -150,10 +162,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/14</span>
+                    <span class="date">2020/03/22</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
+          					    <span class="posted-in"><a href='Block%20%E7%9B%B8%E5%85%B3.html'>Block 相关</a></span>
           				   
                     
 
@@ -257,31 +269,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

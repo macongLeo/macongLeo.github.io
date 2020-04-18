@@ -116,54 +116,36 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15821054226825.html">
+                <a class="clearlink" href="15825371776074.html">
                 
-                  <h1>牛逼的GCD</h1>
+                  <h1>mmap 内存映射</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><strong>DispatchQueue</strong><br/>
-苹果官方对 GCD 的说明:</p>
+                        	<p><img src="media/15825371776074/15825373318908.jpg" alt="" style="width:943px;"/></p>
 
-<blockquote>
-<p>开发者要做的只是定义想执行的任务并追加到合适的 Dispatch Queue 中</p>
-</blockquote>
+<p><strong>什么是内存映射?</strong><br/>
+所谓内存映射,就是将<strong>文件的磁盘扇区映射到进程的虚拟内存空间</strong>的过程.</p>
 
-<p>GCD 中包含两种队列:<br/>
-串行队列 DISPATCH_QUEUE_SERIAL<br/>
-<img src="media/15821054226825/15821156796654.jpg" alt="" style="width:566px;"/><br/>
-串行队列会阻塞当前线程的执行,等任务完成,才会进行下一个任务<br/>
-<img src="media/15821054226825/15821157466982.jpg" alt="" style="width:397px;"/></p>
-
-<p><img src="media/15821054226825/15821157625913.jpg" alt="" style="width:557px;"/></p>
-
-<p>例如:<br/>
-<img src="media/15821054226825/15821164356253.jpg" alt="" style="width:629px;"/><br/>
-queue 为串行的时候,因为要等待现在执行的处理结束,所以表现就是依次执行,顺序处理.<br/>
-当 queue 为DISPATCH_QUEUE_CONCURRENT时,因为不需要等待当前执行的处理结束,先执行第一个,不管第一个是否执行完毕,都开始往下执行,并且顺序不是固定的<br/>
-<img src="media/15821054226825/15821166554297.jpg" alt="" style="width:662px;"/><br/>
-<img src="media/15821054226825/15821166798014.jpg" alt="" style="width:563px;"/></p>
-
-<p><strong>队列的创建</strong></p>
+<p><strong>操作系统读写文件流程</strong><br/>
+<strong>读写操作流程:</strong></p>
 
 <ol>
-<li>通过dispatch_queue_create函数创建</li>
-<li>直接过去系统创建好的 MainQueue / GlobalQueue</li>
+<li>进程发起一个读文件请求</li>
+<li>内核通过查找<strong>进程文件符表</strong>,定位到内核已打开的文件集上的文件信息,从而找到对应文件的 inode;</li>
+<li>inode 在地址空间上查找要请求的文件是否已经缓存在内核页的高速缓存中,如果存在,则直接放回该文件的内容</li>
+<li>如果文件不存在高速缓存中,则通过 inode 定位到文件的磁盘地址,将数据从磁盘复制到内核页高速缓存.之后再次读页面的过程,将内核高速缓存中的数据发送给用户进程</li>
 </ol>
 
-<p><strong>dispatch_after</strong><br/>
-dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定时间后追加处理到 dispatch queue</strong><br/>
-<img src="media/15821054226825/15821176029539.jpg" alt="" style="width:610px;"/></p>
+<blockquote>
+<p><strong>什么是 inode?</strong><br/>
+全程为 index node,即为存储文件元信息的区域,中文译名&quot;索引节点&quot;.<br/>
+例如包含:文件权限,文件拥有者的 UID,文件的大小等等</p>
+</blockquote>
 
-<p><strong>dispatch_group</strong><br/>
-有时候需要在某几个任务结束之后,再进行新的任务,例如:<br/>
-<img src="media/15821054226825/15821182215704.jpg" alt="" style="width:553px;"/><br/>
-<img src="media/15821054226825/15821183629319.jpg" alt="" style="width:633px;"/><br/>
-<img src="media/15821054226825/15821184229942.jpg" alt="" style="width:622px;"/><br/>
-<img src="media/15821054226825/15821184582389.jpg" alt="" style="width:547px;"/></p>
-
-<p><strong>dispatch_barrier_async(栅栏函数)</strong></p>
+<p>参考:<br/>
+<a href="https://juejin.im/post/5caaf564f265da24d60e9c8d">https://juejin.im/post/5caaf564f265da24d60e9c8d</a></p>
 
                         
                       </div>
@@ -172,10 +154,10 @@ dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/19</span>
+                    <span class="date">2020/02/24</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
+          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
           				   
                     
 
@@ -279,31 +261,31 @@ dispatch_after函数并不是在指定时间以后执行,而是<strong>在指定
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

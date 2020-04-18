@@ -116,14 +116,71 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15859202199650.html">
+                <a class="clearlink" href="15864237953841.html">
                 
-                  <h1>Block 的深度探究</h1>
+                  <h1>翻转二叉树</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><img src="media/15859202199650/Block%E7%9A%84%E6%B7%B1%E5%BA%A6%E6%8E%A2%E7%A9%B6.jpg" alt="Block的深度探究"/></p>
+                        	<p>翻转一棵二叉树。<br/>
+输入:<br/>
+<img src="media/15864237953841/15864238304902.jpg" alt="" style="width:220px;"/></p>
+
+<p>递归方式:c++ </p>
+
+<pre class="line-numbers"><code class="language-text">/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    TreeNode* invertTree(TreeNode* root) {
+        dfs(root);
+        return root;
+    }
+
+    //翻转递归方法
+    private:
+    void dfs(TreeNode *root) {
+        if (root) {
+            swap(root-&gt;left,root-&gt;right);
+            dfs(root-&gt;left); //递归调用
+            dfs(root-&gt;right);
+        }
+    }
+};
+</code></pre>
+
+<p>这种递归调用,效率并不高,还有一种迭代的方式:</p>
+
+<pre class="line-numbers"><code class="language-text">class Solution {
+public:
+    TreeNode* invertTree(TreeNode* root) {
+        if (root == NULL) return nullptr;
+        queue &lt;TreeNode *&gt; q; //放节点的队列
+        q.push(root); //根节点入队
+        while (!q.empty()) {
+            int len = q.size();
+             while (len--) {
+                 TreeNode *tmp = q.front();
+                 q.pop();
+                 if (tmp) {
+                     swap(tmp-&gt;left,tmp-&gt;right);
+                     q.push(tmp-&gt;left);
+                     q.push(tmp-&gt;right);
+                 }
+             }
+        }
+        return root;
+    }
+};
+</code></pre>
 
                         
                       </div>
@@ -132,10 +189,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/04/03</span>
+                    <span class="date">2020/04/09</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='Block%20%E7%9B%B8%E5%85%B3.html'>Block 相关</a></span>
+          					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
           				   
                     
 
@@ -239,31 +296,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

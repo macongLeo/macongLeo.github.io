@@ -116,101 +116,81 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780315733102.html">
+                <a class="clearlink" href="15795063924352.html">
                 
-                  <h1>探寻 OC 对象的本质</h1>
+                  <h1>AutoReleasePool 自动释放池</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<blockquote>
-<p>面试题：一个 NSObject 对象占用多少内存？</p>
-</blockquote>
-
-<p>我们平时编写的代码都是 Objective-C 的代码，但是底层实现其实都是 C/C++的代码</p>
-
-<pre class="line-numbers"><code class="language-text">#import &lt;Foundation/Foundation.h&gt;
-#import &lt;malloc/malloc.h&gt;
-#import &lt;objc/runtime.h&gt;
-
-int main(int argc, const char * argv[]) {
-    @autoreleasepool {
-        NSObject *obj = [[NSObject alloc] init];
-        // 创建一个实例对象，实际上分配多少内存 - 16
-        NSLog(@&quot;%zd&quot;, malloc_size((__bridge const void *)obj));
-
-        // 创建一个实例对象，至少需要多少内存 - 8
-        NSLog(@&quot;%zd&quot;, class_getInstanceSize([NSObject class]));
-    }
-    return 0;
-}
-</code></pre>
-
-<ul>
-<li>系统分配了 16 个字节给 NSObject 对象（通过 malloc——size 函数获得）</li>
-<li><p>OC 源码显示分配给对象的内存为 16 个字节的整数倍，至少是 16 个字节</p>
-<p><img src="media/15780315733102/15780350303674.jpg" alt="" style="width:660px;"/></p></li>
+                        	<ul>
+<li>App启动后，苹果在主线程 RunLoop 里注册了两个 Observer，其回调都是 _wrapRunLoopWithAutoreleasePoolHandler()。</li>
+<li>第一个 Observer 监视的事件是 Entry(即将进入Loop)，其回调内会调用 _objc_autoreleasePoolPush() 创建自动释放池。其 order 是-2147483647，优先级最高，保证创建释放池发生在其他所有回调之前。</li>
+<li>第二个 Observer 监视了两个事件： BeforeWaiting(准备进入休眠) 时调用_objc_autoreleasePoolPop() 和 _objc_autoreleasePoolPush() 释放旧的池并创建新池；Exit(即将退出Loop) 时调用 _objc_autoreleasePoolPop() 来释放自动释放池。这个 Observer 的 order 是 2147483647，优先级最低，保证其释放池子发生在其他所有回调之后。</li>
+<li>在主线程执行的代码，通常是写在诸如事件回调、Timer回调内的。这些回调会被 RunLoop 创建好的 AutoreleasePool 环绕着，所以不会出现内存泄漏，开发者也不必显示创建 Pool 了。</li>
 </ul>
 
-<blockquote>
-<p>OC的对象、类主要是基于C\C++的什么数据结构实现的呢？<br/>
-结构体<br/>
-OC 的对象是基于 C 的结构体实现的<br/>
-这个结构体只有一个成员：isa 指针，而指针在 64 位架构中占 8 个字节。<br/>
-那么这个结构体占多大的内存空间呢，我们发现这个结构体只有一个成员，isa指针，而指针在64位架构中占8个字节。也就是说一个NSObjec对象所占用的内存是8个字节。到这里我们已经可以基本解答第一个问题。但是我们发现NSObject对象中还有很多方法，那这些方法不占用内存空间吗？其实类的方法等也占用内存空间，但是这些方法所占用的存储空间并不在NSObject对象中。</p>
-</blockquote>
+<p>也就是说<mark>AutoreleasePool创建是在一个RunLoop事件开始之前(push)，AutoreleasePool释放是在一个RunLoop事件即将结束之前(pop)。</mark><br/>
+AutoreleasePool里的Autorelease对象的加入是在RunLoop事件中，AutoreleasePool里的Autorelease对象的释放是在AutoreleasePool释放时。</p>
 
-<h2 id="toc_0">实例对象 类（对象） 元类</h2>
+<h2 id="toc_0">Autorelease对象什么时候释放？</h2>
 
-<p><img src="media/15780315733102/15780363563241.jpg" alt="" style="width:552px;"/></p>
+<p>在没有手动添加 AutoreleasePool的情况下,<br/>
+**Autorelease对象是在当前的 RunLoop 迭代结束的时候释放的 **<br/>
+原因:<br/>
+    系统在每个 RunLoop 迭代中都加入了自动释放池的 Push 和 Pop</p>
 
-<blockquote>
+<h2 id="toc_1">AutoreleasePool原理</h2>
+
+<p><img src="media/15795063924352/15795107102374.jpg" alt="" style="width:702px;"/></p>
+
+<p><img src="media/15795063924352/15795070852300.jpg" alt="" style="width:536px;"/></p>
+
+<ul>
+<li>AutoreleasePool并没有单独的结构,而是由若干个 AutoreleasePoolPage 以双向链表的形式结合而成(分别对应图中的 parent 和 child 指针)</li>
+<li>AutoreleasePool是按线程一一对应的(结构中的 thread 指向当前线程)</li>
+<li>AutoreleasePoolPage 每个对象会开辟 4096 个字节内存(一页虚拟内存的大小)除了上面的实例变量所占的空间,剩下的空间都用来存储 Autorelease对象</li>
+<li>上面的 id *next 指针作为游标指向栈顶最新 add 进来的 Autorelease对象的下一个位置</li>
+<li>一个 AutoreleasePoolPage 的空间被沾满时,会创建一个新的 AutoreleasePoolPage 对象,连接链表,后来的 Autorelease对象在新的 page 加入</li>
+</ul>
+
+<p>所以若当前线程中只有一个 AutoreleasePoolPage 对象,并记录了很多 Autorelease对象地址时,内存:<br/>
+<img src="media/15795063924352/15795075970216.jpg" alt="" style="width:520px;"/><br/>
+图中的情况，这一页再加入一个autorelease对象就要满了（也就是next指针马上指向栈顶），这时就要执行上面说的操作，建立下一页page对象，与这一页链表连接完成后，新page的next指针被初始化在栈底（begin的位置），然后继续向栈顶添加新对象。</p>
+
+<p><mark><strong>向一个对象发送- autorelease消息，就是将这个对象加入到当前AutoreleasePoolPage的栈顶next指针指向的位置</strong></mark><br/>
+这一步只是把 Autorelease对象加入到了自动释放池,还并没有释放</p>
+
+<h3 id="toc_2">真正释放时刻</h3>
+
+<p>每当进行一次<mark><strong>objc_autoreleasePoolPush</strong></mark>调用时，runtime向当前的AutoreleasePoolPage中add进一个哨兵对象，值为0（也就是个nil），那么这一个page就变成了下面的样子：<br/>
+<img src="media/15795063924352/15795082558655.jpg" alt="" style="width:754px;"/><br/>
+<mark>objc_autoreleasePoolPush</mark>的返回值正是这个哨兵对象的地址，被<mark>objc_autoreleasePoolPop</mark>(哨兵对象)作为入参，于是：</p>
+
 <ol>
-<li>instance的isa指向class</li>
-<li>class的isa指向meta-class</li>
-<li>meta-class的isa指向基类的meta-class，基类的isa指向自己</li>
-<li>class的superclass指向父类的class，如果没有父类，superclass指针为nil</li>
-<li>meta-class的superclass指向父类的meta-class，基类的meta-class的superclass指向基类的class</li>
-<li>instance调用对象方法的轨迹，isa找到class，方法不存在，就通过superclass找父类</li>
-<li>class调用类方法的轨迹，isa找meta-class，方法不存在，就通过superclass找父类</li>
+<li> 根据传入的哨兵对象地址找到哨兵对象所处的page</li>
+<li>在当前page中，将晚于哨兵对象插入的所有autorelease对象都发送一次- release消息，并向回移动next指针到正确位置</li>
+<li>补充2：从最新加入的对象一直向前清理，可以向前跨越若干个page，直到哨兵所在的page<br/>
+刚才的objc_autoreleasePoolPop执行后，
+<img src="media/15795063924352/15795086281414.jpg" alt="" style="width:758px;"/>
+最终变成了下面的样子:
+<img src="media/15795063924352/15795084636880.jpg" alt="" style="width:725px;"/></li>
 </ol>
-</blockquote>
 
-<h2 id="toc_1">为什么会存在元类？</h2>
+<p><strong>嵌套的AutoreleasePool</strong><br/>
+知道了上面的原理，嵌套的AutoreleasePool就非常简单了，pop的时候总会释放到上次push的位置为止，多层的pool就是多个哨兵对象而已，就像剥洋葱一样，每次一层，互不影响。 </p>
 
-<p>元类是一个类对象的类<br/>
-简而言之：<br/>
-当你向一个对象发送一条消息的时候，运行时会在对象的类的方法列表中查找这条消息是否存在。<br/>
-当你向一个类发送一条消息的时候，运行时会在类的元类的方法列表中查找这条消息是否存在。</p>
+<p><img src="media/15795063924352/15795095043776.jpg" alt="" style="width:767px;"/></p>
 
-<p>元类的存在是必需的，因为他存储了一个类的所有类方法。每个类的元类都是独一无二的，因为每个类都有一系列独特的类方法。<br/>
-什么是元类的类</p>
+<p><img src="media/15795063924352/15795109308256.jpg" alt="" style="width:700px;"/></p>
 
-<p>元类，和类一样，也是一个对象。这表示你能够对元类调用方法。自然的，这表示他必须也有一个类指针。</p>
+<p>注意点:<br/>
+NSAutoRelasePool对象执行销毁时[pool drain]后，自动释放池会把添加到该pool里面的所有OC对象都执行一遍release（retainCount-=1），如果恰好此时retainCount&lt;=0 ，那么系统会自动调用<mark>dealloc</mark>方法废弃对象。</p>
 
-<p>所有元类使用基类的元类（即继承链顶端的类的元类）作为他们的类，而所有类的基类都是 NSObject（大多数类是这样的），所以大多数元类使用 NSObject 的元类作为他的类。</p>
-
-<p>根据规则所有元类使用基类的元类作为他们的类，那么基类的元类就是他自己的类（他们的isa指针指向了自己）。这表明NSObject的元类的指针指向的是他自己（他是一个他自己的实例）。</p>
-
-<h2 id="toc_2">继承类和元类</h2>
-
-<p>同样的，类使用 super_class 指针指向他们的 superclass，元类也有 super_class 指针来指向 superclass。<br/>
-这里又有一个奇怪的地方，基类的元类设置的 superclass 是基类自己。<br/>
-这种继承结构导致的结果是所有结构中的实例、类以及元类都继承自结构中的基类。</p>
-
-<p>所有实例、类和元类都在 NSObject 的层级下，这表明所有 NSObject 的实例方法都能够被使用，同样的，对类以及元类来说，所有 NSObject 的类方法也是有效的。</p>
-
-<h2 id="toc_3">元类总结：</h2>
-
-<p>元类是一个类对象的类。每一个类有他自己独一无二的元类（因为每个类能够有自己独一无二的方法列表）。这就意味着类对象的类并不是和他们一样的类。</p>
-
-<p>元类能确保类对象有所有底层类的实例和类方法，中间加上所有自己的类方法。所有类继承自NSObject，这意味着NSObject所有的实例和协议方法为所有类（和元类）对象都定义了。</p>
-
-<p>所有元类使用基类的元类（NSObject 元类）来作为他们的类，包括只在运行时自定义的类的元类。</p>
-
-<p>参考：<br/>
-<a href="https://juejin.im/post/5ac81c75518825556534c0af">https://juejin.im/post/5ac81c75518825556534c0af</a><br/>
-<a href="https://www.jianshu.com/p/79b06fabb459">https://www.jianshu.com/p/79b06fabb459</a></p>
+<p>参考:<br/>
+<a href="https://www.jianshu.com/p/61d8131c6bf3">https://www.jianshu.com/p/61d8131c6bf3</a><br/>
+<a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/">https://blog.sunnyxx.com/2014/10/15/behind-autorelease/</a><br/>
+<a href="https://juejin.im/post/5d7765756fb9a06af82503b6">https://juejin.im/post/5d7765756fb9a06af82503b6</a></p>
 
                         
                       </div>
@@ -219,10 +199,10 @@ OC 的对象是基于 C 的结构体实现的<br/>
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
+                    <span class="date">2020/01/20</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+          					    <span class="posted-in"><a href='RunLoop.html'>RunLoop</a></span>
           				   
                     
 
@@ -326,31 +306,31 @@ OC 的对象是基于 C 的结构体实现的<br/>
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

@@ -116,101 +116,45 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15780315733102.html">
+                <a class="clearlink" href="shu-xing-de-shi-zhi-shu-xing-d.html">
                 
-                  <h1>探寻 OC 对象的本质</h1>
+                  <h1>属性的实质</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
                         	<blockquote>
-<p>面试题：一个 NSObject 对象占用多少内存？</p>
+<p>属性的实质是什么？<br/>
+包括哪几个部分？<br/>
+属性默认的关键字都有哪些？<br/>
+@dynamic关键字和@synthesize关键字是用来做什么的</p>
 </blockquote>
 
-<p>我们平时编写的代码都是 Objective-C 的代码，但是底层实现其实都是 C/C++的代码</p>
+<p>实质包含部分:</p>
 
-<pre class="line-numbers"><code class="language-text">#import &lt;Foundation/Foundation.h&gt;
-#import &lt;malloc/malloc.h&gt;
-#import &lt;objc/runtime.h&gt;
+<p>@property = ivar + getter + setter;</p>
 
-int main(int argc, const char * argv[]) {
-    @autoreleasepool {
-        NSObject *obj = [[NSObject alloc] init];
-        // 创建一个实例对象，实际上分配多少内存 - 16
-        NSLog(@&quot;%zd&quot;, malloc_size((__bridge const void *)obj));
+<p>实例变量+get方法+ set方法，也就是说使用@property系统会自动生成setter和getter方法;</p>
 
-        // 创建一个实例对象，至少需要多少内存 - 8
-        NSLog(@&quot;%zd&quot;, class_getInstanceSize([NSObject class]));
-    }
-    return 0;
-}
-</code></pre>
+<p>默认常用关键字:</p>
 
-<ul>
-<li>系统分配了 16 个字节给 NSObject 对象（通过 malloc——size 函数获得）</li>
-<li><p>OC 源码显示分配给对象的内存为 16 个字节的整数倍，至少是 16 个字节</p>
-<p><img src="media/15780315733102/15780350303674.jpg" alt="" style="width:660px;"/></p></li>
-</ul>
+<p>property中我们经常使用的关键字有strong，weak，assign，copy，nonatomic，atomic....等</p>
 
-<blockquote>
-<p>OC的对象、类主要是基于C\C++的什么数据结构实现的呢？<br/>
-结构体<br/>
-OC 的对象是基于 C 的结构体实现的<br/>
-这个结构体只有一个成员：isa 指针，而指针在 64 位架构中占 8 个字节。<br/>
-那么这个结构体占多大的内存空间呢，我们发现这个结构体只有一个成员，isa指针，而指针在64位架构中占8个字节。也就是说一个NSObjec对象所占用的内存是8个字节。到这里我们已经可以基本解答第一个问题。但是我们发现NSObject对象中还有很多方法，那这些方法不占用内存空间吗？其实类的方法等也占用内存空间，但是这些方法所占用的存储空间并不在NSObject对象中。</p>
-</blockquote>
+<p>@dynamic这个关键词，通常是用不到的。<br/>
+它与@synthesize的区别在于：<br/>
+使用@synthesize编译器会确实的产生getter和setter方法，而@dynamic仅仅是告诉编译器这两个方法在运行期会有的，无需产生警告。</p>
 
-<h2 id="toc_0">实例对象 类（对象） 元类</h2>
+<p>假设有这么个场景，B类，C类分别继承A类，A类实现某个协议（@protocol），协议中某个属性( somePropety )我不想在A中实现，而在B类，C类中分别实现。如果A中不写任何代码，编译器就会给出警告：“use @synthesize, @dynamic or provide a method implementation&quot;这时你给用@dynamic somePropety; <br/>
+编译器就不会警告，同时也不会产生任何默认代码。</p>
 
-<p><img src="media/15780315733102/15780363563241.jpg" alt="" style="width:552px;"/></p>
+<p>@dynamic 就是要来告诉编译器，代码中用@dynamic修饰的属性，其getter和setter方法会在程序运行的时候或者用其他方式动态绑定，以便让编译器通过编译。<br/>
+其主要的作用就是用在NSManageObject对象的属性声明上，由于此类对象的属性一般是从Core Data的属性中生成的，Core Data框架会在程序运行的时候为此类属性生成getter和Setter方法。</p>
 
-<blockquote>
-<ol>
-<li>instance的isa指向class</li>
-<li>class的isa指向meta-class</li>
-<li>meta-class的isa指向基类的meta-class，基类的isa指向自己</li>
-<li>class的superclass指向父类的class，如果没有父类，superclass指针为nil</li>
-<li>meta-class的superclass指向父类的meta-class，基类的meta-class的superclass指向基类的class</li>
-<li>instance调用对象方法的轨迹，isa找到class，方法不存在，就通过superclass找父类</li>
-<li>class调用类方法的轨迹，isa找meta-class，方法不存在，就通过superclass找父类</li>
-</ol>
-</blockquote>
+<p>参考:</p>
 
-<h2 id="toc_1">为什么会存在元类？</h2>
+<p><a href="">https://www.jianshu.com/p/00dbeec23291</a></p>
 
-<p>元类是一个类对象的类<br/>
-简而言之：<br/>
-当你向一个对象发送一条消息的时候，运行时会在对象的类的方法列表中查找这条消息是否存在。<br/>
-当你向一个类发送一条消息的时候，运行时会在类的元类的方法列表中查找这条消息是否存在。</p>
-
-<p>元类的存在是必需的，因为他存储了一个类的所有类方法。每个类的元类都是独一无二的，因为每个类都有一系列独特的类方法。<br/>
-什么是元类的类</p>
-
-<p>元类，和类一样，也是一个对象。这表示你能够对元类调用方法。自然的，这表示他必须也有一个类指针。</p>
-
-<p>所有元类使用基类的元类（即继承链顶端的类的元类）作为他们的类，而所有类的基类都是 NSObject（大多数类是这样的），所以大多数元类使用 NSObject 的元类作为他的类。</p>
-
-<p>根据规则所有元类使用基类的元类作为他们的类，那么基类的元类就是他自己的类（他们的isa指针指向了自己）。这表明NSObject的元类的指针指向的是他自己（他是一个他自己的实例）。</p>
-
-<h2 id="toc_2">继承类和元类</h2>
-
-<p>同样的，类使用 super_class 指针指向他们的 superclass，元类也有 super_class 指针来指向 superclass。<br/>
-这里又有一个奇怪的地方，基类的元类设置的 superclass 是基类自己。<br/>
-这种继承结构导致的结果是所有结构中的实例、类以及元类都继承自结构中的基类。</p>
-
-<p>所有实例、类和元类都在 NSObject 的层级下，这表明所有 NSObject 的实例方法都能够被使用，同样的，对类以及元类来说，所有 NSObject 的类方法也是有效的。</p>
-
-<h2 id="toc_3">元类总结：</h2>
-
-<p>元类是一个类对象的类。每一个类有他自己独一无二的元类（因为每个类能够有自己独一无二的方法列表）。这就意味着类对象的类并不是和他们一样的类。</p>
-
-<p>元类能确保类对象有所有底层类的实例和类方法，中间加上所有自己的类方法。所有类继承自NSObject，这意味着NSObject所有的实例和协议方法为所有类（和元类）对象都定义了。</p>
-
-<p>所有元类使用基类的元类（NSObject 元类）来作为他们的类，包括只在运行时自定义的类的元类。</p>
-
-<p>参考：<br/>
-<a href="https://juejin.im/post/5ac81c75518825556534c0af">https://juejin.im/post/5ac81c75518825556534c0af</a><br/>
-<a href="https://www.jianshu.com/p/79b06fabb459">https://www.jianshu.com/p/79b06fabb459</a></p>
+<hr/>
 
                         
                       </div>
@@ -248,7 +192,7 @@ OC 的对象是基于 C 的结构体实现的<br/>
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			 <a href="iOS 知识集_4.html">&raquo; Next Page</a> 
+			
 			</p>
 			  </div>
 			</div>
@@ -326,31 +270,31 @@ OC 的对象是基于 C 的结构体实现的<br/>
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

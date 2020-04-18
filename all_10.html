@@ -116,77 +116,68 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15858808743256.html">
+                <a class="clearlink" href="15863378232750.html">
                 
-                  <h1>GCD之dispatch_barrier_async 解决多线程读写问题</h1>
+                  <h1>二叉树的层序遍历</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><code>dispatch_barrier_async</code> 函数可以方便的实现多读单写的需求,多线程同时读,但是只能一个线程写操作,并且在写操作完成之后才能继续读.</p>
+                        	<p>给你一个二叉树，请你返回其按 层序遍历 得到的节点值。 （即逐层地，从左到右访问所有节点）。</p>
 
-<p>直接上代码:</p>
+<p>示例：<br/>
+二叉树：[3,9,20,null,null,15,7]<br/>
+<img src="media/15863378232750/15863379025044.jpg" alt="" style="width:107px;"/></p>
 
-<pre class="line-numbers"><code class="language-text">#import &quot;ViewController.h&quot;
+<p>返回其层次遍历结果：</p>
 
-@interface ViewController ()
-@property (nonatomic, strong) NSMutableArray *dataArray;
-@end
+<p><img src="media/15863378232750/15863379289689.jpg" alt="" style="width:101px;"/></p>
 
-@implementation ViewController
+<p>来源：力扣（LeetCode）<br/>
+链接：<a href="https://leetcode-cn.com/problems/binary-tree-level-order-traversal">https://leetcode-cn.com/problems/binary-tree-level-order-traversal</a></p>
 
-- (void)viewDidLoad {
-    [super viewDidLoad];
-    // Do any additional setup after loading the view.
-    self.dataArray = [NSMutableArray array];
-    [self.dataArray addObjectsFromArray:@[@&quot;1&quot;,@&quot;2&quot;]];
-    [self testBarrierAsync];
-}
-
-- (void)testBarrierAsync
-{
-    //创建一个并行队列
-    dispatch_queue_t concurrentQueue = dispatch_queue_create(&quot;com.gcd.barrier.concurrentQueue&quot;, DISPATCH_QUEUE_CONCURRENT);
-    
-    //并行操作
-    void (^blk1)(void) = ^{
-        NSLog(@&quot;当前的数据====%@&quot;,self.dataArray);
-    };
-    void (^blk2)(void) = ^{
-        NSLog(@&quot;当前的数据====%@&quot;,self.dataArray);
-    };
-    void (^blk3)(void) = ^{
-        NSLog(@&quot;当前的数据====%@&quot;,self.dataArray);
-    };
-    
-    //栅栏函数执行操作
-    void (^barrierBlk)(void) = ^{
-        [self.dataArray addObject:@&quot;9&quot;];
-        [self.dataArray addObject:@&quot;8&quot;];
-        
-    };
-    
-    //执行所有操作
-    dispatch_async(concurrentQueue, blk1);
-    dispatch_async(concurrentQueue, blk3);
-    dispatch_barrier_async(concurrentQueue, barrierBlk);
-    dispatch_async(concurrentQueue, blk2);
-}
-
-
-@end
-
+<pre class="line-numbers"><code class="language-text">/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+ 
+ class Solution {
+public:
+    vector&lt;vector&lt;int&gt;&gt; levelOrder(TreeNode* root) {
+        vector&lt;vector&lt;int&gt;&gt; res;
+        if (!root)  return res;         
+        queue &lt;TreeNode *&gt; q;
+        q.push(root);
+        while (!q.empty()) {
+            vector&lt;int&gt; tmp;             
+            int len = q.size(); //入队的所有节点
+            for (int i = 0; i &lt; len;i++) {
+                TreeNode *node = q.front();
+                q.pop();
+                tmp.push_back(node-&gt;val);
+                if (node-&gt;left) {
+                    q.push(node-&gt;left);
+                }
+                if (node -&gt; right) {
+                    q.push(node-&gt;right);
+                }
+            }
+            res.push_back(tmp); 
+        }
+          return res;      
+    }
+};
 </code></pre>
 
-<p><img src="media/15858808743256/15858817346984.jpg" alt="" style="width:960px;"/><br/>
- 从代码里可以看到 前面读取的两次数据是未写入的数据,数组里只是 1,2 两个,当经过写操作的时候,新增了两个数据,后面再次打印这个数组就是最新的数据了</p>
+<p><img src="media/15863378232750/15863390455740.jpg" alt="" style="width:432px;"/></p>
 
-<h3 id="toc_0">注意点</h3>
-
-<p><code>dispatch_barrier_async</code> <br/>
-栅栏函数中传入的参数队列必须是由 dispatch_queue_create 方法创建的队列，否则，与dispatch_async无异，起不到“栅栏”的作用了，对于dispatch_barrier_sync也是同理。</p>
-
-<p>其次,读和写要在同一个队列中</p>
+<p>油管上讲解:<br/>
+<a href="https://www.youtube.com/watch?v=-xNotM_Dsmc">https://www.youtube.com/watch?v=-xNotM_Dsmc</a></p>
 
                         
                       </div>
@@ -195,10 +186,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/04/03</span>
+                    <span class="date">2020/04/08</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='%E5%A4%9A%E7%BA%BF%E7%A8%8B.html'>多线程</a></span>
+          					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
           				   
                     
 
@@ -302,31 +293,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

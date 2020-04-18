@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  iOS 知识集 - 路漫漫其修远兮
+  算法&数据结构 - 路漫漫其修远兮
   
   </title>
   
@@ -116,45 +116,60 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="shu-xing-de-shi-zhi-shu-xing-d.html">
+                <a class="clearlink" href="15863331611135.html">
                 
-                  <h1>属性的实质</h1>
+                  <h1>二叉树的最小深度</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<blockquote>
-<p>属性的实质是什么？<br/>
-包括哪几个部分？<br/>
-属性默认的关键字都有哪些？<br/>
-@dynamic关键字和@synthesize关键字是用来做什么的</p>
-</blockquote>
+                        	<p>给定一个二叉树，找出其最小深度。</p>
 
-<p>实质包含部分:</p>
+<p>最小深度是从根节点到最近叶子节点的最短路径上的节点数量。</p>
 
-<p>@property = ivar + getter + setter;</p>
+<p>说明: 叶子节点是指没有子节点的节点。</p>
 
-<p>实例变量+get方法+ set方法，也就是说使用@property系统会自动生成setter和getter方法;</p>
+<p>示例:</p>
 
-<p>默认常用关键字:</p>
+<p>给定二叉树 [3,9,20,null,null,15,7],</p>
 
-<p>property中我们经常使用的关键字有strong，weak，assign，copy，nonatomic，atomic....等</p>
+<pre class="line-numbers"><code class="language-text">3
+</code></pre>
 
-<p>@dynamic这个关键词，通常是用不到的。<br/>
-它与@synthesize的区别在于：<br/>
-使用@synthesize编译器会确实的产生getter和setter方法，而@dynamic仅仅是告诉编译器这两个方法在运行期会有的，无需产生警告。</p>
+<p>/ \<br/>
+  9  20<br/>
+    /  \<br/>
+   15   7<br/>
+返回它的最小深度  2.</p>
 
-<p>假设有这么个场景，B类，C类分别继承A类，A类实现某个协议（@protocol），协议中某个属性( somePropety )我不想在A中实现，而在B类，C类中分别实现。如果A中不写任何代码，编译器就会给出警告：“use @synthesize, @dynamic or provide a method implementation&quot;这时你给用@dynamic somePropety; <br/>
-编译器就不会警告，同时也不会产生任何默认代码。</p>
+<p>来源：力扣（LeetCode）<br/>
+链接：<a href="https://leetcode-cn.com/problems/minimum-depth-of-binary-tree">https://leetcode-cn.com/problems/minimum-depth-of-binary-tree</a></p>
 
-<p>@dynamic 就是要来告诉编译器，代码中用@dynamic修饰的属性，其getter和setter方法会在程序运行的时候或者用其他方式动态绑定，以便让编译器通过编译。<br/>
-其主要的作用就是用在NSManageObject对象的属性声明上，由于此类对象的属性一般是从Core Data的属性中生成的，Core Data框架会在程序运行的时候为此类属性生成getter和Setter方法。</p>
+<pre class="line-numbers"><code class="language-text">/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     struct TreeNode *left;
+ *     struct TreeNode *right;
+ * };
+ */
 
-<p>参考:</p>
 
-<p><a href="">https://www.jianshu.com/p/00dbeec23291</a></p>
+int minDepth(struct TreeNode* root){
+    //递归退出条件
+    if (root == NULL) {
+        return 0;
+    }
+    int leftD = minDepth(root -&gt; left);
+    int rightD = minDepth(root -&gt; right);
 
-<hr/>
+    //处理叶子节点
+    if (root -&gt; left == NULL || root -&gt; right == NULL) {
+        return leftD + rightD + 1;
+    }
+    return (leftD &lt; rightD) ? leftD + 1 : rightD + 1;
+}
+</code></pre>
 
                         
                       </div>
@@ -163,10 +178,10 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/01/03</span>
+                    <span class="date">2020/04/08</span>
                     <span>posted in&nbsp;</span> 
           				  
-          					    <span class="posted-in"><a href='iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html'>iOS 知识集</a></span>
+          					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
           				   
                     
 
@@ -187,12 +202,12 @@
 			<div class="row">
 			  <div class="large-6 columns">
 			  <p class="text-left" style="padding-top:25px;">
-			   <a href="iOS 知识集_3.html">&laquo; Prev Page</a>  
+			   <a href="算法&数据结构_7.html">&laquo; Prev Page</a>  
 			  </p>
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			
+			 <a href="算法&数据结构_9.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -270,31 +285,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

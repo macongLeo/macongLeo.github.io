@@ -116,58 +116,91 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15820370480952.html">
+                <a class="clearlink" href="15780200209710.html">
                 
-                  <h1>类 子类 分类 区别与联系</h1>
+                  <h1>iOS 响应者链及事件传递</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p><strong>分类(category)</strong><br/>
-分类允许开发者在不改变原有类的情况下,对该类进行拓展,分类是 OC 的特有语法,他是表示一个指向分类的结构体指针,原则上分类只能增加方法,不能增加实例变量,因为在分类中,类的实例变量布局已经固定,所以不能添加实例变量,但是可以利用 runtime 的特性,添加关联属性.</p>
+                        	<h2 id="toc_0">UIResponder</h2>
 
-<pre class="line-numbers"><code class="language-text">Category
-Category 是表示一个指向分类的结构体的指针，其定义如下：
-typedef struct objc_category *Category;
-struct objc_category {
-  char *category_name                          OBJC2_UNAVAILABLE; // 分类名
-  char *class_name                             OBJC2_UNAVAILABLE; // 分类所属的类名
-  struct objc_method_list *instance_methods    OBJC2_UNAVAILABLE; // 实例方法列表
-  struct objc_method_list *class_methods       OBJC2_UNAVAILABLE; // 类方法列表
-  struct objc_protocol_list *protocols         OBJC2_UNAVAILABLE; // 分类所实现的协议列表
+<p>在 iOS中，所有响应事件处理事件的对象都直接或间接的继承UIResponder。</p>
+
+<p><img src="media/15780200209710/2526037-c8d367c7064cf59c.jpg" alt="2526037-c8d367c7064cf59"/></p>
+
+<p>在 iOS 视图结构中，呈现出来的是一个 N 叉树的树形结构，每个视图都只有一个父视图，可以有多个子视图。<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpldkdtyj30he0go46i.jpg" alt=""/></p>
+
+<h2 id="toc_1">寻找第一响应者</h2>
+
+<p>当用户点击某个视图或者按钮的时候，会首先响应 applocation 中的 UIWindow 一层一层的向下查找，直到找到点击的 view，这阶段用到的两个方法：</p>
+
+<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event;   // recursively calls -pointInside:withEvent:. point is in the receiver&#39;s coordinate system
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;   // default returns YES if point is in bounds
+</code></pre>
+
+<p>例如有这样一个图层结构：<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lpsaqbekj30e80jamy9.jpg" alt=""/></p>
+
+<p>在上图中用户点击视图中的ViewD时，UIWindow首先接收到响应，此响应包括用户点击的区域和一个封装好的UIEvent对象，然后UIWindow通过这些信息利用以下方法查找：</p>
+
+<ol>
+<li><p>UIWindow会通过调用pointInside:withEvent:方法返回的YES得知用户点击的范围在ViewA中；</p></li>
+<li><p>ViewA调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewB、ViewC)调用hitTest:withEvent:方法；</p></li>
+<li><p>在遍历中发现使用ViewC调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewC范围之内；</p></li>
+<li><p>ViewC调用hitTest:withEvent:方法，在方法中遍历所有的subView(ViewD、ViewE)调用hitTest:withEvent:方法;</p></li>
+<li><p>在遍历中发现使用ViewD调用pointInside:withEvent:方法时返回YES，得知用户点击在ViewD范围之内;</p></li>
+<li><p>在ViewD调用hitTest:withEvent:方法之前发现View的subViews的count为0，故确定用户点击在ViewD之上。</p></li>
+</ol>
+
+<p>UIWindow会用遍历subviews，使用每一个subview调用hitTest:withEvent:方法，如果用户点击在某一个subview上，pointInside:withEvent:方法返回YES，再用这个subview调用hitTest:withEvent:方法，依次类推，直到当前view没有子view或点击的位置没有在其任何子view之上，便确定用户点击在某view上</p>
+
+<pre class="line-numbers"><code class="language-text">- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
+    for (UIView *view in self.subviews) {
+        if([view pointInside:point withEvent:event]){
+            UIView *hitTestView = [view hitTest:point withEvent:event];
+            if(nil == hitTestView){
+                return view;
+            }
+        }
+    }
+    return nil;
 }
 </code></pre>
 
-<p>从上面可以看出,这个结构体主要包含了分类定义的实例方法与类方法,但是这里面并没有属性列表,也就没办法直接添加属性(实例变量)<br/>
-<strong>要点</strong>:</p>
+<blockquote>
+<p>1.Alpha=0、子视图超出父视图的情况、userInteractionEnabled=NO、hidden=YES视图会被忽略，不会调用hitTest<br/>
+2.父视图被忽略后其所有子视图也会被忽略<br/>
+3.出现视图无法响应的情况，可以考虑上诉情况来排查问题</p>
+</blockquote>
 
-<ul>
-<li>分类是用于给原有类添加方法的,因为在分类的结构体中只有方法列表,没有属性列表.</li>
-<li>分类中可以写@property,但是不会生成 getter/setter 方法,也不会生成实例变量.编译器会有警告,但是不会报错</li>
-<li>可以在分类中访问原有类的.h 中的属性</li>
-<li><strong>如果分类中有和原有类同名的方法,会优先调用分类中的方法,也就是会忽略原有类的方法,同名方法优先级&quot;分类&gt;类&gt;父类&quot;,所以分类中不要和类中原有方法同名</strong></li>
-<li>如果多个分类中都有和元类同名的方法,那么调用该方法的时候,由编译器决定,编译器会执行最后一个参与编译的分类中的方法.</li>
-</ul>
+<h2 id="toc_2">事件传递</h2>
 
-<p><strong>拓展</strong><br/>
-<strong>主类,子类,分类中+load方法的执行顺序</strong></p>
+<p>事件传递的顺序其实就是寻找第一响应者的逆序，当找到了第一响应（View，button）之后，响应者就要对事件作出响应，这里就是使用了 UIResponder 的 nextResponder 方法。</p>
 
-<ul>
-<li>+load 方法是在 mian 函数执行之前执行的,并不会主动调用</li>
-<li>主类,分类,子类都会调用+load 方法</li>
-<li>调用顺序:主类的+load方法会先调用,然后调用子类的+load,最后调用分类的+load.</li>
-<li>所有分类的+load方法都会调用,调用顺序取决于它的编译顺序.</li>
-</ul>
+<h3 id="toc_3">nextResponder 的规则</h3>
 
-<p><strong>+ Initialize方法的调用顺序</strong></p>
+<p>因为UIView和UIViewController都是继承于UIResponder，所以在调用nextResponder时有几条规则如下：</p>
 
-<ul>
-<li>+ Initialize只有当真正用到的时候,并且重写了+ Initialize方法才会调用</li>
-<li>当调用子类的+ Initialize方法的时候,如果父类重写了+ Initialize方法,会先调用父类的+ Initialize,然后调用子类的+ Initialize方法,如果此时父类的分类也重写了+ Initialize方法,那么父类的+ Initialize方法就会被覆盖掉</li>
-</ul>
+<ol>
+<li><p>当一个view调用其nextResponder会返回其superView;</p></li>
+<li><p>如果当前的view为UIViewController的view被添加到其他view上，那么调用nextResponder会返回当前的UIViewController，而这个UIViewController的nextResponder为view的superView；</p></li>
+<li><p>如果当前的UIViewController的view没有添加到任何其他view上，当前的UIViewController的nextResponder为nil，不管它是keyWinodw或UINavigationController的rootViewController，都是如此；</p></li>
+<li><p>如果当前application的keyWindow的rootViewController为UINavigationController(或UITabViewController)，那么通过调用UINavigationController(或UITabViewController)的nextResponder得到keyWinodw；</p></li>
+<li><p>keyWinodw的nextResponder为UIApplication，UIApplication的nextResponder为AppDelegate，AppDelegate的nextResponder为nil。</p></li>
+</ol>
 
-<p>参考:<br/>
-<a href="https://juejin.im/post/5b6a63f4e51d4534b93f770f">https://juejin.im/post/5b6a63f4e51d4534b93f770f</a></p>
+<p>通过知道了上述规则，便可以通过用户点击的ViewD，查看ViewD是否响应了点击事件，如果没有找它的nextResponder，如果没有再继续找，直到找到AppDelegate再没有响应，则此点击事件被系统丢弃，大致流程如下：<br/>
+<img src="https://tva1.sinaimg.cn/large/006tNbRwgy1g9lu7zsmnqj30fa0f8adu.jpg" alt=""/><br/>
+事件响应链的大致流程就是如此了，大概就是一个先向下找，再向上找的过程！</p>
+
+<h2 id="toc_4">无法响应的情况</h2>
+
+<p>参考：<br/>
+<a href="">https://www.cnblogs.com/easy-coding/p/3604856.html</a></p>
+
+<p><a href="">https://developer.apple.com/documentation/uikit/touches_presses_and_gestures/using_responders_and_the_responder_chain_to_handle_events?language=objc</a></p>
 
                         
                       </div>
@@ -176,8 +209,10 @@ struct objc_category {
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/02/18</span>
-                    
+                    <span class="date">2020/01/03</span>
+                    <span>posted in&nbsp;</span> 
+          				  
+          					    <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
           				   
                     
 
@@ -281,31 +316,31 @@ struct objc_category {
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

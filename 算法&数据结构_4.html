@@ -116,59 +116,41 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15863331611135.html">
+                <a class="clearlink" href="15864293812709.html">
                 
-                  <h1>二叉树的最小深度</h1>
+                  <h1>排序数组(升序)</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>给定一个二叉树，找出其最小深度。</p>
+                        	<p>给你一个整数数组 nums，请你将该数组升序排列。<br/>
+<img src="media/15864293812709/15864294268185.jpg" alt="" style="width:266px;"/></p>
 
-<p>最小深度是从根节点到最近叶子节点的最短路径上的节点数量。</p>
-
-<p>说明: 叶子节点是指没有子节点的节点。</p>
-
-<p>示例:</p>
-
-<p>给定二叉树 [3,9,20,null,null,15,7],</p>
-
-<pre class="line-numbers"><code class="language-text">3
-</code></pre>
-
-<p>/ \<br/>
-  9  20<br/>
-    /  \<br/>
-   15   7<br/>
-返回它的最小深度  2.</p>
-
-<p>来源：力扣（LeetCode）<br/>
-链接：<a href="https://leetcode-cn.com/problems/minimum-depth-of-binary-tree">https://leetcode-cn.com/problems/minimum-depth-of-binary-tree</a></p>
-
-<pre class="line-numbers"><code class="language-text">/**
- * Definition for a binary tree node.
- * struct TreeNode {
- *     int val;
- *     struct TreeNode *left;
- *     struct TreeNode *right;
- * };
- */
-
-
-int minDepth(struct TreeNode* root){
-    //递归退出条件
-    if (root == NULL) {
-        return 0;
+<pre class="line-numbers"><code class="language-text">class Solution {
+public:
+    vector&lt;int&gt; sortArray(vector&lt;int&gt;&amp; nums) {
+        quickSort(nums, 0, nums.size()-1);
+        return nums;
     }
-    int leftD = minDepth(root -&gt; left);
-    int rightD = minDepth(root -&gt; right);
 
-    //处理叶子节点
-    if (root -&gt; left == NULL || root -&gt; right == NULL) {
-        return leftD + rightD + 1;
+    void quickSort(vector&lt;int&gt;&amp; nums, int l, int r) {
+        if (l &gt;= r) return;
+
+        //增加随机性，不然如果已经有序，取最左边，每次划分都只减少一个
+        int m = l + (r - l) / 2;
+        swap(nums[r], nums[m]);
+
+        int t = l;//t表示最终划分元素应该在的位置
+        for (int i = l; i &lt; r; ++i) {//从从左到右扫描
+            if (nums[i] &lt; nums[r]) {//找打比划分元素小的
+                swap(nums[t++], nums[i]);//t要么等于i，交互自身，要么比i位置的元素大
+            }
+        }
+        swap(nums[t], nums[r]);//交互划分元素，现在划分元素放在t处
+        quickSort(nums, l, t - 1);//排序t左边
+        quickSort(nums, t + 1, r);//排序t右边
     }
-    return (leftD &lt; rightD) ? leftD + 1 : rightD + 1;
-}
+};
 </code></pre>
 
                         
@@ -178,7 +160,7 @@ int minDepth(struct TreeNode* root){
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/04/08</span>
+                    <span class="date">2020/04/09</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
@@ -285,31 +267,31 @@ int minDepth(struct TreeNode* root){
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  

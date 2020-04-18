@@ -116,26 +116,68 @@
 		<div class="markdown-body home-categories">
 		
 			<div class="article">
-                <a class="clearlink" href="15845005873890.html">
+                <a class="clearlink" href="15863378232750.html">
                 
-                  <h1>1-100 数字求和 (递归算法)</h1>
+                  <h1>二叉树的层序遍历</h1>
                   <div class="a-content">
                       
                       <div class="a-content-text">
                         
-                        	<p>使用递归函数的时候,最重要的一点就是要有一个<strong>函数的出口</strong>,然后递归调用</p>
+                        	<p>给你一个二叉树，请你返回其按 层序遍历 得到的节点值。 （即逐层地，从左到右访问所有节点）。</p>
 
-<p>题目:递归调用:计算 1+2 ... 100 的和</p>
+<p>示例：<br/>
+二叉树：[3,9,20,null,null,15,7]<br/>
+<img src="media/15863378232750/15863379025044.jpg" alt="" style="width:107px;"/></p>
 
-<pre class="line-numbers"><code class="language-text">
-- (int)caculateSumform1ToN:(int)n {
-    if (n &lt; 1) {
-        return 0;
+<p>返回其层次遍历结果：</p>
+
+<p><img src="media/15863378232750/15863379289689.jpg" alt="" style="width:101px;"/></p>
+
+<p>来源：力扣（LeetCode）<br/>
+链接：<a href="https://leetcode-cn.com/problems/binary-tree-level-order-traversal">https://leetcode-cn.com/problems/binary-tree-level-order-traversal</a></p>
+
+<pre class="line-numbers"><code class="language-text">/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+ 
+ class Solution {
+public:
+    vector&lt;vector&lt;int&gt;&gt; levelOrder(TreeNode* root) {
+        vector&lt;vector&lt;int&gt;&gt; res;
+        if (!root)  return res;         
+        queue &lt;TreeNode *&gt; q;
+        q.push(root);
+        while (!q.empty()) {
+            vector&lt;int&gt; tmp;             
+            int len = q.size(); //入队的所有节点
+            for (int i = 0; i &lt; len;i++) {
+                TreeNode *node = q.front();
+                q.pop();
+                tmp.push_back(node-&gt;val);
+                if (node-&gt;left) {
+                    q.push(node-&gt;left);
+                }
+                if (node -&gt; right) {
+                    q.push(node-&gt;right);
+                }
+            }
+            res.push_back(tmp); 
+        }
+          return res;      
     }
-    return n + [self caculateSumform1ToN:n-1];
-}
-
+};
 </code></pre>
+
+<p><img src="media/15863378232750/15863390455740.jpg" alt="" style="width:432px;"/></p>
+
+<p>油管上讲解:<br/>
+<a href="https://www.youtube.com/watch?v=-xNotM_Dsmc">https://www.youtube.com/watch?v=-xNotM_Dsmc</a></p>
 
                         
                       </div>
@@ -144,7 +186,7 @@
                 <div class="read-more clearfix">
                   <div class="more-left left">
                   
-                    <span class="date">2020/03/18</span>
+                    <span class="date">2020/04/08</span>
                     <span>posted in&nbsp;</span> 
           				  
           					    <span class="posted-in"><a href='%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html'>算法&数据结构</a></span>
@@ -173,7 +215,7 @@
 			  </div>
 			  <div class="large-6 columns">
 			<p class="text-right" style="padding-top:25px;">
-			
+			 <a href="算法&数据结构_8.html">&raquo; Next Page</a> 
 			</p>
 			  </div>
 			</div>
@@ -251,31 +293,31 @@
 	      
 		      
 			      <li class="post">
-			        <a href="15864293812709.html">排序数组(升序)</a>
+			        <a href="15868498460347.html">Core Text</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864237953841.html">翻转二叉树</a>
+			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15864220673388.html">N叉树的最大深度(LeetCode 559题)</a>
+			        <a href="15867715737861.html">堆, 栈 数据结构</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863378232750.html">二叉树的层序遍历</a>
+			        <a href="15833970837752.html">Socket</a>
 			      </li>
 		     
 		  
 		      
 			      <li class="post">
-			        <a href="15863331611135.html">二叉树的最小深度</a>
+			        <a href="15851010269707.html">多线程 01</a>
 			      </li>
 		     
 		  
