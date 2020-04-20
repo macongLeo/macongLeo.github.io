@@ -1,664 +1,270 @@
-<!doctype html>
-<html class="no-js" lang="en">
+<!DOCTYPE html>
+<html lang="zh">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>
+      
+    性能优化 - 路漫漫其修远兮
     
-  性能优化 - 路漫漫其修远兮
-  
-  </title>
-  
-  
-  <link href="atom.xml" rel="alternate" title="路漫漫其修远兮" type="application/atom+xml">
-    <link rel="stylesheet" href="asset/css/foundation.min.css" />
-    <link rel="stylesheet" href="asset/css/docs.css" />
-    <script src="asset/js/vendor/modernizr.js"></script>
-    <script src="asset/js/vendor/jquery.js"></script>
- 
-<script type="text/javascript">
-  function before_search(){
-    var searchVal = 'site: ' + document.getElementById('search_input').value;
-    document.getElementById('search_q').value = searchVal;
-    return true;
-  }
-</script>
-  </head>
-  <body class="antialiased hide-extras">
+    </title>
     
-    <div class="marketing off-canvas-wrap" data-offcanvas>
-      <div class="inner-wrap">
 
-
-<nav class="top-bar docs-bar hide-for-small" data-topbar>
-
-
-  <section class="top-bar-section">
-  <div class="row">
-      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
-        <ul id="main-menu" class="left">
-        
-        <li id=""><a target="self" href="index.html">Home</a></li>
-        
-        <li id=""><a target="_self" href="archives.html">Archives</a></li>
-        
-        </ul>
-
-        <ul class="right" id="search-wrap">
-          <li>
-<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
-    <input type="hidden" id="search_q" name="q" value="" />
-    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
-</form>
-</li>
-          </ul>
-      </div></div>
-  </div>
-  </section>
-
-</nav>
-
-        <nav class="tab-bar show-for-small">
-  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
-    <span> &nbsp; 路漫漫其修远兮</span>
-  </a>
-</nav>
-
-<aside class="left-off-canvas-menu">
-      <ul class="off-canvas-list">
-        
-        <li><a target="self" href="index.html">Home</a></li>
-        
-        <li><a target="_self" href="archives.html">Archives</a></li>
-        
-
-    <li><label>Categories</label></li>
-
-        
-            <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
-        
-            <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
-        
-            <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
-        
-            <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
-        
-            <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a></li>
-        
-            <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a></li>
-        
-            <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
-        
-            <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
-        
-            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
-        
-            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
-         
-
-      </ul>
-    </aside>
-
-<a class="exit-off-canvas" href="#"></a>
-
-
-        <section id="main-content" role="main" class="scroll-container">
-        
-       
-
- <script type="text/javascript">
-	$(function(){
-		$('#menu_item_index').addClass('is_active');
-	});
-</script>
-<div class="row">
-	<div class="large-8 medium-8 columns">
-		<div class="markdown-body home-categories">
-		
-			<div class="article">
-                <a class="clearlink" href="15833971627503.html">
+    
+    
+    <link href="atom.xml" rel="alternate" title="路漫漫其修远兮" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/style.min.css">
+    <link rel="stylesheet" href="asset/css/doc.css">
+    <script src="asset/app.js"></script>
+</head>
+  <body>
+    <section class="hero">
+      <div class="hero-head">
+          <nav class="navbar" role="navigation" aria-label="main navigation">
+              <div class="container">
+              <div class="navbar-brand">
                 
-                  <h1>启动优化</h1>
-                  <div class="a-content">
-                      
-                      <div class="a-content-text">
-                        
-                        	<p>对启动做性能优化,首先要对整个的启动过程有一个非常详细的了解,在我们点击了 APP 图标之后,到 APP 启动成功进到第一个页面之后,这之间发生了什么?</p>
-
-<h2 id="toc_0">启动的过程</h2>
-
-<h3 id="toc_1">准备知识</h3>
-
-<h4 id="toc_2">Mach-O</h4>
-
-<p>什么是 Mach-O?</p>
-
-<blockquote>
-<p>Mach-O为Mach Object文件格式的缩写，它是一种用于可执行文件，目标代码，动态库，内核转储的文件格式。作为a.out格式的替代，Mach-O提供了更强的扩展性，并提升了符号表中信息的访问速度。<br/>
-Mach-O曾经为大部分基于Mach核心的操作系统所使用。NeXTSTEP，Darwin和Mac OS X等系统使用这种格式作为其原生可执行文件，库和目标代码的格式。而同样使用GNU Mach作为其微内核的GNU Hurd系统则使用ELF而非Mach-O作为其标准的二进制文件格式。--维基百科</p>
-</blockquote>
-
-<p>Mach-O 又包括:</p>
-
-<ul>
-<li>Executable 可执行文件</li>
-<li>Dylib 动态库</li>
-<li>Bundle 无法被链接的动态库,<strong>只能通过 dlopen()加载</strong></li>
-<li>Image 指的是 Executable,Dylib 或者 Bundle 当中的一种.也叫镜像</li>
-<li>Framework 动态库和对应的头文件和资源文件的集合</li>
-</ul>
-
-<p>Apple 出品的操作系统的可执行文件格式几乎都是 Mach-O,当然也包括 iOS.</p>
-
-<h4 id="toc_3">Mach-O 的组成</h4>
-
-<p>Mach-O大致分为三部分<br/>
-<img src="media/15833971627503/15857965229192.jpg" alt="" style="width:800px;"/></p>
-
-<ul>
-<li>Header 头部,包含可以自行的 CPU 架构,比如x86,arm64</li>
-<li>Load commands 加载命令,包含文件的组织架构和在虚拟内存中的布局方式</li>
-<li>Data,数据 包含 Load commands 中需要的各个段(segment)的数据,每一个 Segment 大小都必须是Page 的整数倍</li>
-</ul>
-
-<p><img src="media/15833971627503/15857967223229.jpg" alt="" style="width:775px;"/></p>
-
-<p>那么 Data 部分又包含哪些 segment 呢?绝大多数 mach-o 文件都包括三个段</p>
-
-<ul>
-<li>__TEXT 代码段,只读,包含函数和只读的字符串,上图中的  _TEXT 和 _text 都是代码段</li>
-<li>__DATA 数据段,读写,包括可读写的全局变量等,上图中的 _DATA, _data 都是数据段</li>
-<li>__LINKEDIT __LINKEDIT包含了方法和变量的元数据(位置偏移量),以及代码的签名信息等 </li>
-</ul>
-
-<p>具体的关于 mach-o 的细节可以参考 <a href="https://github.com/LeoMobileDeveloper/React-Native-Files/blob/master/Mac%20OS%20X%20ABI%20Mach-O%20File%20Format%20Reference.pdf">Mac OS X ABI Mach-O File Format Reference</a>这篇</p>
-
-<h4 id="toc_4">dylib</h4>
-
-<p>dylib 也是一种 Mach-O 格式的文件, 后缀名为 <code>.dylib</code>的文件就是动态库(也叫动态链接库)<br/>
-动态库是运行时加载的,可以被多个 app 共用<br/>
-动态链接库分为系统 <strong>dylib</strong> 和 <strong>内嵌 dylib</strong>(embed dylib,即开发者手动引入的动态库)<br/>
-系统 dylib 包括:</p>
-
-<ul>
-<li>iOS 中用到的所有系统 Framework,比如 UIKit,Foundation</li>
-<li>系统级别的 libSystem(比如 libdispatch(GCD), libsystem_block(Block))</li>
-<li>加载 OC Runtime 的 libobjc</li>
-</ul>
-
-<h4 id="toc_5">dyld</h4>
-
-<p>dyld 的全称是 dynamic linker,他的作用是加载一个进程所需要的 image,dyld 是开源的<br/>
-有关 dyld 的可以参考官方文档 <a href="https://developer.apple.com/library/archive/documentation/DeveloperTools/Conceptual/DynamicLibraries/100-Articles/OverviewOfDynamicLibraries.html">Overview of Dynamic Libraries</a></p>
-
-<h4 id="toc_6">dyld shared cache(动态库共享缓存)</h4>
-
-<p>当需要加载的动态库非常多时，相互依赖的符号也更多了，为了节省解析处理符号的时间，OS X 和 iOS 上的动态链接器使用了共享缓存<br/>
-当加载一个 Mach-O 文件时，dyld 首先会检查是否存在于共享缓存，存在就直接取出使用。每一个进程都会把这个共享缓存映射到了自己的地址空间中。这种方法大大优化了 OS X 和 iOS 上程序的启动时间。</p>
-
-<h4 id="toc_7">Vietual Memory(虚拟内存)</h4>
-
-<p>虚拟内存是在物理内存上建立的一个逻辑地址空间,它向上(应用)提供了一个连续的逻辑地址空间,向下隐藏了物理内存的细节<br/>
-虚拟内存使得可以没有实际的物理地址,也可以让多个逻辑地址对应到一个物理地址<br/>
-虚拟内存被划分为一个个大小相同的 Page(64 位系统上是 16KB),提高管理和读写效率<br/>
-Page 又分为只读和读写的 Page<br/>
-虚拟内存是建立在物理内存和进程之间的中间层.在 iOS 上,当内存不足的时候,会尝试释放那些只读的 Page,因为只读的 Page 在下次访问的时候,可以再充磁盘读取,如果没有可用内存,会通知在后台的 APP(也就是在这个时候收到了 memorywarning),如果在这之后仍然没有可用内存,就会杀死后台的 APP</p>
-
-<h4 id="toc_8">Page fault</h4>
-
-<p>在应用执行的时候,他被分配的逻辑地址空间都是可以访问的,当应用访问一个逻辑 Page,而在对应的物理内存中并不存在的时候,这时候就发生了一次 Pagefault,当 Page fault 发生的时候,会中断当前的程序,在物理内存中寻找一个可用的 Page,然后从磁盘中读取数据到物理内存,接着执行当前的程序</p>
-
-<p><strong>DirtyPage &amp; CleanPage</strong></p>
-
-<ul>
-<li>如果一个 Page 可以从磁盘上重新生成,那么这个 Page 称为 CleanPage</li>
-<li>如果一个 Page 包含了进程相关信息,那么这个 Page 就是 DirtyPage</li>
-</ul>
-
-<p>像代码段这种只读的 Page 就是 CleanPage,而像数据段(__DATA)这种读写的 Page,当写数据发生的时候,会触发 COW(Copy on Write),也就是写时复制,Page 会被标记成 Dirty,同时会被复制<br/>
-详细的可以参考 <a href="https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/ManagingMemory.html#//apple_ref/doc/uid/10000160-SW1">Memory Usage Performance Guidelines</a> 这篇</p>
-
-<h3 id="toc_9">启动过程</h3>
-
-<p>使用 dyld2 启动应用的过程大致如下:<br/>
-<img src="media/15833971627503/15857983872464.jpg" alt="" style="width:772px;"/></p>
-
-<ol>
-<li>加载 dyld 到 APP 进程</li>
-<li>加载动态库(包括所依赖的所有动态库)</li>
-<li>Rebase</li>
-<li>Bind</li>
-<li>初始化 OC Runtime</li>
-<li>其他的初始化代码</li>
-</ol>
-
-<p><img src="media/15833971627503/15858136308829.jpg" alt="" style="width:675px;"/></p>
-
-<h4 id="toc_10">加载动态库</h4>
-
-<p>dyld 会首先读取 mach-o 文件的 Header 和 Loadcommands<br/>
-接着就知道了这个可执行文件依赖的动态库,例如加载动态库 A 到内存,接着检查 A 所依赖的动态库,就这样递归加载,知道所有的动态库加载完毕,通常一个 APP 所依赖的动态库在 100-400 个左右,其中大部分是系统的动态库,他们会会缓存到 <strong>dyld shared cache</strong>,提高读取效率</p>
-
-<h4 id="toc_11">Rebase &amp; Bind</h4>
-
-<p>为了解决应用安全问题,苹果采用了 ASLR 和 Code Sign 技术<br/>
-<strong>ASLR (Address space layout randomization) 地址空间布局随机化</strong><br/>
-APP在被启动的时候,程序会被映射到逻辑的地址空间,这个逻辑的地址空间有一个起始地址,而 ASLR 技术使得这个起始地址是随机的.</p>
-
-<blockquote>
-<p>如果是固定的,黑客很容就可以由起始地址+偏移量找到函数的地址,不安全</p>
-</blockquote>
-
-<p>Code Sign就是签名,在进行加密的时候，会对每一个Page（这里指的是Segment Data）都进行加密，当dyld进行加载的时候，会对每一个Page都进行独立的验证.</p>
-
-<p>mach-o 中有很多符号,有指向当前 mach-o的,也有指向其他 dylib 的,比如 printf,mach-o 采用了 PIC (Position Independ Code)技术,当程序要调用 printf 的时候,会先在__DATA 段中建立一个指针指向 printf,在通过这个指针实现间接调用,dyld 这时候需要做一些 fix-up 的工作,帮助 app 找到这些符号的实际地址,主要包括两部分:</p>
-
-<ul>
-<li>Rebase 修正内部(指向当前的 mach-o 文件)的指针指向</li>
-<li>Bind 修正外部的指针指向</li>
-</ul>
-
-<p><img src="media/15833971627503/15858003202518.jpg" alt="" style="width:795px;"/></p>
-
-<p>之所以需要 Rebase,是因为刚刚提到的 ASLR 使得地址随机化,导致起始地址不固定,另外由于 CodeSign,导致不能直接修改 Image. Rebase 的时候只需要增加对应的偏移量即可,待 Rebase 的数据都存放在__LINKEDIT 中.</p>
-
-<p>Rebase 解决了内部的符号引用问题,而外部的符号引用则有 Bind 解决,在 Bind 的时候,是根据字符串匹配的方式查找符号表,所以这个过程相对于 Rebase 来说是略慢的</p>
-
-<p>针对这一阶段的优化,常见的方案:</p>
-
-<ul>
-<li>减少__DATA 段中的指针数量</li>
-<li>合并 Category 和功能相似的类,比如UIView+Frame,UIView+AutoLayout…合并为一个</li>
-<li>删除无用的类和方法(做一次全局的扫描,看哪些类和方法是没有使用的,删除)</li>
-<li>不使用+load,使用 Initializer 替换,使用 dispath_once 初始化</li>
-</ul>
-
-<h4 id="toc_12">Objective C</h4>
-
-<p>ObjectiveC 是动态语言,所以在执行 main 函数之前,需要把类的信息注册到一个全局的 Table 中,同时 OC 支持 Category,在初始化的时候,也会把 Category 中的方法注册到对应的类中,同时会唯一 Selector,这也是为啥当你 Category 实现了类中同名的方法后,类的方法会被覆盖<br/>
-另外由于 iOS 是基于 Cocoa Touch 的,所以绝大多数的类起始都是系统类,所以大多数的 Runtime 初始化起始在 Rebase 和 Bind 中已经完成</p>
-
-<p>完成 Rebas 和 Bind 之后,通知 Runtime 去做一些代码运行时需要做的事情:</p>
-
-<ul>
-<li>dylb 会注册所有声明过的 Objc 类</li>
-<li>将分类插入到类的方法列表中</li>
-<li>检查每个 selector 的唯一性</li>
-</ul>
-
-<h4 id="toc_13">Initializers</h4>
-
-<p>接下来就是必要的初始化部分啦,主要包括几部分</p>
-
-<ul>
-<li>+load 方法</li>
-<li>C/C++静态初始化对象和标记为__attribute__(constructor)的方法</li>
-</ul>
-
-<p>这里需要注意的是,尽量不要使用+load 方法,并且+load 方法已经弃用了,如果是 swift 开发,你会发现根本无法去写这样的一个方法,官方的建议是使用 initialize,区别就是 laod 是在类装载的时候执行,而 initialize 是在类第一次收到 message 前调用</p>
-
-<p><img src="media/15833971627503/15858120480509.jpg" alt="" style="width:796px;"/></p>
-
-<h4 id="toc_14">dyld3</h4>
-
-<p>上面讲的 dyld2 的加载方式,最新的 dyld3 的加载方式略有不同<br/>
-<img src="media/15833971627503/15858087255291.jpg" alt="" style="width:783px;"/></p>
-
-<p>dyld2 是纯粹的 in-process,也就是在程序进程内执行的,也就意味着程序被启动的时候,dyld2 才开始执行任务<br/>
-dyld3 则是部分 out-process,部分 in-process,上图中虚线之上的部分是 out-of-process 的,在 app 下载安装和版本更新的时候会去执行,out-of-process 会做如下的事情:</p>
-
-<ul>
-<li>分析 Mach-O Headers</li>
-<li>分析依赖的动态库</li>
-<li>查找需要 Rebase &amp; Bind 之类的符号</li>
-<li>把上述结果写入缓存</li>
-</ul>
-
-<p>这样在应用启动的时候,直接从缓存中读取数据,加快加载速度</p>
-
-<h3 id="toc_15">优化启动时间</h3>
-
-<p>启动时间就是用户点击 APP 图标,到第一个界面展示的时间</p>
-
-<p>以 main 函数为分水岭,包括两部分:main 函数之前和 main 函数到第一个界面的 viewDidAppear<br/>
-所以优化方案也是分成两部分,pre-main 和 main</p>
-
-<h4 id="toc_16">pre-main 的优化</h4>
-
-<h4 id="toc_17">main 函数到第一个界面展示的优化</h4>
-
-<ul>
-<li><p>延迟加载</p>
-<p>等第一个界面启动完成之后再去做其他的操作<br/>
-通常在 AppDelegate 中,初始化操作包扩两个方法:</p>
-<pre class="line-numbers"><code class="language-text">* didFinishLaunchingWithOptions
-* applicationDidBecomeActive
-</code></pre>
-<p>这里的初始化一般和业务逻辑相关,包括:</p>
-<ul>
-<li>三方 SDK 初始化:比如 Crash 统计,分享,可以等第一次调用再初始化</li>
-<li>初始化基础服务,比如 WatchDog,远程参数</li>
-<li>启动相关日志,设计到数据库的操作一定要放到后台操作</li>
-<li>页面创建使用纯代码创建,不要使用 storyboard,xib, storyboard,xib会涉及到界面到代码的转换,也是要耗费一些时间.界面复杂的话,约束多,时间增加很明显</li>
-</ul></li>
-</ul>
-
-<h2 id="toc_18">启动时间的统计方案</h2>
-
-<p>1.对于 <code>pre-main</code> 阶段,Xcode 提供了方法可以打印各个阶段时间消耗的方法:<br/>
-Product -&gt; Scheme -&gt; Edit Scheme -&gt; Environment Variables 中将环境变量 DYLD_PRINT_STATISTICS设为1;<br/>
-<img src="media/15833971627503/15858137897463.jpg" alt="" style="width:212px;"/></p>
-
-<p><img src="media/15833971627503/15858137585150.jpg" alt="" style="width:861px;"/></p>
-
-<p>这里额外补充一下 dyld 变量的 参数<br/>
-<img src="media/15833971627503/15858142973536.jpg" alt="" style="width:472px;"/><br/>
-<a href="https://juejin.im/post/5d357ea9f265da1b74023afb">具体参考这篇</a></p>
-
-<p><strong>线上如何度量 pre-main 时间呢?</strong><br/>
-最容易想到的就是拦截打点,我们把目光转向 dyld 的源码,整个初始化都是从<br/>
-<strong>initializeMainExecutable</strong> 方法开始的,dyld 会优先初始化动态库,然后初始化 APP 的可执行文件</p>
-
-<pre class="line-numbers"><code class="language-text">void initializeMainExecutable()
-{
-    // record that we&#39;ve reached this step
-    gLinkContext.startedInitializingMainExecutable = true;
-
-    // run initialzers for any inserted dylibs
-    ImageLoader::InitializerTimingList initializerTimes[allImagesCount()];
-    initializerTimes[0].count = 0;
-    const size_t rootCount = sImageRoots.size();
-    if ( rootCount &gt; 1 ) {
-        for(size_t i=1; i &lt; rootCount; ++i) {
-            sImageRoots[i]-&gt;runInitializers(gLinkContext, initializerTimes[0]);
-        }
-    }
-    
-    // run initializers for main executable and everything it brings up 
-    sMainExecutable-&gt;runInitializers(gLinkContext, initializerTimes[0]);
-</code></pre>
-
-<p>动态库的 load 顺序是与 Load Commands 顺序和依赖关系息息相关的。如图所示：<br/>
-<img src="media/15833971627503/15858150332615.jpg" alt="" style="width:737px;"/><br/>
-找到最早加载的动态, 然后在其 load 函数中做 Hook 就可以<br/>
- AFNetworking 会优先 load ，被依赖的动态库会优先 load<br/>
- 整体思路:</p>
-
-<ul>
-<li>找到最早 load 的动态库</li>
-<li>在 load 函数中获取 App 中的所有可执行文件</li>
-<li>hook 对应的可执行文件的 load 函数</li>
-<li>统计每个 load 函数的时间、全部 load 函数的整体时间</li>
-<li>上报统计分析</li>
-</ul>
-
-<p>Hook 源码可以查看这个 <a href="https://github.com/joy0304/JoyDemo/tree/master/HookLoad">load 函数的时间统计</a></p>
-
-<h2 id="toc_19">代码瘦身</h2>
-
-<p>随着业务的迭代，不断有新的代码加入，同时也会废弃掉无用的代码和资源文件，但是工程中经常有无用的代码和文件被遗弃在角落里，没有及时被清理掉。这些无用的部分一方面增大了App的包体积，另一方便也拖慢了App的冷启动速度，所以及时清理掉这些无用的代码和资源十分有必要<br/>
-通过对Mach-O文件的了解，可以知道__TEXT:__objc_methname:中包含了代码中的所有方法，而__DATA__objc_selrefs中则包含了所有被使用的方法的引用，通过取两个集合的差集就可以得到所有未被使用的代码。核心方法如下，具体可以参考: <a href="https://github.com/xuezhulian/selectorsunref">iOS代码瘦身</a><br/>
-这个库有一个 python 文件,找到编译的.app 文件,拿到 mach-o 文件,<br/>
-.app 的文件路径:</p>
-
-<pre class="line-numbers"><code class="language-text">/Users/macongcong/Library/Developer/Xcode/DerivedData/ZongHeng-aywybrtvwtualiewcesrwkpnnviw/Build/Products/Debug-iphonesimulator 
-</code></pre>
-
-<p><img src="media/15833971627503/15858189879364.jpg" alt="" style="width:643px;"/></p>
-
-<p>1,先到上面我们下载的那个 Python 文件路径下(终端里)</p>
-
-<pre class="line-numbers"><code class="language-text"> cd /Volumes/iMac/Users/macongcong/Downloads/selectorsunref-master/selectorsunref.py
-
-</code></pre>
-
-<p>去掉后面的selectorsunref.py,也就是</p>
-
-<pre class="line-numbers"><code class="language-text">cd /Volumes/iMac/Users/macongcong/Downloads/selectorsunref-master/
-
-</code></pre>
-
-<p>然后给这个 Python 文件指定权限</p>
-
-<pre class="line-numbers"><code class="language-text">chmod a+x selectorsunref.py
-</code></pre>
-
-<p>然后执行</p>
-
-<pre class="line-numbers"><code class="language-text">./selectorsunref.py
-</code></pre>
-
-<p>然后执行我们的.app 文件路径</p>
-
-<p><img src="media/15833971627503/15858196252831.jpg" alt="" style="width:1545px;"/></p>
-
-<h2 id="toc_20">链接的动态库有哪些 哪些是可以去掉的</h2>
-
-<h2 id="toc_21">动态库 静态库区别</h2>
-
-<ul>
-<li>使用动态库可以减少应用程序的可执行文件的大小</li>
-<li>动态库允许 APP 仅在需要的时候才延迟加载,有利于缩短启动时间</li>
-</ul>
-
-<blockquote>
-<p>Two important factors that determine the performance of apps are their launch times and their memory footprints. Reducing the size of an app’s executable file and minimizing its use of memory once it’s launched make the app launch faster and use less memory once it’s launched. Using dynamic libraries instead of static libraries reduces the executable file size of an app. They also allow apps to delay loading libraries with special functionality only when they’re needed instead of at launch time. This feature contributes further to reduced launch times and efficient memory use ---- <a href="https://developer.apple.com/library/archive/documentation/DeveloperTools/Conceptual/DynamicLibraries/100-Articles/OverviewOfDynamicLibraries.html">官方文档</a></p>
-</blockquote>
-
-<h3 id="toc_22">使用动态库与静态库 APP的对比</h3>
-
-<p><img src="media/15833971627503/15858114503305.jpg" alt="" style="width:674px;"/></p>
-
-<p><img src="media/15833971627503/15858114650223.jpg" alt="" style="width:701px;"/></p>
-
-<p>除了在启动时自动加载动态库之外，动态加载器还应应用程序的要求在<strong>运行时加载动态库</strong>。也就是说，如果应用程序在启动时不需要加载动态库，则开发人员可以选择不将应用程序的目标文件与动态库链接，而是仅在应用程序的各个部分中加载动态库。需要它。<strong>以这种方式使用动态库可以加快启动过程</strong>。</p>
-
-<p>静态库与动态库的区别:</p>
-
-<ul>
-<li>静态库: 链接时完整的拷贝到可执行文件中,多次使用就有多个冗余的拷贝(<strong>.a</strong> 和 <strong>.framework</strong>)</li>
-<li>动态库: 链接时不复制,程序运行时由系统动态加载到内存,系统只加载一次,多个程序共用,节省内存 (<strong>.dylib</strong> 和 <strong>.framework</strong>)</li>
-</ul>
-
-<p>为什么.framework既是静态库又是动态库?/<br/>
-<strong>系统的.framework 是动态库,我们自己创建的.framework是静态库</strong></p>
-
-<p>.a 是一个纯二进制文件,不能直接使用,要配合.h 文件才能使用<br/>
-.framework 除了二进制文件,还包括了资源文件,可以直接使用<br/>
-.a + .h + sourceFile = .framework</p>
-
-                        
-                      </div>
-                  </div>
+                <a target="self" class="navbar-item " href="index.html">Home</a>
+                
+                <a target="_self" class="navbar-item " href="archives.html">Archives</a>
+                
+
+                <a role="button" id="navbarSNSRssSwitchBtn" class="navbar-burger burger" aria-label="menu" aria-expanded="false" data-target="navbarSNSRssButtons">
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
                 </a>
-                <div class="read-more clearfix">
-                  <div class="more-left left">
+              </div>
+            
+              <div id="navbarSNSRssButtons" class="navbar-menu">
+                <div class="navbar-start">
                   
-                    <span class="date">2020/03/05</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html'>性能优化</a></span>
-          				   
-                    
-
-                  </div>
-                  <div class="more-right right">
-                  <span class="comments">
+                </div>
+            
+                <div class="navbar-end">
+                  <div class="navbar-item">
+                    <!--buttons start-->
+                    <div class="buttons">
                       
+                        
+                        
+                        
+                        <a href="https://github.com/macongLeo/macongLeo.github.io.git" target="_blank" title="github">
+                            <span class="icon is-large has-text-grey-darker">
+                               <svg class="svg-inline--fa fa-github fa-w-16 fa-lg" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="github" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512" data-fa-i2svg=""><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"></path></svg><!-- <i class="fab fa-github fa-lg"></i> -->
+                            </span>
+                          </a>
+                        
+                        
+                      
+                      <a href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" target="_blank" title="weibo">
+                          <span class="icon is-large has-text-grey-darker">
+                            <svg class="svg-inline--fa fa-weibo fa-w-16 fa-lg" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="weibo" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M407 177.6c7.6-24-13.4-46.8-37.4-41.7-22 4.8-28.8-28.1-7.1-32.8 50.1-10.9 92.3 37.1 76.5 84.8-6.8 21.2-38.8 10.8-32-10.3zM214.8 446.7C108.5 446.7 0 395.3 0 310.4c0-44.3 28-95.4 76.3-143.7C176 67 279.5 65.8 249.9 161c-4 13.1 12.3 5.7 12.3 6 79.5-33.6 140.5-16.8 114 51.4-3.7 9.4 1.1 10.9 8.3 13.1 135.7 42.3 34.8 215.2-169.7 215.2zm143.7-146.3c-5.4-55.7-78.5-94-163.4-85.7-84.8 8.6-148.8 60.3-143.4 116s78.5 94 163.4 85.7c84.8-8.6 148.8-60.3 143.4-116zM347.9 35.1c-25.9 5.6-16.8 43.7 8.3 38.3 72.3-15.2 134.8 52.8 111.7 124-7.4 24.2 29.1 37 37.4 12 31.9-99.8-55.1-195.9-157.4-174.3zm-78.5 311c-17.1 38.8-66.8 60-109.1 46.3-40.8-13.1-58-53.4-40.3-89.7 17.7-35.4 63.1-55.4 103.4-45.1 42 10.8 63.1 50.2 46 88.5zm-86.3-30c-12.9-5.4-30 .3-38 12.9-8.3 12.9-4.3 28 8.6 34 13.1 6 30.8.3 39.1-12.9 8-13.1 3.7-28.3-9.7-34zm32.6-13.4c-5.1-1.7-11.4.6-14.3 5.4-2.9 5.1-1.4 10.6 3.7 12.9 5.1 2 11.7-.3 14.6-5.4 2.8-5.2 1.1-10.9-4-12.9z"></path></svg><!-- <i class="fab fa-weibo fa-lg"></i> -->
+                          </span>
+                      </a>
+                      
+                      <a href="atom.xml" target="_blank" title="RSS">
+                          <span class="icon is-large has-text-black-bis">
+                              <svg class="svg-inline--fa fa-rss fa-w-14 fa-lg" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="rss" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"></path></svg><!-- <i class="fas fa-rss fa-lg"></i> -->
+                          </span>
+                      </a>
+                    </div>
+                    <!--buttons end-->
 
-                       
-                  </span>
                   </div>
                 </div>
-              </div><!-- article -->
-        
-              
-
-
-			<div class="row">
-			  <div class="large-6 columns">
-			  <p class="text-left" style="padding-top:25px;">
-			   
-			  </p>
-			  </div>
-			  <div class="large-6 columns">
-			<p class="text-right" style="padding-top:25px;">
-			 <a href="性能优化_1.html">&raquo; Next Page</a> 
-			</p>
-			  </div>
-			</div>
-		</div>
-	</div><!-- large 8 -->
-
- <div class="large-4 medium-4 columns">
-  <div class="hide-for-small">
-    <div id="sidebar" class="sidebar">
-          <div id="site-info" class="site-info">
-            
-                <div class="site-a-logo"><img src="img/icon.jpg" /></div>
-            
-                <h1>路漫漫其修远兮</h1>
-                <div class="site-des">2020 加油 奋斗 !</div>
-                <div class="social">
-
-
-
-
-
-
-
-<a target="_blank" class="weibo" href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" title="weibo">Weibo</a>
-
-<a target="_blank" class="github" target="_blank" href="https://github.com/macongLeo/macongLeo.github.io.git" title="GitHub">GitHub</a>
-
-  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
-                
-              	 </div>
-          	</div>
-
-             
-
-              <div id="site-categories" class="side-item ">
-                <div class="side-header">
-                  <h2>Categories</h2>
-                </div>
-                <div class="side-content">
-
-      	<p class="cat-list">
-        
-            <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
-        
-            <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
-        
-            <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
-        
-            <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
-        
-            <a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html"><strong>网络进阶</strong></a>
-        
-            <a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html"><strong>性能优化</strong></a>
-        
-            <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
-        
-            <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
-        
-            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
-        
-            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
-         
-        </p>
-
-
                 </div>
               </div>
-
-              <div id="site-categories" class="side-item">
-                <div class="side-header">
-                  <h2>Recent Posts</h2>
-                </div>
-                <div class="side-content">
-                <ul class="posts-list">
-	      
-		      
-			      <li class="post">
-			        <a href="15868498460347.html">Core Text</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15867715737861.html">堆, 栈 数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833970837752.html">Socket</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15851010269707.html">多线程 01</a>
-			      </li>
-		     
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		   
-		  		</ul>
-                </div>
-              </div>
-        </div><!-- sidebar -->
-      </div><!-- hide for small -->
-</div><!-- large 4 -->
-
-</div><!-- row -->
-
- <div class="page-bottom clearfix">
-  <div class="row">
-   <p class="copyright">Copyright &copy; 2015
-Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
-Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
-  </div>
-</div>
-
-        </section>
+            </nav>
       </div>
-    </div>
+
+ 
+<div class="hero-body ct-body">
+        <div class="container">
+              <div class="columns is-centered">
+                  <div class="column  is-four-fifths">
+                      <div class="columns is-mobile">
+                          <div class="column">
+                              <h1 class="title">
+路漫漫其修远兮
+              
+                              </h1>
+                              <h2 class="subtitle">
+                                 2020 加油 奋斗 !
+                              </h2>
+                          </div>
+                          <div class="column is-narrow"><figure class="image is-128x128">
+                            
+                              <img class="is-rounded" src="img/icon.jpg">
+                            
+                            </figure></div>
+                      </div>
+                        
+                      
+                  </div>
+                  
+                </div>
+            
+              
+        
+        </div>
+      </div>
+</section>
+<section class="ct-body">
+      <div class="container">
+          <div class="columns is-variable bd-klmn-columns is-4">
+              <div class="column is-two-thirds">
+                
+                  <div class="card">
+                    
+                      <div class="card-content">
+                        <div class="content">
+                          <a href="15833971627503.html"> 
+                            <h2 class="title">启动优化</h2>
+                          </a>        
+                                                    
+                          <p> 
+                            <a href="15833971627503.html"><span class="tran-readmore">Read more...</span></a>&nbsp;&nbsp; 
+                            <span class="date">2020/03/05</span>
+                            <span class="tran-posted-in">posted in</span>&nbsp; 
+                            
+                                <span class="posted-in"><a href='%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html'>性能优化</a></span>
+                                                      
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  
+
+                  <nav class="pagination is-centered" role="navigation" aria-label="pagination">
+                    <a class="pagination-previous"  disabled="disabled" ><span class="tran-prev-page">&laquo; Prev Page</span></a>  
+                    <a class="pagination-next"   href="性能优化_1.html" ><span class="tran-next-page">Next Page &raquo;</span></a>                   
+                  </nav>
+
+              </div><!-- end column -->
+              <div class="column">
+                  <div class="card">
+                      <header class="card-header">
+                        <p class="card-header-title">
+                           <span class="tran-site-categories">Categories</span> 
+                        </p>
+                     
+                      </header>
+                      <div class="card-content site-categories">
+                        <div class="content"> 
+                          <ul>
+                          
+                                <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a>
+                                   <ul> 
+                                  
+                                        <li><a href="Runtime.html">Runtime</a></li>
+                                  
+                                        <li><a href="RunLoop.html">RunLoop</a></li>
+                                  
+                                        <li><a href="KVO&&KVC.html">KVO&&KVC</a></li>
+                                  
+                                        <li><a href="Block%20%E7%9B%B8%E5%85%B3.html">Block 相关</a></li>
+                                  
+                                        <li><a href="%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html">内存管理</a></li>
+                                  
+                                   </ul> 
+                                </li> 
+                          
+                                <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E5%85%B6%E4%BB%96.html">其他</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                          </ul>
+                        </div>
+                      </div>
+                     
+                    </div>
+
+                    <div class="card">
+                        <header class="card-header">
+                          <p class="card-header-title">
+                              <span class="tran-site-tags">Tags</span> 
+                          </p>
+                       
+                        </header>
+                        <div class="card-content site-tags">
+                          <div class="content">
+                           <div class="tags">
+                            
+                           </div>
+                             
+                          </div>
+                        </div>
+                       
+                      </div>
+
+              </div>
+            </div>
+
+          
+      </div>
+    </section>
+
+    <footer class="footer">
+        <div class="content has-text-centered">
+          <p>
+              Copyright &copy; 2019
+              Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+              Theme used <a target="_blank" href="https://bulma.io/">Bulma CSS</a>.
+          </p>
+        </div>
+      </footer>
 
 
 
@@ -677,215 +283,10 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
-<style type="text/css">
-figure{margin: 0;padding: 0;}
-figcaption{text-align:center;}
-
-/* PrismJS 1.14.0
- http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
-/**
- * prism.js default theme for JavaScript, CSS and HTML
- * Based on dabblet (http://dabblet.com)
- * @author Lea Verou
- */
-
-code[class*="language-"],
-pre[class*="language-"] {
-    color: black;
-    background: none;
-    text-shadow: 0 1px white;
-    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-    text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
-    word-wrap: normal;
-    line-height: 1.5;
-    
-    -moz-tab-size: 4;
-    -o-tab-size: 4;
-    tab-size: 4;
-    
-    -webkit-hyphens: none;
-    -moz-hyphens: none;
-    -ms-hyphens: none;
-    hyphens: none;
-}
-
-pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
-code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
-    text-shadow: none;
-    background:#b3d4fc;
-}
-
-pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
-code[class*="language-"]::selection, code[class*="language-"] ::selection {
-    text-shadow: none;
-    background: #b3d4fc;
-}
-
-@media print {
-    code[class*="language-"],
-    pre[class*="language-"] {
-        text-shadow: none;
-    }
-}
-
-/* Code blocks */
-pre[class*="language-"] {
-    padding: 1em;
-    margin: .5em 0;
-    overflow: auto;
-}
-
-:not(pre) > code[class*="language-"],
-pre[class*="language-"] {
-    background: #F7F7F7;
-}
-
-/* Inline code */
-:not(pre) > code[class*="language-"] {
-    padding: .1em;
-    border-radius: .3em;
-    white-space: normal;
-}
-
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-    color: slategray;
-}
-
-.token.punctuation {
-    color: #999;
-}
-
-.namespace {
-    opacity: .7;
-}
-
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol,
-.token.deleted {
-    color: #905;
-}
-
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin,
-.token.inserted {
-    color: #690;
-}
-
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string {
-    color: #9a6e3a;
-    background: hsla(0, 0%, 100%, .5);
-}
-
-.token.atrule,
-.token.attr-value,
-.token.keyword {
-    color: #07a;
-}
-
-.token.function,
-.token.class-name {
-    color: #DD4A68;
-}
-
-.token.regex,
-.token.important,
-.token.variable {
-    color: #e90;
-}
-
-.token.important,
-.token.bold {
-    font-weight: bold;
-}
-.token.italic {
-    font-style: italic;
-}
-
-.token.entity {
-    cursor: help;
-}
-
-
-pre[class*="language-"].line-numbers {
-    position: relative;
-    padding-left: 3.8em;
-    counter-reset: linenumber;
-}
-
-pre[class*="language-"].line-numbers > code {
-    position: relative;
-    white-space: inherit;
-}
-
-.line-numbers .line-numbers-rows {
-    position: absolute;
-    pointer-events: none;
-    top: 0;
-    font-size: 100%;
-    left: -3.8em;
-    width: 3em; /* works for line-numbers below 1000 lines */
-    letter-spacing: -1px;
-    border-right: 1px solid #999;
-
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-
-}
-
-    .line-numbers-rows > span {
-        pointer-events: none;
-        display: block;
-        counter-increment: linenumber;
-    }
-
-        .line-numbers-rows > span:before {
-            content: counter(linenumber);
-            color: #999;
-            display: block;
-            padding-right: 0.8em;
-            text-align: right;
-        }
-
-</style>
 
   
     
 
-    <script src="asset/js/foundation.min.js"></script>
-    <script>
-      $(document).foundation();
-      function fixSidebarHeight(){
-        var w1 = $('.markdown-body').height();
-          var w2 = $('#sidebar').height();
-          if (w1 > w2) { $('#sidebar').height(w1); };
-      }
-      $(function(){
-        fixSidebarHeight();
-      })
-      $(window).load(function(){
-          fixSidebarHeight();
-      });
-     
-    </script>
 
 
 

@@ -1,759 +1,270 @@
-<!doctype html>
-<html class="no-js" lang="en">
+<!DOCTYPE html>
+<html lang="zh">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>
+      
+    UI 相关 - 路漫漫其修远兮
     
-  UI 相关 - 路漫漫其修远兮
-  
-  </title>
-  
-  
-  <link href="atom.xml" rel="alternate" title="路漫漫其修远兮" type="application/atom+xml">
-    <link rel="stylesheet" href="asset/css/foundation.min.css" />
-    <link rel="stylesheet" href="asset/css/docs.css" />
-    <script src="asset/js/vendor/modernizr.js"></script>
-    <script src="asset/js/vendor/jquery.js"></script>
- 
-<script type="text/javascript">
-  function before_search(){
-    var searchVal = 'site: ' + document.getElementById('search_input').value;
-    document.getElementById('search_q').value = searchVal;
-    return true;
-  }
-</script>
-  </head>
-  <body class="antialiased hide-extras">
+    </title>
     
-    <div class="marketing off-canvas-wrap" data-offcanvas>
-      <div class="inner-wrap">
 
-
-<nav class="top-bar docs-bar hide-for-small" data-topbar>
-
-
-  <section class="top-bar-section">
-  <div class="row">
-      <div style="position: relative;width:100%;"><div style="position: absolute; width:100%;">
-        <ul id="main-menu" class="left">
-        
-        <li id=""><a target="self" href="index.html">Home</a></li>
-        
-        <li id=""><a target="_self" href="archives.html">Archives</a></li>
-        
-        </ul>
-
-        <ul class="right" id="search-wrap">
-          <li>
-<form target="_blank" onsubmit="return before_search();" action="https://google.com/search" method="get">
-    <input type="hidden" id="search_q" name="q" value="" />
-    <input tabindex="1" type="search" id="search_input"  placeholder="Search"/>
-</form>
-</li>
-          </ul>
-      </div></div>
-  </div>
-  </section>
-
-</nav>
-
-        <nav class="tab-bar show-for-small">
-  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
-    <span> &nbsp; 路漫漫其修远兮</span>
-  </a>
-</nav>
-
-<aside class="left-off-canvas-menu">
-      <ul class="off-canvas-list">
-        
-        <li><a target="self" href="index.html">Home</a></li>
-        
-        <li><a target="_self" href="archives.html">Archives</a></li>
-        
-
-    <li><label>Categories</label></li>
-
-        
-            <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a></li>
-        
-            <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a></li>
-        
-            <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a></li>
-        
-            <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a></li>
-        
-            <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a></li>
-        
-            <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a></li>
-        
-            <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a></li>
-        
-            <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a></li>
-        
-            <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a></li>
-        
-            <li><a href="%E5%85%B6%E4%BB%96.html">其他</a></li>
-         
-
-      </ul>
-    </aside>
-
-<a class="exit-off-canvas" href="#"></a>
-
-
-        <section id="main-content" role="main" class="scroll-container">
-        
-       
-
- <script type="text/javascript">
-	$(function(){
-		$('#menu_item_index').addClass('is_active');
-	});
-</script>
-<div class="row">
-	<div class="large-8 medium-8 columns">
-		<div class="markdown-body home-categories">
-		
-			<div class="article">
-                <a class="clearlink" href="15868498460347.html">
+    
+    
+    <link href="atom.xml" rel="alternate" title="路漫漫其修远兮" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/style.min.css">
+    <link rel="stylesheet" href="asset/css/doc.css">
+    <script src="asset/app.js"></script>
+</head>
+  <body>
+    <section class="hero">
+      <div class="hero-head">
+          <nav class="navbar" role="navigation" aria-label="main navigation">
+              <div class="container">
+              <div class="navbar-brand">
                 
-                  <h1>Core Text</h1>
-                  <div class="a-content">
-                      
-                      <div class="a-content-text">
-                        
-                        	<blockquote>
-<p>CoreText是Mac OS和iOS系统中处理文本的low-level API, 不管是使用OC还是swift, 实际我们使用CoreText都还是间接或直接使用C语言在写代码。CoreText是iOS和Mac OS中文本处理的根基, TextKit和WebKit都是构建于其上。</p>
-</blockquote>
-
-<p>Core Text 的框架图<br/>
-<img src="media/15868498460347/15868499201965.jpg" alt="" style="width:678px;"/></p>
-
-<ul>
-<li>CTFrame 可以看做是画布,画布的大小范围由 CTpath 决定</li>
-<li>CTFrame 由很多个 CTLine 组成,CTLine 表示为一行</li>
-<li>CTLine 有多个 CTRun 组成,CTRun相当于一行中的多个快,但是 CTRun 不需要我们创建,由 NSAttributedString 的属性决定,系统自动生成,每个 CTRun 对应不同的属性</li>
-<li>CTFramesetter 是一个工厂,创建 CTFrame,一个界面上可以有多个 CTFrame</li>
-</ul>
-
-<p><img src="media/15868498460347/15868534886011.jpg" alt="" style="width:438px;"/></p>
-
-<h3 id="toc_0">使用 Core Text 步骤</h3>
-
-<ol>
-<li>使用Core Text首先要有一个显示的 string.</li>
-<li>然后设置 string 的每个部分的样式-&gt;attributedString</li>
-<li>生成 CTFramesetter</li>
-<li>得到 CTFrame</li>
-<li>绘制:CTFrameDraw</li>
-</ol>
-
-<h3 id="toc_1">字体 CTFont</h3>
-
-<ul>
-<li>字体 Font: 是一系列字号,样式和磅值相同的字符</li>
-<li>字面 Face: 是所有字号的磅值和格式的综合</li>
-<li>磅值 Weight:用于描述字体的粗度</li>
-<li>样式 Style: 字形有三种形式:Roman type是直体;oblique type是斜体;utakuc type是斜体兼曲线(比Roman type更像书法体)。</li>
-<li>基线 BaseLine: 通常在x、v、b、m下的那条线 描边(Stroke):组成字符的线或曲线。可以加粗或改变字符形状</li>
-<li>衬线 Serif: 用来使字符更可视的一条水平线。如字母左上角和下部的水平线。</li>
-</ul>
-
-<p><img src="media/15868498460347/15868539756590.jpg" alt="" style="width:633px;"/><br/>
-<img src="media/15868498460347/15868539881833.jpg" alt="" style="width:643px;"/></p>
-
-<p>在 Apple 的 SDK 中是这样定义这些属性的</p>
-
-<pre class="line-numbers"><code class="language-text">const CFStringRef kCTCharacterShapeAttributeName;
-//字体形状属性  必须是CFNumberRef对象默认为0，非0则对应相应的字符形状定义，如1表示传统字符形状
-
-const CFStringRef kCTFontAttributeName;
-//字体属性   必须是CTFont对象
-
-const CFStringRef kCTKernAttributeName;
-//字符间隔属性 必须是CFNumberRef对象
-
-const CFStringRef kCTLigatureAttributeName;
-//设置是否使用连字属性，设置为0，表示不使用连字属性。标准的英文连字有FI,FL.默认值为1，既是使用标准连字。也就是当搜索到f时候，会把fl当成一个文字。必须是CFNumberRef 默认为1,可取0,1,2
-
-const CFStringRef kCTForegroundColorAttributeName;
-//字体颜色属性  必须是CGColor对象，默认为black
-
-const CFStringRef kCTForegroundColorFromContextAttributeName;
- //上下文的字体颜色属性 必须为CFBooleanRef 默认为False
-
-const CFStringRef kCTParagraphStyleAttributeName;
-//段落样式属性 必须是CTParagraphStyle对象 默认为NIL
-
-const CFStringRef kCTStrokeWidthAttributeName;
-//笔画线条宽度 必须是CFNumberRef对象，默为0.0f，标准为3.0f
-const CFStringRef kCTStrokeColorAttributeName;
-//笔画的颜色属性 必须是CGColorRef 对象，默认为前景色
-
-const CFStringRef kCTSuperscriptAttributeName;
-//设置字体的上下标属性 必须是CFNumberRef对象 默认为0,可为-1为下标,1为上标，需要字体支持才行。如排列组合的样式Cn1
-
-const CFStringRef kCTUnderlineColorAttributeName;
-//字体下划线颜色属性 必须是CGColorRef对象，默认为前景色
-
-const CFStringRef kCTUnderlineStyleAttributeName;
-//字体下划线样式属性 必须是CFNumberRef对象,默为kCTUnderlineStyleNone 可以通过CTUnderlineStypleModifiers 进行修改下划线风格
-
-const CFStringRef kCTVerticalFormsAttributeName;
-//文字的字形方向属性 必须是CFBooleanRef 默认为false，false表示水平方向，true表示竖直方向
-
-const CFStringRef kCTGlyphInfoAttributeName;
-//字体信息属性 必须是CTGlyphInfo对象
-
-const CFStringRef kCTRunDelegateAttributeName
-//CTRun 委托属性 必须是CTRunDelegate对象
-</code></pre>
-
-<h3 id="toc_2">富文本</h3>
-
-<blockquote>
-<p>富文本格式(RTF)规范是为了便于在应用程序之间轻松转储格式化文本和图形的一种编码方法。<br/>
-现在，用户可以利用特定转换软件，在不同系统如MS-DOS、Windows、OS/2、Macintosh和Power Macintosh的应用程序之间转移字处理文档。<br/>
-RTF规范提供一种在不同的输出设备、操作环境和操作系统之间交换文本和图形的一种格式。<br/>
-RTF使用ANSI, PC-8, Macintosh, 或IBM PC字符集控制文档的表示法和格式化，包括屏幕显示和打印<br/>
-。凭借RTF规范，不同的操作系统和不同的软件程序创建的文档能够在这些操作系统和应用程序之间传递。<br/>
-将一个格式化的文件转换为RTF文件的软件称为RTF书写器。<br/>
-RTF书写器用于分离现有文本中的程序控制信息，并且生成一个包含文本和与之相关的RTF组的新文件。<br/>
-将RTF文件转换成格式化文件的软件则称为RTF阅读器。</p>
-</blockquote>
-
-<p>简单的来说,带有<strong>文字属性</strong>的字符串就是富文本</p>
-
-<p>iOS 中包含 <code>NSAttributedString</code> 和 <code>NSMutableAttributedString</code> 两个类</p>
-
-<p>富文本的基础使用方法:</p>
-
-<ul>
-<li>-initWithString 以字符串NSString 初始化一个富文本对象</li>
-<li>-setAttributes:range: 为富文本的一段范围添加一些属性,第一个参数是字典,第二个是 NSRange 范围</li>
-<li>-addAttribute:value:range 添加一个属性</li>
-<li>-addAttributes:range  添加多个属性</li>
-<li>-removeAttribute:range  移除属性</li>
-</ul>
-
-<p>例如:</p>
-
-<pre class="line-numbers"><code class="language-text">NSDictionary *dic = @{NSFontAttributeName:[UIFont fontWithName:@&quot;Zapfino&quot; size:20],NSForegroundColorAttributeName:[UIColor redColor],NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle)};
-    NSMutableAttributedString * attributeStr = [[NSMutableAttributedString alloc] initWithString:@&quot;0我是一个富文本，9听说我有很多属性，19I will try。32这里清除属性.&quot;];
-//    设置属性
-    [attributeStr setAttributes:dic range:NSMakeRange(0, attributeStr.length)];
-//    添加属性
-    [attributeStr addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:30] range:NSMakeRange(9, 10)];
-    [attributeStr addAttribute:NSForegroundColorAttributeName value:[UIColor cyanColor] range:NSMakeRange(13, 13)];
-//    添加多个属性
-    NSDictionary * dicAdd = @{NSBackgroundColorAttributeName:[UIColor yellowColor],NSLigatureAttributeName:@1};
-    [attributeStr addAttributes:dicAdd range:NSMakeRange(19, 13)];
-//    移除属性
-    [attributeStr removeAttribute:NSFontAttributeName range:NSMakeRange(32, 9)];
-    UILabel * label = [[UILabel alloc] initWithFrame:CGRectMake(100, 100, 200, 400)];
-    label.numberOfLines = 0;
-    label.attributedText = attributeStr;
-</code></pre>
-
-<h3 id="toc_3">CoreText 绘制富文本</h3>
-
-<p>CoreText实现图文混排其实就是在富文本中 插入一个<strong>空白的图片占位符</strong> 的富文本字符串,通过<strong>代理</strong>设置相关的图片尺寸信息.根据从富文本得到的 frame,<strong>计算图片绘制的 frame 再绘制图片</strong> 这么一个过程</p>
-
-<p>直接上代码</p>
-
-<pre class="line-numbers"><code class="language-text">-(void)drawRect:(CGRect)rect
-{
-    [super drawRect:rect];
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetTextMatrix(context, CGAffineTransformIdentity);    CGContextTranslateCTM(context, 0, self.bounds.size.height);
-    CGContextScaleCTM(context, 1.0, -1.0);
-    NSMutableAttributedString * attributeStr = [[NSMutableAttributedString alloc] initWithString:@&quot;\n这里在测试图文混排，\n我是一个富文本&quot;];
-    CTRunDelegateCallbacks callBacks;
-    memset(&amp;callBacks,0,sizeof(CTRunDelegateCallbacks));
-    callBacks.version = kCTRunDelegateVersion1;
-    callBacks.getAscent = ascentCallBacks;
-    callBacks.getDescent = descentCallBacks;
-    callBacks.getWidth = widthCallBacks;
-    NSDictionary * dicPic = @{@&quot;height&quot;:@129,@&quot;width&quot;:@400};
-    CTRunDelegateRef delegate = CTRunDelegateCreate(&amp; callBacks, (__bridge void *)dicPic);
-    unichar placeHolder = 0xFFFC;
-    NSString * placeHolderStr = [NSString stringWithCharacters:&amp;placeHolder length:1];
-    NSMutableAttributedString * placeHolderAttrStr = [[NSMutableAttributedString alloc] initWithString:placeHolderStr];
-    CFAttributedStringSetAttribute((CFMutableAttributedStringRef)placeHolderAttrStr, CFRangeMake(0, 1), kCTRunDelegateAttributeName, delegate);
-    CFRelease(delegate);
-    [attributeStr insertAttributedString:placeHolderAttrStr atIndex:12];
-    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)attributeStr);
-    CGMutablePathRef path = CGPathCreateMutable();
-    CGPathAddRect(path, NULL, self.bounds);
-    NSInteger length = attributeStr.length;
-    CTFrameRef frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0, length), path, NULL);
-    CTFrameDraw(frame, context);
-    
-    UIImage * image = [UIImage imageNamed:@&quot;bd_logo1&quot;];
-    CGRect imgFrm = [self calculateImageRectWithFrame:frame];
-    CGContextDrawImage(context,imgFrm, image.CGImage);
-    CFRelease(frame);
-    CFRelease(path);
-    CFRelease(frameSetter);
-}
-static CGFloat ascentCallBacks(void * ref)
-{
-    return [(NSNumber *)[(__bridge NSDictionary *)ref valueForKey:@&quot;height&quot;] floatValue];
-}
-static CGFloat descentCallBacks(void * ref)
-{
-    return 0;
-}
-static CGFloat widthCallBacks(void * ref)
-{
-    return [(NSNumber *)[(__bridge NSDictionary *)ref valueForKey:@&quot;width&quot;] floatValue];
-}
-
-
--(CGRect)calculateImageRectWithFrame:(CTFrameRef)frame
-{
-    NSArray * arrLines = (NSArray *)CTFrameGetLines(frame);
-    NSInteger count = [arrLines count];
-    CGPoint points[count];
-    CTFrameGetLineOrigins(frame, CFRangeMake(0, 0), points);
-    for (int i = 0; i &lt; count; i ++) {
-        CTLineRef line = (__bridge CTLineRef)arrLines[i];
-        NSArray * arrGlyphRun = (NSArray *)CTLineGetGlyphRuns(line);
-        for (int j = 0; j &lt; arrGlyphRun.count; j ++) {
-            CTRunRef run = (__bridge CTRunRef)arrGlyphRun[j];
-            NSDictionary * attributes = (NSDictionary *)CTRunGetAttributes(run);            CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[attributes valueForKey:(id)kCTRunDelegateAttributeName];
-            if (delegate == nil) {
-                continue;
-            }
-            NSDictionary * dic = CTRunDelegateGetRefCon(delegate);
-            if (![dic isKindOfClass:[NSDictionary class]]) {
-                continue;
-            }
-            CGPoint point = points[i];
-            CGFloat ascent;
-            CGFloat descent;
-            CGRect boundsRun;
-            boundsRun.size.width = CTRunGetTypographicBounds(run, CFRangeMake(0, 0), &amp;ascent, &amp;descent, NULL);
-            boundsRun.size.height = ascent + descent;
-            CGFloat xOffset = CTLineGetOffsetForStringIndex(line, CTRunGetStringRange(run).location, NULL);
-            boundsRun.origin.x = point.x + xOffset;
-            boundsRun.origin.y = point.y - descent;
-            CGPathRef path = CTFrameGetPath(frame);
-            CGRect colRect = CGPathGetBoundingBox(path);
-            CGRect imageBounds = CGRectOffset(boundsRun, colRect.origin.x, colRect.origin.y);
-            return imageBounds;
-        }
-    }
-    return CGRectZero;
-}
-</code></pre>
-
-<h4 id="toc_4">第一步是坐标系转换</h4>
-
-<pre class="line-numbers"><code class="language-text">CGContextRef context = UIGraphicsGetCurrentContext();
-CGContextSetTextMatrix(context, CGAffineTransformIdentity);    
-CGContextTranslateCTM(context, 0, self.bounds.size.height);
-CGContextScaleCTM(context, 1.0, -1.0);
-</code></pre>
-
-<blockquote>
-<p>coreText 起初是为OSX设计的，而OSX得坐标原点是左下角，y轴正方向朝上。iOS中坐标原点是左上角，y轴正方向向下。<br/>
- 若不进行坐标转换，则文字从下开始，还是倒着的<br/>
-<img src="media/15868498460347/15869348690014.jpg" alt="" style="width:371px;"/></p>
-</blockquote>
-
-<pre class="line-numbers"><code class="language-text">CGContextRef context = UIGraphicsGetCurrentContext();//获取当前绘制上下文
-</code></pre>
-
-<p>首选拿到上下文,因为所有的绘制操作都是在上下文上进行的,然后剩下的三句:</p>
-
-<pre class="line-numbers"><code class="language-text">CGContextSetTextMatrix(context, CGAffineTransformIdentity);//设置字形的变换矩阵为不做图形变换  
-CGContextTranslateCTM(context, 0, self.bounds.size.height);//平移方法，将画布向上平移一个屏幕高  
-CGContextScaleCTM(context, 1.0, -1.0);//缩放方法，x轴缩放系数为1，则不变，y轴缩放系数为-1，则相当于以x轴为轴旋转180度
-</code></pre>
-
-<p>正如之上的背景说的，coreText使用的是系统坐标，然而我们平时所接触的iOS的都是屏幕坐标，所以要将屏幕坐标系转换系统坐标系，这样才能与我们想想的坐标互相对应。<br/>
- 事实上呢，这三句是翻转画布的固定写法，这三句你以后会经常看到的。</p>
-
-<h4 id="toc_5">图片的代理设置</h4>
-
-<p>事实上，图文混排就是在要插入图片的位置插入一个富文本类型的占位符。通过CTRUNDelegate设置图片</p>
-
-<pre class="line-numbers"><code class="language-text"> NSMutableAttributedString * attributeStr = [[NSMutableAttributedString alloc] initWithString:@&quot;\n这里在测试图文混排，\n我是一个富文本&quot;];//这句不用我多说吧，最起码得有个富文本啊才能插入不是。
- 
- /*
- 设置一个回调结构体，告诉代理该回调那些方法
- */
-CTRunDelegateCallbacks callBacks;//创建一个回调结构体，设置相关参数
-memset(&amp;callBacks,0,sizeof(CTRunDelegateCallbacks));//memset将已开辟内存空间 callbacks 的首 n 个字节的值设为值 0, 相当于对CTRunDelegateCallbacks内存空间初始化
-callBacks.version = kCTRunDelegateVersion1;//设置回调版本，默认这个
-callBacks.getAscent = ascentCallBacks;//设置图片顶部距离基线的距离
-callBacks.getDescent = descentCallBacks;//设置图片底部距离基线的距离
-callBacks.getWidth = widthCallBacks;//设置图片宽度
-</code></pre>
-
-<p>字形:<br/>
- <img src="media/15868498460347/15869352147884.jpg" alt="" style="width:403px;"/></p>
-
-<p>这是一个 CTRun 的尺寸图,我们绘制图片的时候,实际上是在一个 CTRun 中绘制这个图片,CTRun 的绘制坐标系中,会以 origin 点作为原点进行绘制<br/>
- 基线为过原点的x轴，ascent即为CTRun顶线距基线的距离，descent即为底线距基线的距离。<br/>
-  我们绘制图片应该从原点开始绘制，图片的高度及宽度及CTRun的高度及宽度，我们通过<strong>代理设置CTRun的尺寸间接设置图片的尺寸</strong>。</p>
-
-<pre class="line-numbers"><code class="language-text">// 创建一个代理
-    NSDictionary * dicPic = @{@&quot;height&quot;:@129,@&quot;width&quot;:@400};//创建一个图片尺寸的字典，初始化代理对象需要
-    CTRunDelegateRef delegate = CTRunDelegateCreate(&amp; callBacks, (__bridge void *)dicPic);//创建代理
-</code></pre>
-
-<p>上面只是设置了回调结构体，然而我们还没有告诉这个代理我们要的图片尺寸。<br/>
- 所以这句话就在设置代理的时候绑定了一个返回图片尺寸的字典。<br/>
- 事实上此处你可以绑定任意对象。此处你绑定的对象既是回调方法中的参数ref。</p>
-
-<pre class="line-numbers"><code class="language-text">static CGFloat ascentCallBacks(void * ref)
-{
-    return [(NSNumber *)[(__bridge NSDictionary *)ref valueForKey:@&quot;height&quot;] floatValue];
-}
-static CGFloat descentCallBacks(void * ref)
-{
-    return 0;
-}
-static CGFloat widthCallBacks(void * ref)
-{
-    return [(NSNumber *)[(__bridge NSDictionary *)ref valueForKey:@&quot;width&quot;] floatValue];
-}
-</code></pre>
-
-<p>上文说过，ref既是创建代理是绑定的对象。所以我们在这里，从字典中分别取出图片的宽和高。</p>
-
-<p>值得注意的是，<strong>由于是c的方法，所以也没有什么对象的概念</strong>。是一个指针类型的数据。不过oc的对象其实也就是c的结构体。我们可以通过类型转换获得oc中的字典。</p>
-
-<p><strong>__bridge既是C的结构体转换成OC对象时需要的一个修饰词</strong></p>
-
-<h4 id="toc_6">图片的插入</h4>
-
-<p>首先创建一个富文本类型的图片占位符，绑定我们的代理</p>
-
-<pre class="line-numbers"><code class="language-text">unichar placeHolder = 0xFFFC;//创建空白字符
-NSString *placeHolderStr = [NSString stringWithCharacters:&amp;placeHolder length:1];//以空白字符生成字符串
-NSMutableAttributedString *placeHolderAttrStr = [[NSMutableAttributedString alloc] initWithString:placeHolderStr];//用字符串初始化占位符的富文本
-CFAttributedStringSetAttribute((CFMutableAttributedStringRef)placeHolderAttrStr, CFRangeMake(0, 1), kCTRunDelegateAttributeName, delegate);//给字符串中的范围中字符串设置代理
-CFRelease(delegate);//释放（__bridge进行C与OC数据类型的转换，C为非ARC，需要手动管理）
-</code></pre>
-
-<p><strong>为什么最后需要是否?</strong><br/>
-<strong>因为进行了类型转换之后就不属于对象了，也不再归自动引用计数机制管理了，所以你得手动管理。</strong></p>
-
-<p>然后将占位符插入我们的富文本中</p>
-
-<pre class="line-numbers"><code class="language-text">[attributeStr insertAttributedString:placeHolderAttrStr atIndex:12];//将占位符插入原富文本
-</code></pre>
-
-<p>至此,我们已经生成好了我们要的带有图片信息的富文本了,接下来就是要在画布上绘制这个富文本了</p>
-
-<h4 id="toc_7">绘制</h4>
-
-<p>绘制分成两个部分,<strong>文本绘制,图片绘制</strong><br/>
-因为富文本中我们添加的图片只是一个带有图片尺寸的空白占位符,绘制的时候也是只会绘制出响应尺寸的空白占位符,所以什么也显示不了<br/>
-绘制图片,需要拿到占位符的坐标,在占位符的地方绘制相应大小的图片.</p>
-
-<h5 id="toc_8">绘制文本</h5>
-
-<pre class="line-numbers"><code class="language-text">CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)attributeStr);//一个frame的工厂，负责生成frame
-CGMutablePathRef path = CGPathCreateMutable();//创建绘制区域
-CGPathAddRect(path, NULL, self.bounds);//添加绘制尺寸
-NSInteger length = attributeStr.length;
-CTFrameRef frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0,length), path, NULL);//工厂根据绘制区域及富文本（可选范围，多次设置）设置frame
-CTFrameDraw(frame, context);//根据frame绘制文字
-</code></pre>
-
-<p>frameSetter是根据富文本生成的一个frame生成的工厂，你可以通过framesetter以及你想要绘制的富文本的范围获取该CTRun的frame。<br/>
- 但是你需要注意的是，获取的frame是仅绘制你所需要的那部分富文本的frame。即当前情况下，你绘制范围定为（10，1），那么你得到的尺寸是只绘制（10，1）的尺寸，他应该从屏幕左上角开始（因为你改变了坐标系），而不是当你绘制全部富文本时他该在的位置。</p>
-
-<p>然后建立一会绘制的尺寸，实际上就是在指定你的绘制范围。<br/>
- 接着生成整个富文本绘制所需要的frame。因为范围是全部文本，所以获取的frame即为全部文本的frame.最后，根据你获得的frame，绘制全部富文本。</p>
-
-<h5 id="toc_9">绘制图片</h5>
-
-<p>绘制图片我们只需要使用:</p>
-
-<pre class="line-numbers"><code class="language-text">CGContextDrawImage(context,imgFrm, image.CGImage);//绘制图片
-</code></pre>
-
-<p>我们可以看到这个方法有三个参数，分别是context，frame，以及image。<br/>
-要什么就给他什么好咯，context和image都好说，context就是当前的上下文，最开始获得那个。image就是你要添加的那个图片，不过是CGImage类型。通过UIImage转出CGImage就好了，我们重点讲一下frame的获取。</p>
-
-<pre class="line-numbers"><code class="language-text">NSArray * arrLines = (NSArray *)CTFrameGetLines(frame);//根据frame获取需要绘制的线的数组
-NSInteger count = [arrLines count];//获取线的数量
-CGPoint points[count];//建立起点的数组（cgpoint类型为结构体，故用C语言的数组）
-CTFrameGetLineOrigins(frame, CFRangeMake(0, 0), points);//获取起点
-</code></pre>
-
-<p>第一句就是获取绘制中的所有 CTLine;<br/>
-<img src="media/15868498460347/15869368419200.jpg" alt="" style="width:380px;"/></p>
-
-<ul>
-<li>CTLine 可以看做Core Text绘制中的一行的对象 通过它可以获得当前行的line ascent,line descent ,line leading,还可以获得Line下的所有Glyph Runs</li>
-<li>CTRun 或者叫做 Glyph Run，是一组共享相同attributes（属性）的字形的集合体</li>
-</ul>
-
-<p>一个CTFrame有几个CTLine组成，有几行文字就有几行CTLine。一个CTLine有包含多个CTRun，一个CTRun是所有属性都相同的那部分富文本的绘制单元。<strong>所以CTRun是CTFrame的基本绘制单元</strong>。</p>
-
-<p>接着说我们的代码。<br/>
-为什么我获取的数组需要进行类型转换呢？因为CTFrameGetLines（）返回值是CFArrayRef类型的数据。就是一个c的数组类型吧，暂且先这么理解，所以需要转换。<br/>
-那为什么不用__bridge呢？记得么，我说过，本身就传地址的数据是不用桥接的。就是这样。<br/>
-然后获取数组的元素个数。有什么用呢，因为我们要用到每个CTLine的原点坐标进行计算。每个CTLine都有自己的origin。所以要生成一个相同元素个数的数组去盛放origin对象。<br/>
- 然后用CTFrameGetLineOrigins获取所有原点。<br/>
- 到此，我们计算frame的准备工作完成了。才完成准备工作。</p>
-
-<h5 id="toc_10">计算 frame</h5>
-
-<p>思路呢，就是遍历我们的frame中的所有CTRun，检查他是不是我们绑定图片的那个，如果是，根据该CTRun所在CTLine的origin以及CTRun在CTLine中的横向偏移量计算出CTRun的原点，加上其尺寸即为该CTRun的尺寸。</p>
-
-<pre class="line-numbers"><code class="language-text">for (int i = 0; i &lt; count; i ++) {//遍历线的数组
-        CTLineRef line = (__bridge CTLineRef)arrLines[i];
-        NSArray * arrGlyphRun = (NSArray *)CTLineGetGlyphRuns(line);//获取GlyphRun数组（GlyphRun：高效的字符绘制方案）
-        for (int j = 0; j &lt; arrGlyphRun.count; j ++) {//遍历CTRun数组
-            CTRunRef run = (__bridge CTRunRef)arrGlyphRun[j];//获取CTRun
-            NSDictionary * attributes = (NSDictionary *)CTRunGetAttributes(run);//获取CTRun的属性
-            CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[attributes valueForKey:(id)kCTRunDelegateAttributeName];//获取代理
-            if (delegate == nil) {//非空
-                continue;
-            }
-            NSDictionary * dic = CTRunDelegateGetRefCon(delegate);//判断代理字典
-            if (![dic isKindOfClass:[NSDictionary class]]) {
-                continue;
-            }
-            CGPoint point = points[i];//获取一个起点
-            CGFloat ascent;//获取上距
-            CGFloat descent;//获取下距
-            CGRect boundsRun;//创建一个frame
-            boundsRun.size.width = CTRunGetTypographicBounds(run, CFRangeMake(0, 0), &amp;ascent, &amp;descent, NULL);
-            boundsRun.size.height = ascent + descent;//取得高
-            CGFloat xOffset = CTLineGetOffsetForStringIndex(line, CTRunGetStringRange(run).location, NULL);//获取x偏移量
-            boundsRun.origin.x = point.x + xOffset;//point是行起点位置，加上每个字的偏移量得到每个字的x
-            boundsRun.origin.y = point.y - descent;//计算原点
-            CGPathRef path = CTFrameGetPath(frame);//获取绘制区域
-            CGRect colRect = CGPathGetBoundingBox(path);//获取剪裁区域边框
-            CGRect imageBounds = CGRectOffset(boundsRun, colRect.origin.x, colRect.origin.y);
-            return imageBounds;
-</code></pre>
-
-<p>外层for循环呢，是为了取到所有的CTLine。<br/>
- 类型转换什么的我就不多说了，然后通过CTLineGetGlyphRuns获取一个CTLine中的所有CTRun。<br/>
- 里层for循环是检查每个CTRun。<br/>
- 通过CTRunGetAttributes拿到该CTRun的所有属性。<br/>
- 通过kvc取得属性中的代理属性。<br/>
- 接下来判断代理属性是否为空。因为图片的占位符我们是绑定了代理的，而文字没有。以此区分文字和图片。<br/>
- 如果代理不为空，通过CTRunDelegateGetRefCon取得生成代理时绑定的对象。判断类型是否是我们绑定的类型，防止取得我们之前为其他的富文本绑定过代理。<br/>
- 如果两条都符合，ok，这就是我们要的那个CTRun。<br/>
- 开始计算该CTRun的frame吧。<br/>
- 获取原点和获取宽高被。<br/>
- 通过CTRunGetTypographicBounds取得宽，ascent和descent。有了上面的介绍我们应该知道图片的高度就是ascent+descent了吧。<br/>
- 接下来获取原点。<br/>
- CTLineGetOffsetForStringIndex获取对应CTRun的X偏移量。<br/>
- 取得对应CTLine的原点的Y，减去图片的下边距才是图片的原点，这点应该很好理解。<br/>
- 至此，我们已经获得了图片的frame了。因为只绑定了一个图片，所以直接return就好了，如果多张图片可以继续遍历返回数组。<br/>
- 获取到图片的frame，我们就可以绘制图片了，用上面介绍的方法。</p>
-
-<p>最后记得释放</p>
-
-<pre class="line-numbers"><code class="language-text">CFRelease(frame);
-CFRelease(path);
-CFRelease(frameSetter);
-</code></pre>
-
-                        
-                      </div>
-                  </div>
+                <a target="self" class="navbar-item " href="index.html">Home</a>
+                
+                <a target="_self" class="navbar-item " href="archives.html">Archives</a>
+                
+
+                <a role="button" id="navbarSNSRssSwitchBtn" class="navbar-burger burger" aria-label="menu" aria-expanded="false" data-target="navbarSNSRssButtons">
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
                 </a>
-                <div class="read-more clearfix">
-                  <div class="more-left left">
+              </div>
+            
+              <div id="navbarSNSRssButtons" class="navbar-menu">
+                <div class="navbar-start">
                   
-                    <span class="date">2020/04/14</span>
-                    <span>posted in&nbsp;</span> 
-          				  
-          					    <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
-          				   
-                    
-
-                  </div>
-                  <div class="more-right right">
-                  <span class="comments">
+                </div>
+            
+                <div class="navbar-end">
+                  <div class="navbar-item">
+                    <!--buttons start-->
+                    <div class="buttons">
                       
+                        
+                        
+                        
+                        <a href="https://github.com/macongLeo/macongLeo.github.io.git" target="_blank" title="github">
+                            <span class="icon is-large has-text-grey-darker">
+                               <svg class="svg-inline--fa fa-github fa-w-16 fa-lg" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="github" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512" data-fa-i2svg=""><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"></path></svg><!-- <i class="fab fa-github fa-lg"></i> -->
+                            </span>
+                          </a>
+                        
+                        
+                      
+                      <a href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" target="_blank" title="weibo">
+                          <span class="icon is-large has-text-grey-darker">
+                            <svg class="svg-inline--fa fa-weibo fa-w-16 fa-lg" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="weibo" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M407 177.6c7.6-24-13.4-46.8-37.4-41.7-22 4.8-28.8-28.1-7.1-32.8 50.1-10.9 92.3 37.1 76.5 84.8-6.8 21.2-38.8 10.8-32-10.3zM214.8 446.7C108.5 446.7 0 395.3 0 310.4c0-44.3 28-95.4 76.3-143.7C176 67 279.5 65.8 249.9 161c-4 13.1 12.3 5.7 12.3 6 79.5-33.6 140.5-16.8 114 51.4-3.7 9.4 1.1 10.9 8.3 13.1 135.7 42.3 34.8 215.2-169.7 215.2zm143.7-146.3c-5.4-55.7-78.5-94-163.4-85.7-84.8 8.6-148.8 60.3-143.4 116s78.5 94 163.4 85.7c84.8-8.6 148.8-60.3 143.4-116zM347.9 35.1c-25.9 5.6-16.8 43.7 8.3 38.3 72.3-15.2 134.8 52.8 111.7 124-7.4 24.2 29.1 37 37.4 12 31.9-99.8-55.1-195.9-157.4-174.3zm-78.5 311c-17.1 38.8-66.8 60-109.1 46.3-40.8-13.1-58-53.4-40.3-89.7 17.7-35.4 63.1-55.4 103.4-45.1 42 10.8 63.1 50.2 46 88.5zm-86.3-30c-12.9-5.4-30 .3-38 12.9-8.3 12.9-4.3 28 8.6 34 13.1 6 30.8.3 39.1-12.9 8-13.1 3.7-28.3-9.7-34zm32.6-13.4c-5.1-1.7-11.4.6-14.3 5.4-2.9 5.1-1.4 10.6 3.7 12.9 5.1 2 11.7-.3 14.6-5.4 2.8-5.2 1.1-10.9-4-12.9z"></path></svg><!-- <i class="fab fa-weibo fa-lg"></i> -->
+                          </span>
+                      </a>
+                      
+                      <a href="atom.xml" target="_blank" title="RSS">
+                          <span class="icon is-large has-text-black-bis">
+                              <svg class="svg-inline--fa fa-rss fa-w-14 fa-lg" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="rss" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"></path></svg><!-- <i class="fas fa-rss fa-lg"></i> -->
+                          </span>
+                      </a>
+                    </div>
+                    <!--buttons end-->
 
-                       
-                  </span>
                   </div>
                 </div>
-              </div><!-- article -->
-        
-              
-
-
-			<div class="row">
-			  <div class="large-6 columns">
-			  <p class="text-left" style="padding-top:25px;">
-			   
-			  </p>
-			  </div>
-			  <div class="large-6 columns">
-			<p class="text-right" style="padding-top:25px;">
-			 <a href="UI 相关_1.html">&raquo; Next Page</a> 
-			</p>
-			  </div>
-			</div>
-		</div>
-	</div><!-- large 8 -->
-
- <div class="large-4 medium-4 columns">
-  <div class="hide-for-small">
-    <div id="sidebar" class="sidebar">
-          <div id="site-info" class="site-info">
-            
-                <div class="site-a-logo"><img src="img/icon.jpg" /></div>
-            
-                <h1>路漫漫其修远兮</h1>
-                <div class="site-des">2020 加油 奋斗 !</div>
-                <div class="social">
-
-
-
-
-
-
-
-<a target="_blank" class="weibo" href="https://weibo.com/6161580353/profile?rightmod=1&wvr=6&mod=personinfo&is_all=1" title="weibo">Weibo</a>
-
-<a target="_blank" class="github" target="_blank" href="https://github.com/macongLeo/macongLeo.github.io.git" title="GitHub">GitHub</a>
-
-  <a target="_blank" class="rss" href="atom.xml" title="RSS">RSS</a>
-                
-              	 </div>
-          	</div>
-
-             
-
-              <div id="site-categories" class="side-item ">
-                <div class="side-header">
-                  <h2>Categories</h2>
-                </div>
-                <div class="side-content">
-
-      	<p class="cat-list">
-        
-            <a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html"><strong>iOS 知识集</strong></a>
-        
-            <a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html"><strong>iOS 开发技巧整理</strong></a>
-        
-            <a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html"><strong>iOS 底层进阶</strong></a>
-        
-            <a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html"><strong>多线程</strong></a>
-        
-            <a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html"><strong>网络进阶</strong></a>
-        
-            <a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html"><strong>性能优化</strong></a>
-        
-            <a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html"><strong>设计模式(架构)</strong></a>
-        
-            <a href="UI%20%E7%9B%B8%E5%85%B3.html"><strong>UI 相关</strong></a>
-        
-            <a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html"><strong>算法&数据结构</strong></a>
-        
-            <a href="%E5%85%B6%E4%BB%96.html"><strong>其他</strong></a>
-         
-        </p>
-
-
                 </div>
               </div>
-
-              <div id="site-categories" class="side-item">
-                <div class="side-header">
-                  <h2>Recent Posts</h2>
-                </div>
-                <div class="side-content">
-                <ul class="posts-list">
-	      
-		      
-			      <li class="post">
-			        <a href="15868498460347.html">Core Text</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15868323008867.html">有效的括号(LeetCode 20 题)</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15867715737861.html">堆, 栈 数据结构</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15833970837752.html">Socket</a>
-			      </li>
-		     
-		  
-		      
-			      <li class="post">
-			        <a href="15851010269707.html">多线程 01</a>
-			      </li>
-		     
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		  
-		      
-		   
-		  		</ul>
-                </div>
-              </div>
-        </div><!-- sidebar -->
-      </div><!-- hide for small -->
-</div><!-- large 4 -->
-
-</div><!-- row -->
-
- <div class="page-bottom clearfix">
-  <div class="row">
-   <p class="copyright">Copyright &copy; 2015
-Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
-Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
-  </div>
-</div>
-
-        </section>
+            </nav>
       </div>
-    </div>
+
+ 
+<div class="hero-body ct-body">
+        <div class="container">
+              <div class="columns is-centered">
+                  <div class="column  is-four-fifths">
+                      <div class="columns is-mobile">
+                          <div class="column">
+                              <h1 class="title">
+路漫漫其修远兮
+              
+                              </h1>
+                              <h2 class="subtitle">
+                                 2020 加油 奋斗 !
+                              </h2>
+                          </div>
+                          <div class="column is-narrow"><figure class="image is-128x128">
+                            
+                              <img class="is-rounded" src="img/icon.jpg">
+                            
+                            </figure></div>
+                      </div>
+                        
+                      
+                  </div>
+                  
+                </div>
+            
+              
+        
+        </div>
+      </div>
+</section>
+<section class="ct-body">
+      <div class="container">
+          <div class="columns is-variable bd-klmn-columns is-4">
+              <div class="column is-two-thirds">
+                
+                  <div class="card">
+                    
+                      <div class="card-content">
+                        <div class="content">
+                          <a href="15868498460347.html"> 
+                            <h2 class="title">Core Text</h2>
+                          </a>        
+                                                    
+                          <p> 
+                            <a href="15868498460347.html"><span class="tran-readmore">Read more...</span></a>&nbsp;&nbsp; 
+                            <span class="date">2020/04/14</span>
+                            <span class="tran-posted-in">posted in</span>&nbsp; 
+                            
+                                <span class="posted-in"><a href='UI%20%E7%9B%B8%E5%85%B3.html'>UI 相关</a></span>
+                                                      
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  
+
+                  <nav class="pagination is-centered" role="navigation" aria-label="pagination">
+                    <a class="pagination-previous"  disabled="disabled" ><span class="tran-prev-page">&laquo; Prev Page</span></a>  
+                    <a class="pagination-next"   href="UI 相关_1.html" ><span class="tran-next-page">Next Page &raquo;</span></a>                   
+                  </nav>
+
+              </div><!-- end column -->
+              <div class="column">
+                  <div class="card">
+                      <header class="card-header">
+                        <p class="card-header-title">
+                           <span class="tran-site-categories">Categories</span> 
+                        </p>
+                     
+                      </header>
+                      <div class="card-content site-categories">
+                        <div class="content"> 
+                          <ul>
+                          
+                                <li><a href="iOS%20%E7%9F%A5%E8%AF%86%E9%9B%86.html">iOS 知识集</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="iOS%20%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7%E6%95%B4%E7%90%86.html">iOS 开发技巧整理</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="iOS%20%E5%BA%95%E5%B1%82%E8%BF%9B%E9%98%B6.html">iOS 底层进阶</a>
+                                   <ul> 
+                                  
+                                        <li><a href="Runtime.html">Runtime</a></li>
+                                  
+                                        <li><a href="RunLoop.html">RunLoop</a></li>
+                                  
+                                        <li><a href="KVO&&KVC.html">KVO&&KVC</a></li>
+                                  
+                                        <li><a href="Block%20%E7%9B%B8%E5%85%B3.html">Block 相关</a></li>
+                                  
+                                        <li><a href="%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.html">内存管理</a></li>
+                                  
+                                   </ul> 
+                                </li> 
+                          
+                                <li><a href="%E5%A4%9A%E7%BA%BF%E7%A8%8B.html">多线程</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E7%BD%91%E7%BB%9C%E8%BF%9B%E9%98%B6.html">网络进阶</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.html">性能优化</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F(%E6%9E%B6%E6%9E%84).html">设计模式(架构)</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="UI%20%E7%9B%B8%E5%85%B3.html">UI 相关</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E7%AE%97%E6%B3%95&%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html">算法&数据结构</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                                <li><a href="%E5%85%B6%E4%BB%96.html">其他</a>
+                                  
+                                  
+                                  
+                                </li> 
+                          
+                          </ul>
+                        </div>
+                      </div>
+                     
+                    </div>
+
+                    <div class="card">
+                        <header class="card-header">
+                          <p class="card-header-title">
+                              <span class="tran-site-tags">Tags</span> 
+                          </p>
+                       
+                        </header>
+                        <div class="card-content site-tags">
+                          <div class="content">
+                           <div class="tags">
+                            
+                           </div>
+                             
+                          </div>
+                        </div>
+                       
+                      </div>
+
+              </div>
+            </div>
+
+          
+      </div>
+    </section>
+
+    <footer class="footer">
+        <div class="content has-text-centered">
+          <p>
+              Copyright &copy; 2019
+              Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+              Theme used <a target="_blank" href="https://bulma.io/">Bulma CSS</a>.
+          </p>
+        </div>
+      </footer>
 
 
 
@@ -772,215 +283,10 @@ Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
 
 
 
-<style type="text/css">
-figure{margin: 0;padding: 0;}
-figcaption{text-align:center;}
-
-/* PrismJS 1.14.0
- http://prismjs.com/download.html#themes=prism&languages=markup+css+clike+javascript */
-/**
- * prism.js default theme for JavaScript, CSS and HTML
- * Based on dabblet (http://dabblet.com)
- * @author Lea Verou
- */
-
-code[class*="language-"],
-pre[class*="language-"] {
-    color: black;
-    background: none;
-    text-shadow: 0 1px white;
-    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-    text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
-    word-wrap: normal;
-    line-height: 1.5;
-    
-    -moz-tab-size: 4;
-    -o-tab-size: 4;
-    tab-size: 4;
-    
-    -webkit-hyphens: none;
-    -moz-hyphens: none;
-    -ms-hyphens: none;
-    hyphens: none;
-}
-
-pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
-code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
-    text-shadow: none;
-    background:#b3d4fc;
-}
-
-pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
-code[class*="language-"]::selection, code[class*="language-"] ::selection {
-    text-shadow: none;
-    background: #b3d4fc;
-}
-
-@media print {
-    code[class*="language-"],
-    pre[class*="language-"] {
-        text-shadow: none;
-    }
-}
-
-/* Code blocks */
-pre[class*="language-"] {
-    padding: 1em;
-    margin: .5em 0;
-    overflow: auto;
-}
-
-:not(pre) > code[class*="language-"],
-pre[class*="language-"] {
-    background: #F7F7F7;
-}
-
-/* Inline code */
-:not(pre) > code[class*="language-"] {
-    padding: .1em;
-    border-radius: .3em;
-    white-space: normal;
-}
-
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-    color: slategray;
-}
-
-.token.punctuation {
-    color: #999;
-}
-
-.namespace {
-    opacity: .7;
-}
-
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol,
-.token.deleted {
-    color: #905;
-}
-
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin,
-.token.inserted {
-    color: #690;
-}
-
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string {
-    color: #9a6e3a;
-    background: hsla(0, 0%, 100%, .5);
-}
-
-.token.atrule,
-.token.attr-value,
-.token.keyword {
-    color: #07a;
-}
-
-.token.function,
-.token.class-name {
-    color: #DD4A68;
-}
-
-.token.regex,
-.token.important,
-.token.variable {
-    color: #e90;
-}
-
-.token.important,
-.token.bold {
-    font-weight: bold;
-}
-.token.italic {
-    font-style: italic;
-}
-
-.token.entity {
-    cursor: help;
-}
-
-
-pre[class*="language-"].line-numbers {
-    position: relative;
-    padding-left: 3.8em;
-    counter-reset: linenumber;
-}
-
-pre[class*="language-"].line-numbers > code {
-    position: relative;
-    white-space: inherit;
-}
-
-.line-numbers .line-numbers-rows {
-    position: absolute;
-    pointer-events: none;
-    top: 0;
-    font-size: 100%;
-    left: -3.8em;
-    width: 3em; /* works for line-numbers below 1000 lines */
-    letter-spacing: -1px;
-    border-right: 1px solid #999;
-
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-
-}
-
-    .line-numbers-rows > span {
-        pointer-events: none;
-        display: block;
-        counter-increment: linenumber;
-    }
-
-        .line-numbers-rows > span:before {
-            content: counter(linenumber);
-            color: #999;
-            display: block;
-            padding-right: 0.8em;
-            text-align: right;
-        }
-
-</style>
 
   
     
 
-    <script src="asset/js/foundation.min.js"></script>
-    <script>
-      $(document).foundation();
-      function fixSidebarHeight(){
-        var w1 = $('.markdown-body').height();
-          var w2 = $('#sidebar').height();
-          if (w1 > w2) { $('#sidebar').height(w1); };
-      }
-      $(function(){
-        fixSidebarHeight();
-      })
-      $(window).load(function(){
-          fixSidebarHeight();
-      });
-     
-    </script>
 
 
 
